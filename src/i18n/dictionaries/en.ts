@@ -8,14 +8,14 @@ export const en: Dictionary = {
     offer: "Architecture",
     philosophy: "Governance",
     agents: "SMV Models",
-    contact: "Operational Diagnosis",
+    contact: "Book a call",
   },
   hero: {
     eyebrow: "Automation Studio · South Florida",
     titleLines: ["AI Architecture", "Built to Scale", "Your Business."],
     subtitle:
       "AI isn't only for giant corporations. We build simple systems that automate your most repetitive tasks. The goal is simple: stop your team from working like robots doing manual work, and free up that time to grow your business.",
-    primaryCta: "Request Operational Diagnosis",
+    primaryCta: "Book a free 30-min call",
   },
   manifesto: {
     eyebrow: "Governance",
@@ -142,7 +142,7 @@ export const en: Dictionary = {
     steps: [
       {
         n: "01",
-        title: "Operational Audit",
+        title: "Free 30-min call",
         desc: "30 min. You show us exactly where your business is leaking money and time. Zero sales pitch.",
       },
       {
@@ -168,7 +168,7 @@ export const en: Dictionary = {
     items: [
       {
         q: "How much does this actually cost?",
-        a: "We don't post prices here on purpose. The number depends on what's actually broken: a Landing Page is a different conversation than a Governed Agent Implementation. The Operational Audit is free and 30 minutes. After it, you get a fixed-scope, fixed-price proposal. No estimates, no surprises.",
+        a: "We don't post prices here on purpose. The number depends on what's actually broken: a Landing Page is a different conversation than a Governed Agent Implementation. The 30-minute discovery call is free. After it, you get a fixed-scope, fixed-price proposal. No estimates, no surprises.",
       },
       {
         q: "How fast will I see results?",
@@ -192,7 +192,7 @@ export const en: Dictionary = {
       },
       {
         q: "How much does this cost for a business my size?",
-        a: "We don't post prices here on purpose — every engagement is scoped to what your business actually needs and what's actually broken. A solo contractor and a 30-person medspa get very different builds, and the price reflects that. The chat agent on this page can walk you through approximate ranges if you ask. For exact pricing tied to your specific scope, that's the Operational Diagnosis — 30 minutes, free, no pitch.",
+        a: "We don't post prices here on purpose — every engagement is scoped to what your business actually needs and what's actually broken. A solo contractor and a 30-person medspa get very different builds, and the price reflects that. The chat agent on this page can walk you through approximate ranges if you ask. For exact pricing tied to your specific scope, that comes from a free 30-minute call — no pitch.",
       },
       {
         q: "When do I see this paying for itself?",
@@ -205,10 +205,10 @@ export const en: Dictionary = {
     ],
   },
   cta: {
-    eyebrow: "Operational Audit",
-    title: "Schedule Your Operational Audit.",
+    eyebrow: "Free discovery call",
+    title: "Book your free 30-minute call.",
     subtitle: "",
-    button: "Book a 30-min call",
+    button: "Book a free 30-min call",
     bullets: [
       { n: "01", text: "Identify manual bottlenecks and hidden labor leaks." },
       { n: "02", text: "Receive a tailored AI automation blueprint for your business." },
@@ -295,7 +295,7 @@ export const en: Dictionary = {
     send: "Send",
     thinking: "Thinking…",
     retry: "Retry",
-    bookCta: "Book your call",
+    bookCta: "Book a free call",
     privacy: "Privacy",
     errorGeneric: "Something went wrong. Please try again.",
     errorUnavailable:
@@ -322,7 +322,7 @@ export const en: Dictionary = {
       title: "Your digital salesperson, operating 24/7.",
       subtitle:
         "We don't build decorative pages. We build the lead capture and local visibility infrastructure that feeds your AI agents.",
-      primaryCta: "Schedule your Audit",
+      primaryCta: "Book a free 30-min call",
       secondaryCta: "See how it works",
     },
     problem: {
@@ -420,7 +420,7 @@ export const en: Dictionary = {
       title: "Not a chatbot. An entire department, operating in milliseconds.",
       subtitle:
         "Each SMV model is a specialized agent engineered for one job and kept on-script by hardened guardrails. Multi-channel, governed every single day.",
-      primaryCta: "Schedule your Audit",
+      primaryCta: "Book a free 30-min call",
       secondaryCta: "See the models",
     },
     problem: {
@@ -518,7 +518,7 @@ export const en: Dictionary = {
       title: "AI that your CTO and compliance team will actually sign off on.",
       subtitle:
         "Enterprise-grade AI architecture and governance. Get secure, functioning agents in weeks, not 6-month consulting engagements or 200-page PDFs.",
-      primaryCta: "Schedule your Audit",
+      primaryCta: "Book a free 30-min call",
       secondaryCta: "See the architecture",
       trustStrip:
         "Architecture designed under the principles of NIST AI RMF and ISO 42001. Structured to support your internal compliance team's SOC 2 readiness work.",

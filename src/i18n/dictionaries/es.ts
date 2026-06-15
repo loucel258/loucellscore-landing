@@ -10,14 +10,14 @@ export const es: Dictionary = {
     offer: "Arquitectura",
     philosophy: "Gobernanza",
     agents: "Modelos SMV",
-    contact: "Diagnóstico Operativo",
+    contact: "Agenda una llamada",
   },
   hero: {
     eyebrow: "Estudio de Automatización · Sur de Florida",
     titleLines: ["Arquitectura de IA", "para Escalar", "Tu Negocio."],
     subtitle:
       "La IA no es solo para corporaciones gigantes. Construimos sistemas sencillos que automatizan tus tareas más repetitivas. El objetivo es simple: que tu equipo deje de funcionar como robots haciendo trabajo manual, y use ese tiempo para hacer crecer tu negocio.",
-    primaryCta: "Solicitar Diagnóstico Operativo",
+    primaryCta: "Agenda una llamada gratis",
   },
   manifesto: {
     eyebrow: "Gobernanza",
@@ -144,7 +144,7 @@ export const es: Dictionary = {
     steps: [
       {
         n: "01",
-        title: "Diagnóstico Operativo",
+        title: "Llamada gratis de 30 min",
         desc: "30 min. Nos muestras exactamente dónde tu negocio está perdiendo dinero y tiempo. Cero pitch de ventas.",
       },
       {
@@ -170,7 +170,7 @@ export const es: Dictionary = {
     items: [
       {
         q: "¿Cuánto cuesta de verdad?",
-        a: "No publicamos precios aquí a propósito. El número depende de qué está realmente roto: una Landing Page es una conversación distinta a una Implementación de Agente Gobernado. El Diagnóstico Operativo es gratis y dura 30 minutos. Después de él, recibes una propuesta con alcance fijo y precio fijo. Sin estimados, sin sorpresas.",
+        a: "No publicamos precios aquí a propósito. El número depende de qué está realmente roto: una Landing Page es una conversación distinta a una Implementación de Agente Gobernado. La llamada de descubrimiento es gratis y dura 30 minutos. Después de él, recibes una propuesta con alcance fijo y precio fijo. Sin estimados, sin sorpresas.",
       },
       {
         q: "¿Qué tan rápido voy a ver resultados?",
@@ -194,7 +194,7 @@ export const es: Dictionary = {
       },
       {
         q: "¿Cuánto cuesta esto para un negocio de mi tamaño?",
-        a: "No publicamos precios acá a propósito — cada engagement se cotiza según lo que tu negocio realmente necesita y qué está realmente roto. Un contratista solo y una medspa de 30 personas reciben builds muy distintos, y el precio refleja eso. El agente de chat de esta página puede caminarte por rangos aproximados si preguntás. Para precio exacto atado a tu scope específico, eso es el Diagnóstico Operativo — 30 minutos, gratis, sin pitch.",
+        a: "No publicamos precios acá a propósito — cada engagement se cotiza según lo que tu negocio realmente necesita y qué está realmente roto. Un contratista solo y una medspa de 30 personas reciben builds muy distintos, y el precio refleja eso. El agente de chat de esta página puede caminarte por rangos aproximados si preguntás. Para precio exacto atado a tu scope específico, eso sale de una llamada gratis de 30 minutos — sin pitch.",
       },
       {
         q: "¿Cuándo veo que esto se paga solo?",
@@ -207,10 +207,10 @@ export const es: Dictionary = {
     ],
   },
   cta: {
-    eyebrow: "Diagnóstico Operativo",
-    title: "Agenda tu Diagnóstico Operativo.",
+    eyebrow: "Llamada gratis",
+    title: "Agenda tu llamada gratis de 30 minutos.",
     subtitle: "",
-    button: "Agenda una llamada de 30 min",
+    button: "Agenda una llamada gratis (30 min)",
     bullets: [
       { n: "01", text: "Identifica cuellos de botella manuales y fugas ocultas de trabajo." },
       { n: "02", text: "Recibe un plano de automatización con IA hecho a la medida de tu negocio." },
@@ -300,7 +300,7 @@ export const es: Dictionary = {
     send: "Enviar",
     thinking: "Pensando…",
     retry: "Reintentar",
-    bookCta: "Agenda tu llamada",
+    bookCta: "Agenda gratis",
     privacy: "Privacidad",
     errorGeneric: "Algo salió mal. Intenta de nuevo.",
     errorUnavailable:
@@ -327,7 +327,7 @@ export const es: Dictionary = {
       title: "Tu vendedor digital, operando 24/7.",
       subtitle:
         "No construimos páginas decorativas. Construimos la infraestructura de captura de leads y visibilidad local que alimenta a tus agentes de IA.",
-      primaryCta: "Agenda tu Diagnóstico",
+      primaryCta: "Agenda una llamada gratis",
       secondaryCta: "Ver cómo funciona",
     },
     problem: {
@@ -425,7 +425,7 @@ export const es: Dictionary = {
       title: "No es un chatbot. Un departamento entero, operando en milisegundos.",
       subtitle:
         "Cada modelo SMV es un agente especializado diseñado para un solo trabajo y blindado para no salirse del guion. Multicanal, blindado y gobernado todos los días.",
-      primaryCta: "Agenda tu Diagnóstico",
+      primaryCta: "Agenda una llamada gratis",
       secondaryCta: "Ver los modelos",
     },
     problem: {
@@ -523,7 +523,7 @@ export const es: Dictionary = {
       title: "IA que tu CTO y tu equipo de compliance van a firmar de verdad.",
       subtitle:
         "Arquitectura y gobernanza de IA nivel empresarial. Agentes seguros y funcionando en semanas, no engagements de consultoría de 6 meses ni PDFs de 200 páginas.",
-      primaryCta: "Agenda tu Diagnóstico",
+      primaryCta: "Agenda una llamada gratis",
       secondaryCta: "Ver la arquitectura",
       trustStrip:
         "Arquitectura diseñada bajo los principios de NIST AI RMF e ISO 42001. Estructurada para apoyar el trabajo de SOC 2 readiness de tu equipo interno de compliance.",
