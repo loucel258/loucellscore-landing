@@ -60,6 +60,9 @@ export default async function PortalAgentDetailPage({
 
   const isLive = a.status === "live";
 
+  // Server component renders per request, so a request-time clock read is
+  // the intended behavior (the compiler purity rule is overly strict for RSC).
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const ago30d = new Date(now - 30 * 86400_000).toISOString();
 
@@ -139,7 +142,7 @@ export default async function PortalAgentDetailPage({
             <strong className="text-neutral-800">{a.agent_type.replace(/_/g, " ")}</strong>{" "}
             {a.live_started_at ? (
               <>
-                · running on your stack for the last{" "}
+                · live and working across your tools for the last{" "}
                 <strong className="text-neutral-800">{daysAgo(a.live_started_at)} days</strong>.
               </>
             ) : (

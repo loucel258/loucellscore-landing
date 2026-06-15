@@ -133,8 +133,8 @@ export const es: Dictionary = {
         desc: "Vendemos resultados concretos para tu negocio, no horas facturables. Recibes alcance claro, precios predecibles y entregables exactos desde el día uno.",
       },
       {
-        title: "Tu Data, Tu Infraestructura",
-        desc: "Cada agente que desplegamos vive en tus cuentas — tu Twilio, tu CRM, tu storage. Nosotros lo gobernamos mensualmente. Puedes llevártelo cuando quieras — las llaves están a tu nombre desde el día uno.",
+        title: "Tu Data. Tus Llaves.",
+        desc: "Tus datos de clientes viven en tus sistemas — tu CRM, tu QuickBooks, tu storage. Las API keys están a tu nombre: las revocas y el agente se detiene al instante. Eso es tu kill switch, no nuestro lock-in.",
       },
     ],
   },
@@ -417,7 +417,7 @@ export const es: Dictionary = {
     meta: {
       title: "Modelos SMV — Loucells Core",
       description:
-        "No es un chatbot. Un departamento entero operando en milisegundos. Agentes de IA especializados y gobernados. Tuyos por construcción, gobernados por nosotros.",
+        "No es un chatbot. Un departamento entero operando en milisegundos. Agentes de IA especializados y gobernados — nosotros los operamos, tú tienes las llaves.",
     },
     backLabel: "Volver al inicio",
     hero: {
@@ -494,7 +494,7 @@ export const es: Dictionary = {
     },
     why: {
       eyebrow: "Por Qué Nuestros Agentes",
-      title: "Tuyos por construcción. Gobernados por nosotros.",
+      title: "Nosotros operamos el agente. Tú tienes las llaves.",
       items: [
         {
           title: "Especializados, No Generales",
@@ -505,8 +505,8 @@ export const es: Dictionary = {
           desc: "Lógica de precios bloqueada. Prompts blindados. El agente se queda en el guion, nunca inventa información y nunca revela datos que no debe.",
         },
         {
-          title: "Tus Cuentas. Tu Agente.",
-          desc: "El agente vive en tu Twilio, tu CRM, tu storage — tus cuentas, tus llaves, tu data. Nosotros lo construimos y lo gobernamos mensualmente, pero la infraestructura es tuya desde el día uno. Cancela cuando quieras y el agente sigue corriendo en tu stack.",
+          title: "Tu Data. Tus Llaves. Tu Decisión.",
+          desc: "Tus datos de clientes viven en tus sistemas — tu CRM, tu QuickBooks, tu storage. El agente corre en nuestra plataforma, pero las API keys están a tu nombre. Cancela mes a mes y te desconectamos limpio: llaves revocadas, data exportada, nada cableado a tu dinero.",
         },
       ],
     },
@@ -601,8 +601,8 @@ export const es: Dictionary = {
           desc: "Diseñado para seguridad empresarial. Construimos sobre modelos diseñados específicamente para minimizar alucinaciones y maximizar la seguridad de datos.",
         },
         {
-          title: "Tuyo por Construcción. Gobernado por Nosotros.",
-          desc: "Tu infraestructura, tus datos. Nuestro retainer continuo mantiene tus controles de gobernanza alineados con los principios actuales de NIST AI RMF y apoya tu propio trabajo de SOC 2 readiness.",
+          title: "Operado por Nosotros. Controlado por Ti.",
+          desc: "Tus datos y tus llaves siguen siendo tuyos. Nuestro retainer continuo mantiene los controles de gobernanza alineados con los principios actuales de NIST AI RMF y apoya tu propio trabajo de SOC 2 readiness.",
         },
       ],
     },

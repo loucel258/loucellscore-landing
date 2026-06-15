@@ -49,19 +49,25 @@ export default async function TermsPage({
             regularización.
           </p>
 
-          <h2>3. Propiedad intelectual</h2>
+          <h2>3. Propiedad intelectual y propiedad</h2>
           <p>
-            Una vez completado el pago total, el cliente recibe propiedad
-            completa de los entregables específicos del proyecto: código
-            fuente del agente, arquitectura desplegada, configuraciones
-            personalizadas y documentación de operación. La filosofía es
-            <em> tuyo por construcción</em>.
+            El cliente es dueño de lo que importa para su negocio: sus
+            propios datos, sus registros de clientes, y sus credenciales de
+            acceso, que permanecen a nombre del cliente durante todo el
+            engagement. El cliente puede exportar su data en cualquier
+            momento. La filosofía es{" "}
+            <em>operado por nosotros, controlado por ti</em>: las llaves
+            están a tu nombre, y tú decides cuándo cancelar.
           </p>
           <p>
-            Permanecen como propiedad de Loucells Core: librerías internas
-            reutilizables, frameworks generales de gobernanza, plantillas de
-            audit logging y metodología de implementación que aplicamos
-            transversalmente entre clientes.
+            Permanecen como propiedad de Loucells Core: el agente de IA y su
+            código, la plataforma sobre la que corre, el Trust Stack,
+            librerías reutilizables, frameworks de gobernanza, plantillas de
+            audit logging y la metodología de implementación. El cliente
+            licencia el uso del agente desplegado por la duración del
+            engagement; el agente en sí no se transfiere. Al cancelar, el
+            cliente retiene y exporta su data, las credenciales se revocan, y
+            el agente se desconecta — no sigue corriendo.
           </p>
 
           <h2>4. Retainer mensual (gobernanza)</h2>
@@ -135,18 +141,25 @@ export default async function TermsPage({
             non-payment resume after the balance is settled.
           </p>
 
-          <h2>3. Intellectual property</h2>
+          <h2>3. Intellectual property &amp; ownership</h2>
           <p>
-            Upon full payment, the client receives complete ownership of
-            project-specific deliverables: agent source code, deployed
-            architecture, custom configurations, and operations
-            documentation. The philosophy is <em>owned by you, built by us</em>.
+            The client owns what matters to their business: their own data,
+            their customer records, and their account credentials, which
+            remain in the client&apos;s name throughout the engagement. The
+            client may export their data at any time. The philosophy is{" "}
+            <em>run by us, controlled by you</em>: the keys are in your name,
+            and you decide when to cancel.
           </p>
           <p>
-            What remains property of Loucells Core: internal reusable
-            libraries, general governance frameworks, audit logging
-            templates, and the implementation methodology we apply across
-            clients.
+            What remains the property of Loucells Core: the AI agent and its
+            source, the platform it runs on, the Trust Stack, reusable
+            libraries, governance frameworks, audit logging templates, and the
+            implementation methodology applied across clients. The client
+            licenses the use of the deployed agent for the duration of the
+            engagement; the agent itself is not transferred. On cancellation,
+            the client retains and exports their data, the credentials are
+            revoked, and the agent is disconnected — it does not continue
+            running.
           </p>
 
           <h2>4. Monthly retainer (governance)</h2>

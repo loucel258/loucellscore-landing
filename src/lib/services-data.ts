@@ -428,7 +428,8 @@ export const services: ServiceDetail[] = [
   // can't (or won't) pay Deloitte/Accenture rates. NIST AI RMF
   // + SOC 2 aligned. Ships with the Loucells Core Trust Stack: DLP,
   // RBAC, append-only audit log, human-in-the-loop. Positioning:
-  // "Owned by you. Governed by us." — the retainer is continuous
+  // "Run by us. Controlled by you." — we run the agent on our platform;
+  // the client's data and keys stay theirs. The retainer is continuous
   // governance. Specific revenue ranges intentionally omitted —
   // qualification happens in the Operational Audit call.
   // ─────────────────────────────────────────────────────────
@@ -496,8 +497,8 @@ export const services: ServiceDetail[] = [
       es: "Un agente que tu equipo de seguridad aprueba.",
     },
     description: {
-      en: "We design, build, and deploy a production-grade AI agent on the Loucells Core Trust Stack: append-only audit trail, role-based access control, data loss prevention, RAG over your sources, and human-in-the-loop for sensitive decisions. Built on Claude. Multi-channel: web chat, WhatsApp Business, email, Slack. Owned by you. Governed by us.",
-      es: "Diseñamos, construimos y desplegamos un agente de IA grado producción sobre el Loucells Core Trust Stack: audit trail append-only, control de acceso por roles, prevención de pérdida de datos (DLP), RAG sobre tus fuentes y human-in-the-loop para decisiones sensibles. Construido sobre Claude. Multi-canal: chat web, WhatsApp Business, email, Slack. Tuyo por construcción. Gobernado por nosotros.",
+      en: "We design, build, and deploy a production-grade AI agent on the Loucells Core Trust Stack: append-only audit trail, role-based access control, data loss prevention, RAG over your sources, and human-in-the-loop for sensitive decisions. Built on Claude. Multi-channel: web chat, WhatsApp Business, email, Slack. We run it; your data and keys stay yours.",
+      es: "Diseñamos, construimos y desplegamos un agente de IA grado producción sobre el Loucells Core Trust Stack: audit trail append-only, control de acceso por roles, prevención de pérdida de datos (DLP), RAG sobre tus fuentes y human-in-the-loop para decisiones sensibles. Construido sobre Claude. Multi-canal: chat web, WhatsApp Business, email, Slack. Nosotros lo operamos; tus datos y tus llaves siguen siendo tuyos.",
     },
     priceLabel: {
       en: "$20K-$45K setup + $2.5K/mo",

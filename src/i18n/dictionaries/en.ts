@@ -131,8 +131,8 @@ export const en: Dictionary = {
         desc: "We sell concrete business outcomes, not billable hours. You get a clear project scope, predictable pricing, and exact deliverables from day one.",
       },
       {
-        title: "Your Data, Your Infrastructure",
-        desc: "Every agent we deploy lives on your accounts — your Twilio, your CRM, your storage. We govern it monthly. You can take it back any time the keys are in your name from day one.",
+        title: "Your Data. Your Keys.",
+        desc: "Your customer data stays in your systems — your CRM, your QuickBooks, your storage. The API keys are in your name: revoke them and the agent stops instantly. That's your kill switch, not our lock-in.",
       },
     ],
   },
@@ -412,7 +412,7 @@ export const en: Dictionary = {
     meta: {
       title: "SMV Models — Loucells Core",
       description:
-        "Not a chatbot. An entire department operating in milliseconds. Specialized, governed AI agents owned by you and governed by us.",
+        "Not a chatbot. An entire department operating in milliseconds. Specialized, governed AI agents — we run them, you hold the keys.",
     },
     backLabel: "Back to home",
     hero: {
@@ -489,7 +489,7 @@ export const en: Dictionary = {
     },
     why: {
       eyebrow: "Why Loucells Core Agents",
-      title: "Owned by you. Governed by us.",
+      title: "We run the agent. You hold the keys.",
       items: [
         {
           title: "Specialized, Not General",
@@ -500,8 +500,8 @@ export const en: Dictionary = {
           desc: "Locked pricing logic. Hardened prompts. The agent stays on-script, never invents information, and never leaks data it shouldn't.",
         },
         {
-          title: "Your Accounts. Your Agent.",
-          desc: "The agent lives on your Twilio, your CRM, your storage — your accounts, your keys, your data. We build it, we govern it monthly, but the infrastructure is yours from day one. Cancel anytime and the agent keeps running on your stack.",
+          title: "Your Data. Your Keys. Your Call.",
+          desc: "Your customer data stays in your systems — your CRM, your QuickBooks, your storage. The agent runs on our platform, but the API keys are in your name. Cancel month-to-month and we disconnect you clean: keys revoked, data exported, nothing left wired to your money.",
         },
       ],
     },
@@ -596,8 +596,8 @@ export const en: Dictionary = {
           desc: "Engineered for enterprise safety. We build on models designed specifically to minimize hallucinations and maximize data security.",
         },
         {
-          title: "Owned by You. Governed by Us.",
-          desc: "Your infrastructure, your data. Our ongoing retainer keeps your governance controls aligned with current NIST AI RMF principles and supports your own SOC 2 readiness work.",
+          title: "Run by Us. Controlled by You.",
+          desc: "Your data and your keys stay yours. Our ongoing retainer keeps the governance controls aligned with current NIST AI RMF principles and supports your own SOC 2 readiness work.",
         },
       ],
     },

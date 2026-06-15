@@ -73,7 +73,7 @@ export default async function PortalAgentsPage({
         title="Agents at a glance"
         description={
           <>
-            Each agent below runs against your stack — your Twilio, your CRM, your booking tool. Click any agent to see its conversations, outcomes, and what powers it.
+            Each agent below works across your tools — your Twilio, your CRM, your booking tool. Click any agent to see its conversations, outcomes, and what powers it.
           </>
         }
         actions={
