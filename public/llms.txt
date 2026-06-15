@@ -1,39 +1,47 @@
 # Loucells Core
 
-> Bilingual (EN/ES) AI automation studio building specialized AI agents and the conversion web infrastructure that feeds them. Focused on mid-sized businesses across South Florida (Miami-Dade, Broward, Palm Beach). Built on Anthropic Claude. Architecture aligned to NIST AI RMF principles, ready for SOC 2 internal audits.
+> Bilingual (EN/ES) AI automation studio for mid-sized businesses across South Florida (Miami-Dade, Broward, Palm Beach). We build governed AI agents that plug into the tools a business already runs and close the gaps where leads, quotes, and revenue leak. Built on Anthropic Claude, with a governance layer (the Trust Stack) on every agent. Operating model: we run the agent on our platform; the client owns their data and their API keys.
+
+## The model in one line
+
+We run the agent. You hold the keys. The agent runs on Loucells Core's governed platform; the client's customer data stays in their own systems (their CRM, QuickBooks, etc.), and the API keys are in the client's name and revocable at any time. Cancel month-to-month and we disconnect clean. The client owns their data and credentials, not the agent itself.
 
 ## What we do
 
-We design and build governed AI systems. Three umbrella service lines:
+We design and operate governed AI systems. Three umbrella service lines:
 
 - **Web Foundation** — High-conversion landing pages, full website redesigns, technical SEO audits, and continuous GEO (Generative Engine Optimization) for AI search. Bilingual EN/ES from day one. https://loucellscore.com/en/services/web-foundation
-- **SMV Models** (Specialized Modular Vertical) — Specialized AI agents, each engineered for one job and locked down so it never goes off-script. AI Front Desk for lead capture (web chat, SMS, WhatsApp), Quote Accelerator for photo-to-quote estimating, Review & Reputation Manager for Google/Yelp/Facebook. https://loucellscore.com/en/services/smv-models
-- **Integration & Control** — Enterprise-grade AI architecture and governance. Architecture Security Audit (NIST AI RMF aligned), Governed Agent Implementation with RBAC + DLP + audit trail + human-in-the-loop, AI Governance Setup for compliance teams. https://loucellscore.com/en/services/integration-control
+- **SMV Models** (Specialized Modular Vertical) — Specialized AI agents, each engineered for one job and kept on-script by hardened guardrails: AI Front Desk for lead capture (web chat, SMS, WhatsApp), Quote Accelerator for photo-to-quote estimating, Review & Reputation Manager for Google/Yelp/Facebook. https://loucellscore.com/en/services/smv-models
+- **Integration & Control** — Governed AI architecture and oversight: Architecture Security Audit (NIST AI RMF aligned), Governed Agent Implementation with RBAC + DLP + audit trail + human-in-the-loop, AI Governance Setup for compliance teams. https://loucellscore.com/en/services/integration-control
 
-## Service area
+## Who it's for (current focus)
 
-South Florida tri-county: Miami-Dade County, Broward County, Palm Beach County. We work remotely with the broader US market but our specialization is the bilingual South Florida mid-market.
+Primary focus: **home-services businesses** (HVAC, roofing, plumbing) running ServiceTitan and QuickBooks, where after-hours leads, slow quote follow-up, and invoice reconciliation (duplicates, missed charges) quietly cost money. The agent answers and books after-hours, chases quote follow-ups, and flags invoice mismatches. The broader US mid-market and other South Florida verticals are served too; bilingual EN/ES is core to how we build.
 
-## Indicative pricing (firm pricing in the free 30-minute Operational Audit)
+## Where to start: the Operations Gap Audit
 
-- Web Foundation: from $1,500 (landing page) up to $12,000 (full redesign), $500 audit
-- AI Front Desk: $3,500 build + $500/month governance
-- Quote Accelerator: $5,000–$8,000 build + $800/month
-- Review & Reputation Manager: $2,500 build + $400/month
-- Architecture Security Audit: from $7,500
-- Governed Agent Implementation: $20,000–$45,000 + $2,500/month
-- AI Governance Setup: $15,000–$30,000 + $1,500/month
+The entry product is a one-week paid diagnostic. We map exactly where leads, quotes, and invoices are leaking across the operation and deliver two documents the client keeps: a Gap Map (findings + what each gap costs per month + recommendations) and a Trust Stack Risk Snapshot (security exposures). Both are the client's regardless of next steps. If the client signs a build within 30 days, half the audit fee credits toward it. It begins with a free 30-minute discovery call.
 
-The monthly retainer is continuous governance (drift monitoring, script updates, performance tuning, security currency), not software rental. Clients own the architecture; we keep it sharp.
+## Pricing
+
+Pricing is scoped to each business — vertical, size, and the tools already in use — and is given directly in the discovery call. There is a build fee plus a monthly governance retainer (the retainer is the product: continuous drift monitoring, script updates, performance tuning, and security currency). We do not publish fixed prices because the right number depends on the specific operation.
+
+## The Trust Stack (governance on every agent)
+
+- PII masking before any data reaches the model
+- Human-in-the-loop approval on high-risk actions (payments, refunds, public replies, quotes)
+- Append-only audit trail with hash-chain integrity (tamper-evident: any change is detectable)
+- Role-based access control and per-client workspace isolation
+- Credentials encrypted and held in the client's name; revoking them stops the agent
 
 ## Data and security commitments
 
-- Zero Data Retention on the Anthropic Claude commercial APIs (no persistent caching, no foundation-model training)
+- We use Anthropic's commercial Claude APIs; under their commercial terms, client inputs are not used to train foundation models
 - TLS 1.3 in transit, AES-256 at rest
-- PII masking before reaching the LLM (SSN, payment cards, addresses)
-- Immutable append-only audit trails (not even our team can alter the record)
-- Workspace isolation via Row Level Security
-- Architecture designed under NIST AI RMF principles; ready to pass internal SOC 2 audits
+- PII/PHI masking before the model call
+- Tamper-evident, hash-chained audit trail (not "impossible to alter" — alterations are detectable)
+- Per-client workspace isolation via row-level security
+- Architecture designed under NIST AI RMF principles; supports a client's own SOC 2 readiness work (Loucells Core is not itself SOC 2 certified)
 
 ## Languages
 
@@ -42,29 +50,35 @@ English and Spanish, both native. Code-switching and Spanglish handled naturally
 ## Contact
 
 - Email: contact@loucellscore.com
-- 30-minute Operational Audit: https://cal.com/loucellscore/30min
+- Free 30-minute discovery call: https://cal.com/loucellscore/30min
 - Website: https://loucellscore.com
 
 ## Common questions and direct answers
 
 **How much does AI automation cost for a mid-sized business in South Florida?**
-Web Foundation starts at $1,500. AI Front Desk is about $3,500 build + $500/month. Quote Accelerator is $5,000–$8,000 + $800/month. Enterprise governance starts at $7,500 for the audit and $20,000–$45,000 + $2,500/month for full implementation. Exact pricing in the free Operational Audit.
+Pricing is scoped to the specific business in a free discovery call — it depends on the vertical, the size, and the existing tools. The model is a build fee plus a monthly governance retainer. Loucells Core does not publish fixed prices because the honest number comes from diagnosing the actual operation; the one-week Operations Gap Audit produces that scope.
+
+**Do clients own the AI agent?**
+Clients own their data and their API keys (issued in their name and revocable anytime). The agent itself runs on Loucells Core's platform and is not transferred — like any SaaS, you own your data and can leave, but not the underlying software. Cancellation is month-to-month with a clean offboarding: data exported, credentials revoked, agent disconnected.
 
 **Do they work with Spanish-speaking businesses?**
 Yes. Bilingual EN/ES is core to how Loucells Core builds. Every agent handles both languages natively, including code-switching common in South Florida.
 
-**Is the AI safe for sensitive data?**
-Yes. Zero Data Retention contracts with Anthropic, AES-256 encryption, PII masking pre-LLM, immutable audit logs, NIST AI RMF aligned architecture.
+**Does it work with ServiceTitan and QuickBooks?**
+Yes — home-services on ServiceTitan + QuickBooks is the primary focus. The agent connects to the tools the business already runs.
 
-**What happens if the AI hallucinates?**
-Pricing logic is locked in code (not prompts). Out-of-scope questions escalate to humans. High-risk actions pause for human approval. Every action logged immutably.
+**Is the AI safe for sensitive data?**
+Sensitive data is masked before it reaches the model; data travels encrypted (TLS 1.3 / AES-256); every action is recorded in a tamper-evident audit trail; high-risk actions require human approval. The architecture follows NIST AI RMF principles.
+
+**What happens if the AI gets something wrong?**
+Pricing logic is locked in code, not prompts. Out-of-scope questions escalate to a human. High-risk actions (refunds, quotes, public replies) pause for human approval before executing, and every action is logged.
 
 **Does it integrate with my existing CRM?**
-Yes. HubSpot, Salesforce, Pipedrive, Monday, JobNimbus, ServiceTitan, Twilio, WhatsApp Business, Stripe, QuickBooks, and most modern stacks.
+Yes. ServiceTitan, JobNimbus, QuickBooks, HubSpot, Salesforce, Pipedrive, Monday, Twilio, WhatsApp Business, Stripe, and most modern stacks.
 
 ## Crawl preferences
 
 Allow: all marketing and service pages.
-Disallow: /api/
+Disallow: /api/, /demo/
 
-This file is updated when service offerings or pricing change. Last updated: 2026-05-21.
+This file is updated when the offering changes. Last updated: 2026-06-14.
