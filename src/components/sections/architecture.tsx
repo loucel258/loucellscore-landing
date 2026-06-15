@@ -31,10 +31,10 @@ export function Architecture({
   const pillars = [
     {
       icon: <Lock className="size-4" strokeWidth={1.5} />,
-      title: es ? "Privacidad Absoluta" : "Absolute Privacy",
+      title: es ? "Datos Protegidos por Diseño" : "Data Protected by Design",
       desc: es
-        ? "Cero riesgo de fuga de datos. La IA opera en un entorno cerrado y se integra a tus sistemas actuales sin exponer la información confidencial de tus clientes ni de tu negocio."
-        : "Zero risk of data leaks. The AI runs in a closed environment and integrates with your current systems without exposing confidential customer or business information.",
+        ? "Enmascaramos datos sensibles antes de que toquen el modelo y procesamos en un entorno gobernado y aislado. El agente se integra a tus sistemas actuales sin exponer la información confidencial de tus clientes ni de tu negocio."
+        : "Sensitive data is masked before it ever reaches the model, and processing runs in a governed, isolated environment. The agent integrates with your current systems without exposing confidential customer or business information.",
     },
     {
       icon: <Eye className="size-4" strokeWidth={1.5} />,
@@ -45,10 +45,10 @@ export function Architecture({
     },
     {
       icon: <ShieldCheck className="size-4" strokeWidth={1.5} />,
-      title: es ? "Seguridad de Nivel Corporativo" : "Enterprise-Grade Security",
+      title: es ? "Defensa en Profundidad" : "Defense in Depth",
       desc: es
-        ? "Aplicamos las mismas barreras de seguridad que exigen las grandes corporaciones, adaptadas para que tu negocio opere sin interrupciones, sin vulnerabilidades y desde el día uno."
-        : "We apply the same security barriers large corporations demand, adapted so your business operates without interruptions, without vulnerabilities, from day one.",
+        ? "Controles de seguridad nombrados — credenciales cifradas a tu nombre, permisos mínimos, aprobación humana en acciones de riesgo y registro auditable — alineados con los principios de NIST AI RMF y aplicados desde el día uno."
+        : "Named security controls — credentials encrypted and in your name, least-privilege access, human approval on risky actions, and an auditable record — aligned with NIST AI RMF principles and applied from day one.",
     },
   ];
 
@@ -104,7 +104,7 @@ export function Architecture({
           <div className="relative flex flex-col gap-10">
             <Reveal className="flex flex-col gap-5">
               <span className="text-micro text-cyan">
-                // {es ? "Trust Stack" : "Trust Stack"}
+                {"// Trust Stack"}
               </span>
               <h2 className="text-display-2 text-balance text-text-primary">
                 {es

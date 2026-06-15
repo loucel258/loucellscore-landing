@@ -87,9 +87,11 @@ export default async function PrivacyPage({
               tus eventos, nunca los de otros visitantes.
             </li>
             <li>
-              El log se conserva indefinidamente para mantener la integridad
-              de la hash chain. Si quieres que purguemos los eventos atados
-              a tu session_id, escríbenos a{" "}
+              El registro de auditoría guarda metadata de integridad
+              no-personal y un hash criptográfico del mensaje — no el
+              contenido en texto plano. Ese registro no-personal se conserva
+              para mantener verificable la hash chain. Si quieres que
+              eliminemos datos personales atados a tu sesión, escríbenos a{" "}
               <a href={`mailto:${siteConfig.contactEmail}`}>
                 {siteConfig.contactEmail}
               </a>
@@ -105,10 +107,9 @@ export default async function PrivacyPage({
           </p>
           <ul>
             <li>
-              <strong>Zero Data Retention:</strong> usamos las APIs comerciales
-              de Anthropic (Claude) bajo contratos que garantizan que tus datos
-              nunca se almacenan en caché persistente ni se utilizan para
-              entrenar modelos fundacionales de terceros.
+              <strong>Sin entrenamiento con tu data:</strong> usamos las APIs
+              comerciales de Anthropic (Claude); bajo sus términos comerciales,
+              tus inputs no se usan para entrenar modelos fundacionales.
             </li>
             <li>
               <strong>Cifrado:</strong> TLS 1.3 en tránsito y AES-256 en reposo
@@ -120,9 +121,10 @@ export default async function PrivacyPage({
               enmascaran antes de ser enviados al modelo de lenguaje.
             </li>
             <li>
-              <strong>Audit trail inmutable:</strong> cada acción del agente
-              queda registrada de forma append-only en logs que ni nuestro
-              equipo técnico puede alterar.
+              <strong>Audit trail tamper-evident:</strong> cada acción del
+              agente queda registrada append-only con integridad de hash
+              chain, de modo que cualquier alteración es detectable en el
+              siguiente chequeo de integridad.
             </li>
             <li>
               <strong>Aislamiento por workspace:</strong> los datos de cada
@@ -132,8 +134,8 @@ export default async function PrivacyPage({
 
           <h2>Tus derechos</h2>
           <p>
-            Puedes solicitar acceso, corrección o eliminación de tus datos en
-            cualquier momento escribiendo a{" "}
+            Puedes solicitar acceso, corrección o eliminación de tus datos
+            personales en cualquier momento escribiendo a{" "}
             <a href={`mailto:${siteConfig.contactEmail}`}>
               {siteConfig.contactEmail}
             </a>
@@ -210,9 +212,11 @@ export default async function PrivacyPage({
               see your events, never anyone else&apos;s.
             </li>
             <li>
-              The log is retained indefinitely to preserve hash-chain
-              integrity. To request deletion of events tied to your
-              session_id, email{" "}
+              The audit record stores non-personal integrity metadata and a
+              cryptographic hash of the message — not the plaintext content.
+              This non-personal record is retained to keep the hash-chain
+              verifiable. To request deletion of personal data tied to your
+              session, email{" "}
               <a href={`mailto:${siteConfig.contactEmail}`}>
                 {siteConfig.contactEmail}
               </a>
@@ -228,10 +232,9 @@ export default async function PrivacyPage({
           </p>
           <ul>
             <li>
-              <strong>Zero Data Retention:</strong> we use Anthropic&apos;s
-              commercial Claude APIs under contracts guaranteeing your data
-              is never persistently cached or used to train third-party
-              foundation models.
+              <strong>No training on your data:</strong> we use Anthropic&apos;s
+              commercial Claude APIs; under their commercial terms, your
+              inputs are not used to train foundation models.
             </li>
             <li>
               <strong>Encryption:</strong> TLS 1.3 in transit and AES-256 at
@@ -243,9 +246,9 @@ export default async function PrivacyPage({
               reach the language model.
             </li>
             <li>
-              <strong>Immutable audit trail:</strong> every agent action is
-              logged append-only. Not even our technical team can alter the
-              record.
+              <strong>Tamper-evident audit trail:</strong> every agent action
+              is logged append-only with hash-chain integrity, so any
+              alteration is detectable on the next integrity check.
             </li>
             <li>
               <strong>Workspace isolation:</strong> client data is isolated
@@ -255,8 +258,8 @@ export default async function PrivacyPage({
 
           <h2>Your rights</h2>
           <p>
-            You can request access, correction, or deletion of your data at
-            any time by emailing{" "}
+            You can request access, correction, or deletion of your personal
+            data at any time by emailing{" "}
             <a href={`mailto:${siteConfig.contactEmail}`}>
               {siteConfig.contactEmail}
             </a>
