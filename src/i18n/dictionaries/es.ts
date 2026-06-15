@@ -178,7 +178,7 @@ export const es: Dictionary = {
       },
       {
         q: "¿Mis datos y los datos de mis clientes están seguros?",
-        a: "Tus datos nunca entrenan un modelo público. Corremos sobre las APIs comerciales de Anthropic bajo contratos que garantizan cero retención de datos. El almacenamiento usa cifrado AES-256 en reposo y TLS 1.3 en tránsito. Los campos sensibles se enmascaran antes de tocar al modelo. Los controles debajo son los mismos que las empresas más grandes pagan consultores para configurar — tú los recibes integrados desde el día uno.",
+        a: "Tus datos no se usan para entrenar modelos fundacionales — corremos sobre las APIs comerciales de Anthropic. El almacenamiento usa cifrado AES-256 en reposo y TLS 1.3 en tránsito. Los campos sensibles se enmascaran antes de tocar al modelo. Los controles debajo son los mismos que las empresas más grandes pagan consultores para configurar — tú los recibes integrados desde el día uno.",
       },
       {
         q: "¿Qué pasa si la IA alucina o da información incorrecta?",
@@ -214,7 +214,7 @@ export const es: Dictionary = {
     bullets: [
       { n: "01", text: "Identifica cuellos de botella manuales y fugas ocultas de trabajo." },
       { n: "02", text: "Recibe un plano de automatización con IA hecho a la medida de tu negocio." },
-      { n: "03", text: "Cero riesgo operativo. ROI claro antes de firmar un cheque." },
+      { n: "03", text: "Un diagnóstico pago con entregables que te quedas. ROI claro antes de comprometerte a un build." },
     ],
   },
   footer: {
@@ -502,7 +502,7 @@ export const es: Dictionary = {
         },
         {
           title: "Gobernados, Sin Alucinaciones",
-          desc: "Lógica de precios bloqueada. Prompts blindados. El agente se queda en el guion, nunca inventa información y nunca revela datos que no debe.",
+          desc: "Lógica de precios bloqueada. Prompts blindados. El agente se queda en el guion, está construido para no inventar información, y enmascara datos sensibles antes de que lleguen al modelo.",
         },
         {
           title: "Tu Data. Tus Llaves. Tu Decisión.",
@@ -540,7 +540,7 @@ export const es: Dictionary = {
         {
           n: "02",
           title: "Deuda de Gobernanza",
-          desc: "Desplegar IA sin audit trails ni controles de acceso te garantiza una auditoría de compliance fallida más adelante.",
+          desc: "Desplegar IA sin audit trails ni controles de acceso es como los equipos terminan fallando una auditoría de compliance más adelante.",
         },
         {
           n: "03",

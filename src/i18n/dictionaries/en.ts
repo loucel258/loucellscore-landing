@@ -176,7 +176,7 @@ export const en: Dictionary = {
       },
       {
         q: "What about my data and my customers' data?",
-        a: "Your data never trains a public model. We run on Anthropic's commercial APIs under contracts that guarantee zero data retention. Storage is encrypted at rest (AES-256) and in transit (TLS 1.3). Sensitive fields are masked before they ever reach the model. The controls underneath are the same ones larger companies pay consultants to set up — you get them built in from day one.",
+        a: "Your data isn't used to train foundation models — we run on Anthropic's commercial APIs. Storage is encrypted at rest (AES-256) and in transit (TLS 1.3). Sensitive fields are masked before they ever reach the model. The controls underneath are the same ones larger companies pay consultants to set up — you get them built in from day one.",
       },
       {
         q: "What happens if the AI hallucinates or gives wrong information?",
@@ -212,7 +212,7 @@ export const en: Dictionary = {
     bullets: [
       { n: "01", text: "Identify manual bottlenecks and hidden labor leaks." },
       { n: "02", text: "Receive a tailored AI automation blueprint for your business." },
-      { n: "03", text: "Zero operational risk. Clear ROI before you write a check." },
+      { n: "03", text: "A paid diagnostic with deliverables you keep. Clear ROI before you commit to a build." },
     ],
   },
   footer: {
@@ -419,7 +419,7 @@ export const en: Dictionary = {
       eyebrow: "SMV Models",
       title: "Not a chatbot. An entire department, operating in milliseconds.",
       subtitle:
-        "Each SMV model is a specialized agent engineered for one job and locked down so it never goes off-script. Multi-channel, hardened, and governed every single day.",
+        "Each SMV model is a specialized agent engineered for one job and kept on-script by hardened guardrails. Multi-channel, governed every single day.",
       primaryCta: "Schedule your Audit",
       secondaryCta: "See the models",
     },
@@ -497,7 +497,7 @@ export const en: Dictionary = {
         },
         {
           title: "Governed, Not Hallucinating",
-          desc: "Locked pricing logic. Hardened prompts. The agent stays on-script, never invents information, and never leaks data it shouldn't.",
+          desc: "Locked pricing logic. Hardened prompts. The agent stays on-script, is built not to invent information, and masks sensitive data before it reaches the model.",
         },
         {
           title: "Your Data. Your Keys. Your Call.",
@@ -535,7 +535,7 @@ export const en: Dictionary = {
         {
           n: "02",
           title: "Governance Debt",
-          desc: "Deploying AI without audit trails or access controls guarantees a failed compliance audit down the line.",
+          desc: "Deploying AI without audit trails or access controls is how teams fail a compliance audit down the line.",
         },
         {
           n: "03",

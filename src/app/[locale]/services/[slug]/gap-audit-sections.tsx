@@ -41,7 +41,7 @@ const LENSES: Record<Locale, Lens[]> = {
         "Consistency: does Tuesday-morning you sound like Saturday-afternoon staff?",
         "Review responses, quote follow-ups, and the messages that never went out",
       ],
-      evidence: "75-150 real message samples scored across 4 dimensions — no SMB-tier competitor audits this as its own lens",
+      evidence: "75-150 real message samples scored across 4 dimensions — the lens most audits skip entirely",
       finding: "“Of 11 negative reviews in the last 12 months, 7 received owner replies that disputed the customer's account. 3 escalated into public back-and-forth.”",
     },
     {
@@ -85,7 +85,7 @@ const LENSES: Record<Locale, Lens[]> = {
         "Consistencia: ¿el tú de martes a la mañana suena igual que tu staff un sábado a la tarde?",
         "Respuestas a reseñas, follow-ups de cotizaciones, y los mensajes que nunca salieron",
       ],
-      evidence: "75-150 muestras de mensajes reales calificadas en 4 dimensiones — ningún competidor SMB audita esto como lente propio",
+      evidence: "75-150 muestras de mensajes reales calificadas en 4 dimensiones — el lente que la mayoría de las auditorías ni mira",
       finding: "“De 11 reseñas negativas en los últimos 12 meses, 7 recibieron respuestas del dueño disputando la versión del cliente. 3 escalaron a ida y vuelta público.”",
     },
     {
@@ -127,7 +127,7 @@ const TIMELINE: Record<Locale, { day: string; title: string; detail: string }[]>
 const COPY = {
   en: {
     lensEyebrow: "// the instrument",
-    lensTitle: "Three lenses. Nobody at this tier runs all three.",
+    lensTitle: "Three lenses. Most audits use one.",
     lensSub: "Generic audits count leads and stop. This one also examines what gets said to your customers and where their data sits — the two places operations bleed quietly.",
     evidenceLabel: "Evidence we pull",
     findingLabel: "Sample finding — the level of specificity you get",
@@ -153,7 +153,7 @@ const COPY = {
   },
   es: {
     lensEyebrow: "// el instrumento",
-    lensTitle: "Tres lentes. Nadie en este tier corre los tres.",
+    lensTitle: "Tres lentes. La mayoría de las auditorías usa uno.",
     lensSub: "Las auditorías genéricas cuentan leads y paran ahí. Esta también examina qué se les dice a tus clientes y dónde viven sus datos — los dos lugares donde una operación sangra en silencio.",
     evidenceLabel: "Evidencia que extraemos",
     findingLabel: "Hallazgo de muestra — el nivel de especificidad que recibes",
