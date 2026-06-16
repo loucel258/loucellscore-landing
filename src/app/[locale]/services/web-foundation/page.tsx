@@ -81,7 +81,7 @@ export default async function WebFoundationPage({
             {data.backLabel}
           </Link>
         </div>
-        <SubpageHero data={data.hero} imageSrc="/hero/08-web-foundation.jpeg" />
+        <SubpageHero data={data.hero} imageSrc="/hero/08-web-foundation.webp" />
         <SubpageProblem data={data.problem} />
         <SubpageServices data={data.services} />
         <SubpageProcess data={data.process} />

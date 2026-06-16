@@ -169,10 +169,11 @@ export function Cluster3D({
           }
           style={{ transform: "translateZ(-90px) scale(1.12)", filter: "blur(14px)" }}
         />
-        {/* Mid layer — centerpiece */}
+        {/* Mid layer — centerpiece (LCP element above the fold) */}
         <img
           src={imageSrc}
           alt=""
+          fetchPriority="high"
           draggable={false}
           className={
             reduce

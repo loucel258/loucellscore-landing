@@ -212,7 +212,7 @@ export function GapAuditHeroVisual({ locale }: { locale: Locale }) {
           }}
         >
           <Cluster3D
-            imageSrc="/hero/gap-audit-hero.jpeg"
+            imageSrc="/hero/gap-audit-hero.webp"
             glareIntensity={0.14}
             showArcs={false}
           />

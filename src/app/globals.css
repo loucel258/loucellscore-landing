@@ -78,7 +78,7 @@
 
   --text-primary: #F8FAFC;     /* slate-50 with subtle blue tint */
   --text-secondary: #94A3B8;   /* slate-400 — captions */
-  --text-tertiary: #64748B;    /* slate-500 — micro labels */
+  --text-tertiary: #7C899E;    /* slate 400/500 blend — micro labels, WCAG AA 5:1 on --bg */
 
   --accent-cyan: #06B6D4;       /* primary CTA */
   --accent-cyan-glow: #22D3EE;
@@ -350,13 +350,13 @@
 }
 
 /* ---------------------------------------------------------------------
-   Portal + admin shells: visible keyboard focus on every interactive
-   element. Buttons across the portal were shipped without focus styles;
-   scoping a :focus-visible ring here closes the WCAG gap in one place
-   without touching every component. data-shell is set on the layout
-   roots.
+   Visible keyboard focus on every interactive element, site-wide.
+   Marketing pages and the portal/admin shells were shipped without
+   focus styles; a single :focus-visible ring closes the WCAG 2.4.7 gap
+   in one place without touching every component. The cyan ring at 0.7
+   lightness reads on both the dark marketing bg and the light shell.
    -------------------------------------------------------------------- */
-[data-shell] :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid oklch(0.7 0.12 220);
   outline-offset: 2px;
   border-radius: 4px;
