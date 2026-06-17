@@ -16,7 +16,8 @@ import { ChatPulseDashboard } from "./dashboard";
  * cookie with the right shared secret = in.
  *
  * Data source: Supabase service-role queries against:
- *   - audit_logs (ws_chat_loucel_landing scope)
+ *   - audit_logs (scoped to the live landing agent's workspace, resolved
+ *     from its slug via client_agents — see chatWorkspaceId below)
  *   - leads
  *
  * NEVER deploy this without ADMIN_DASHBOARD_PASSWORD set. The route is
@@ -46,6 +47,22 @@ export default async function ChatPulsePage() {
     );
   }
 
+  // Resolve the live agent's workspace_id from its slug, mirroring the
+  // landing layout (NEXT_PUBLIC_AGENT_SLUG ?? "loucels-landing"). The chat
+  // moved from the legacy ws_chat_loucel_landing to a client_agents-backed
+  // workspace during the dogfood migration; resolving by slug keeps this
+  // dashboard pointed at the live agent even if the workspace_id changes
+  // again. Falls back to the legacy id if the agent row isn't found.
+  const agentSlug = process.env.NEXT_PUBLIC_AGENT_SLUG ?? "loucels-landing";
+  const { data: agentRow } = await sb
+    .from("client_agents")
+    .select("workspace_id")
+    .eq("slug", agentSlug)
+    .maybeSingle();
+  const chatWorkspaceId =
+    (agentRow as { workspace_id?: string } | null)?.workspace_id ??
+    "ws_chat_loucel_landing";
+
   // Time windows
   const now = new Date();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -66,12 +83,12 @@ export default async function ChatPulsePage() {
     sb
       .from("audit_logs")
       .select("decision, blocked_by, reason, source", { count: "exact" })
-      .eq("workspace_id", "ws_chat_loucel_landing")
+      .eq("workspace_id", chatWorkspaceId)
       .gte("inserted_at", dayAgo),
     sb
       .from("audit_logs")
       .select("decision, blocked_by, reason, source", { count: "exact" })
-      .eq("workspace_id", "ws_chat_loucel_landing")
+      .eq("workspace_id", chatWorkspaceId)
       .gte("inserted_at", weekAgo),
     sb.from("leads").select("id, booking_status", { count: "exact" }).gte("created_at", dayAgo),
     sb.from("leads").select("id, booking_status", { count: "exact" }).gte("created_at", weekAgo),
@@ -84,14 +101,14 @@ export default async function ChatPulsePage() {
     sb
       .from("audit_logs")
       .select("inserted_at, decision, blocked_by, reason")
-      .eq("workspace_id", "ws_chat_loucel_landing")
+      .eq("workspace_id", chatWorkspaceId)
       .eq("decision", "DENY")
       .order("inserted_at", { ascending: false })
       .limit(50),
     sb
       .from("audit_logs")
       .select("inserted_at, blocked_by, reason")
-      .eq("workspace_id", "ws_chat_loucel_landing")
+      .eq("workspace_id", chatWorkspaceId)
       .eq("blocked_by", "upstream_error")
       .order("inserted_at", { ascending: false })
       .limit(50),
