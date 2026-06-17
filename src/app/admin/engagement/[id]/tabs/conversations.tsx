@@ -1,4 +1,4 @@
-import { MessageSquare, ArrowUpRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { MessageSquare, ArrowUpRight, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { Panel } from "@/components/workspace/panel";
 import { Metric, MetricRow } from "@/components/workspace/metric";
 import { BarStrip } from "@/components/workspace/sparkline";
@@ -6,12 +6,23 @@ import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { formatShortDate, daysAgo } from "@/lib/admin/format";
 import type { AuditLogRow } from "../types";
 
+export type TranscriptTurn = {
+  role: "user" | "assistant";
+  text: string;
+  at: string;
+  toolSummary: string | null;
+};
+/** Decrypted conversation turns keyed by session_id. */
+export type SessionTranscripts = Record<string, TranscriptTurn[]>;
+
 export function ConversationsTab({
   workspaceId,
   audit,
+  transcripts,
 }: {
   workspaceId: string | null;
   audit: AuditLogRow[];
+  transcripts: SessionTranscripts;
 }) {
   if (!workspaceId) {
     return (
@@ -61,6 +72,15 @@ export function ConversationsTab({
   const resolutionRate = totalSessions > 0 ? ((totalSessions - totalEscalated) / totalSessions) * 100 : 0;
   const escalationRate = totalSessions > 0 ? (totalEscalated / totalSessions) * 100 : 0;
   const avgMsgs = totalSessions > 0 ? audit.length / totalSessions : 0;
+
+  // Decrypted transcripts, grouped into sessions sorted by most recent turn.
+  const transcriptSessions = Object.entries(transcripts)
+    .map(([sessionId, turns]) => ({
+      sessionId,
+      turns,
+      lastAt: turns[turns.length - 1]?.at ?? turns[0]?.at ?? "",
+    }))
+    .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
 
   return (
     <div className="space-y-6">
@@ -162,6 +182,63 @@ export function ConversationsTab({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
+        title="Transcripts"
+        eyebrow="Decrypted · admin-only"
+        icon={<Lock className="size-4" />}
+      >
+        {transcriptSessions.length === 0 ? (
+          <EmptyPanel
+            icon={<Lock className="size-5" />}
+            title="No transcripts stored"
+            description="Conversation messages are persisted encrypted once the agent is live with a retention policy. They decrypt here for review."
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[10px] text-neutral-500">
+              End-to-end encrypted at rest (AES-256-GCM). Decrypted server-side
+              for this admin view only. May contain customer PII.
+            </p>
+            {transcriptSessions.map((s) => (
+              <details
+                key={s.sessionId}
+                className="rounded-lg border border-neutral-200 bg-white"
+              >
+                <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-neutral-50">
+                  <span className="font-mono text-[10px] text-neutral-700">
+                    {s.sessionId.slice(0, 24)}…
+                  </span>
+                  <span className="tabular-nums text-neutral-500">
+                    {s.turns.length} msg{s.turns.length === 1 ? "" : "s"} · {formatShortDate(s.lastAt)}
+                  </span>
+                </summary>
+                <div className="space-y-2 border-t border-neutral-100 px-3 py-3">
+                  {s.turns.map((t, i) => (
+                    <div
+                      key={i}
+                      className={t.role === "user" ? "flex justify-end" : "flex justify-start"}
+                    >
+                      <div
+                        className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-xs ${
+                          t.role === "user"
+                            ? "bg-cyan-600 text-white"
+                            : "bg-neutral-100 text-neutral-800"
+                        }`}
+                      >
+                        {t.text}
+                        {t.toolSummary && (
+                          <div className="mt-1 text-[10px] opacity-70">🔧 {t.toolSummary}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
           </div>
         )}
       </Panel>

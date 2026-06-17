@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
+import { decryptMessage, encryptionAvailable } from "@/lib/portal/encrypt";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { AuthWall } from "@/components/admin/auth-wall";
 import { PageHeader } from "@/components/admin/page-header";
@@ -18,7 +19,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { WorkspaceTabs } from "@/components/workspace/tabs";
 import { getCostBreakdown } from "@/lib/admin/costs";
 import { OverviewTab } from "./tabs/overview";
-import { ConversationsTab } from "./tabs/conversations";
+import { ConversationsTab, type SessionTranscripts } from "./tabs/conversations";
 import { CostsTab } from "./tabs/costs";
 import { HitlTab } from "./tabs/hitl";
 import { AuditTab } from "./tabs/audit";
@@ -183,6 +184,15 @@ export default async function EngagementWorkspacePage({
         trendDaily: [],
       });
 
+  // Encrypted conversation transcripts for this engagement. Keyed by
+  // engagement_id (the decryption salt), independent of workspace_id.
+  const transcriptsQuery = sb
+    .from("conversation_messages")
+    .select("session_id, role, cipher_b64, tool_summary, inserted_at")
+    .eq("engagement_id", id)
+    .order("inserted_at", { ascending: true })
+    .limit(2000);
+
   const [
     auditRes,
     audit24hRes,
@@ -191,6 +201,7 @@ export default async function EngagementWorkspacePage({
     recentApprovalsRes,
     cost30d,
     cost7d,
+    transcriptsRes,
   ] = await Promise.all([
     auditQuery,
     audit24hCountQuery,
@@ -199,7 +210,35 @@ export default async function EngagementWorkspacePage({
     recentApprovalsQuery,
     cost30dPromise,
     cost7dPromise,
+    transcriptsQuery,
   ]);
+
+  // Decrypt server-side. A bad row never breaks the page — it renders a
+  // placeholder so the rest of the transcript stays readable.
+  const transcripts: SessionTranscripts = {};
+  if (encryptionAvailable()) {
+    type CipherRow = {
+      session_id: string;
+      role: "user" | "assistant";
+      cipher_b64: string;
+      tool_summary: string | null;
+      inserted_at: string;
+    };
+    for (const row of (transcriptsRes.data as CipherRow[] | null) ?? []) {
+      let text: string;
+      try {
+        text = decryptMessage(id, row.cipher_b64);
+      } catch {
+        text = "[unable to decrypt]";
+      }
+      (transcripts[row.session_id] ??= []).push({
+        role: row.role,
+        text,
+        at: row.inserted_at,
+        toolSummary: row.tool_summary,
+      });
+    }
+  }
 
   const audit = (auditRes.data as AuditLogRow[]) ?? [];
   const pending = (pendingRes.data as PendingApprovalRow[]) ?? [];
@@ -274,7 +313,7 @@ export default async function EngagementWorkspacePage({
         />
       )}
       {activeTab === "conversations" && (
-        <ConversationsTab workspaceId={workspaceId} audit={audit} />
+        <ConversationsTab workspaceId={workspaceId} audit={audit} transcripts={transcripts} />
       )}
       {activeTab === "costs" && (
         <CostsTab
