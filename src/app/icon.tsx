@@ -10,7 +10,7 @@ export default function Icon() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#050507",
+          background: "#0F172A",
           borderRadius: 14,
           display: "flex",
           alignItems: "center",
@@ -23,8 +23,8 @@ export default function Icon() {
             height: 22,
             borderRadius: 999,
             background:
-              "radial-gradient(circle at 30% 30%, #00E5FF 0%, #6B4FFF 55%, #FF2D7A 100%)",
-            boxShadow: "0 0 16px 2px rgba(0, 229, 255, 0.45)",
+              "radial-gradient(circle at 30% 30%, #06B6D4 0%, #8B5CF6 55%, #7C3AED 100%)",
+            boxShadow: "0 0 16px 2px rgba(6, 182, 212, 0.45)",
           }}
         />
       </div>

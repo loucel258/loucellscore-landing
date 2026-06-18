@@ -2,13 +2,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Loucells Core mark">
   <defs>
     <radialGradient id="g" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00E5FF"/>
-      <stop offset="55%" stop-color="#6B4FFF"/>
-      <stop offset="100%" stop-color="#FF2D7A"/>
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="55%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
     </radialGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="#050507"/>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
   <circle cx="32" cy="32" r="11" fill="url(#g)"/>
-  <circle cx="32" cy="32" r="20" fill="none" stroke="#00E5FF" stroke-opacity="0.25" stroke-width="1"/>
-  <circle cx="32" cy="32" r="27" fill="none" stroke="#6B4FFF" stroke-opacity="0.15" stroke-width="1"/>
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#06B6D4" stroke-opacity="0.25" stroke-width="1"/>
+  <circle cx="32" cy="32" r="27" fill="none" stroke="#8B5CF6" stroke-opacity="0.15" stroke-width="1"/>
 </svg>

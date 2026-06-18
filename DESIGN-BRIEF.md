@@ -1,4 +1,4 @@
-# Loucel Labs — Design Brief
+# Loucells Core — Design Brief
 
 > Working document. Source of truth for visual decisions during build.
 
@@ -135,7 +135,7 @@ A slow-rotating 3D scene: **15–25 glowing nodes** floating in space, connected
 
 9. FOOTER — minimal
    - 3 columns: brand+tagline | nav links | contact + social
-   - Bottom: ©2026 Loucel Labs · All rights reserved · Email
+   - Bottom: ©2026 Loucells Core · All rights reserved · Email
 ```
 
 ---
@@ -182,7 +182,7 @@ A slow-rotating 3D scene: **15–25 glowing nodes** floating in space, connected
 
 ## 9. Logo direction (placeholder until designed)
 
-- Wordmark only: "Loucel Labs" in Geist Sans 600, tight tracking
+- Wordmark only: "Loucells Core" in Geist Sans 600, tight tracking
 - Optional mark: a single glowing dot or 3-node mini-constellation to the left
 - No icon font, no SVG yet — pure type until we design
 

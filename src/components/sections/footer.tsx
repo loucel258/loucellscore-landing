@@ -75,7 +75,7 @@ export function Footer({
             {siteConfig.contactEmail}
           </a>
           <span className="text-mono-xs text-text-tertiary">
-            © {new Date().getFullYear()} LOUCEL LABS · {dict.footer.rights.toUpperCase()}
+            © {new Date().getFullYear()} LOUCELLS CORE · {dict.footer.rights.toUpperCase()}
           </span>
         </div>
       </div>

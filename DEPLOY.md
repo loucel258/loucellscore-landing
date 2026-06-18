@@ -15,28 +15,28 @@ Set these in Vercel dashboard (Settings → Environment Variables) for the **pro
 
 | Variable | Example | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `https://loucellabs.com` | No trailing slash. Used for canonical URLs, sitemap, OG. |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | `hello@loucellabs.com` | Footer, legal, mailto links. |
-| `NEXT_PUBLIC_CAL_URL` | `https://cal.com/loucellabs/30min` | Booking link in CTAs. |
+| `NEXT_PUBLIC_SITE_URL` | `https://loucellscore.com` | No trailing slash. Used for canonical URLs, sitemap, OG. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | `contact@loucellscore.com` | Footer, legal, mailto links. |
+| `NEXT_PUBLIC_CAL_URL` | `https://cal.com/loucellscore/30min` | Booking link in CTAs. |
 
 For local development copy `.env.example` to `.env.local` and adjust.
 
 ## Domain setup
 
-1. Buy `loucellabs.com` (or whichever final name).
-2. In Vercel: Settings → Domains → Add `loucellabs.com` and `www.loucellabs.com`.
+1. Buy `loucellscore.com` (or whichever final name).
+2. In Vercel: Settings → Domains → Add `loucellscore.com` and `www.loucellscore.com`.
 3. Update DNS at registrar:
    - Apex `@` → A record to `76.76.21.21`
    - `www` → CNAME to `cname.vercel-dns.com`
-4. Set `loucellabs.com` as primary (www → apex redirect).
+4. Set `loucellscore.com` as primary (www → apex redirect).
 5. Update `NEXT_PUBLIC_SITE_URL` env var to match final domain.
 6. Redeploy.
 
 ## Pre-launch checklist
 
-- [ ] Replace placeholder Cal.com URL (`cal.com/loucellabs/30min`) with real one
+- [ ] Replace placeholder Cal.com URL (`cal.com/loucellscore/30min`) with real one
 - [ ] Set up Google Search Console — verify with DNS TXT or HTML file
-- [ ] Submit sitemap: `https://loucellabs.com/sitemap.xml`
+- [ ] Submit sitemap: `https://loucellscore.com/sitemap.xml`
 - [ ] Set up Google Business Profile (if local presence)
 - [ ] Replace `/public/og-default.png` (1200×630) — currently missing, create one
 - [ ] Replace `/public/favicon.ico` — currently default Next.js

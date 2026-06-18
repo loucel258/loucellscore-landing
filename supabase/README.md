@@ -1,4 +1,4 @@
-# Loucel Labs · Supabase setup
+# Loucells Core · Supabase setup
 
 This folder contains the SQL migrations the Trust Stack demos need. Run them once on a fresh project and the demos light up.
 

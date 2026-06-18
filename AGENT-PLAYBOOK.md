@@ -1,4 +1,4 @@
-# AGENT PLAYBOOK — Loucel Labs
+# AGENT PLAYBOOK — Loucells Core
 
 **For:** Steven Estrada
 **Date:** 2026-05-25
@@ -43,7 +43,7 @@ That's it. Three rules. No PR template, no checklist theater.
 ## 3. Agents to ignore right now
 
 - **MCP Builder** — premature. You have no customer asking for an MCP integration. Revisit at deal #5.
-- **Tax Strategist / Bookkeeper & Controller** — you're pre-revenue on Loucel Labs. A CPA at year-end is cheaper than agent loops on books that don't exist yet.
+- **Tax Strategist / Bookkeeper & Controller** — you're pre-revenue on Loucells Core. A CPA at year-end is cheaper than agent loops on books that don't exist yet.
 - **The full SEO sub-fleet** — you have a landing page with 4 demos and no domain yet. SEO is a Q3 problem. Buy the domain, ship to Vercel, then revisit one SEO agent (technical) — not the fleet.
 - **Paid-ads sub-fleet** — same logic. You have no conversion data. Running audit-meta or audit-google now spends money to learn what Analytics Reporter will tell you for free in two weeks.
 

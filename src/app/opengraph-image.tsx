@@ -11,7 +11,7 @@ export default function OG() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#050507",
+          background: "#0F172A",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
@@ -31,7 +31,7 @@ export default function OG() {
             height: 540,
             borderRadius: 999,
             background:
-              "radial-gradient(circle, rgba(0,229,255,0.35) 0%, rgba(0,229,255,0) 65%)",
+              "radial-gradient(circle, rgba(6,182,212,0.35) 0%, rgba(6,182,212,0) 65%)",
           }}
         />
         <div
@@ -43,7 +43,7 @@ export default function OG() {
             height: 580,
             borderRadius: 999,
             background:
-              "radial-gradient(circle, rgba(107,79,255,0.30) 0%, rgba(107,79,255,0) 65%)",
+              "radial-gradient(circle, rgba(139,92,246,0.30) 0%, rgba(139,92,246,0) 65%)",
           }}
         />
         <div
@@ -55,7 +55,7 @@ export default function OG() {
             height: 320,
             borderRadius: 999,
             background:
-              "radial-gradient(circle, rgba(255,45,122,0.20) 0%, rgba(255,45,122,0) 65%)",
+              "radial-gradient(circle, rgba(124,58,237,0.20) 0%, rgba(124,58,237,0) 65%)",
           }}
         />
 
@@ -74,15 +74,15 @@ export default function OG() {
               height: 18,
               borderRadius: 999,
               background:
-                "radial-gradient(circle at 30% 30%, #00E5FF 0%, #6B4FFF 55%, #FF2D7A 100%)",
-              boxShadow: "0 0 24px 4px rgba(0,229,255,0.4)",
+                "radial-gradient(circle at 30% 30%, #06B6D4 0%, #8B5CF6 55%, #7C3AED 100%)",
+              boxShadow: "0 0 24px 4px rgba(6,182,212,0.4)",
             }}
           />
           <span
             style={{
               fontSize: 22,
               fontWeight: 600,
-              color: "#F5F5F7",
+              color: "#F8FAFC",
               letterSpacing: -0.5,
             }}
           >
@@ -103,7 +103,7 @@ export default function OG() {
             style={{
               fontSize: 14,
               fontFamily: "ui-monospace, monospace",
-              color: "#00E5FF",
+              color: "#06B6D4",
               textTransform: "uppercase",
               letterSpacing: 4,
             }}
@@ -114,7 +114,7 @@ export default function OG() {
             style={{
               fontSize: 70,
               fontWeight: 600,
-              color: "#F5F5F7",
+              color: "#F8FAFC",
               letterSpacing: -2.5,
               lineHeight: 1.02,
               maxWidth: 980,
@@ -124,12 +124,12 @@ export default function OG() {
           >
             <span>AI Architecture</span>
             <span>Built to Scale</span>
-            <span style={{ color: "#00E5FF" }}>Your Business.</span>
+            <span style={{ color: "#06B6D4" }}>Your Business.</span>
           </div>
           <span
             style={{
               fontSize: 22,
-              color: "rgba(245,245,247,0.6)",
+              color: "rgba(248,250,252,0.6)",
               maxWidth: 800,
             }}
           >
@@ -145,7 +145,7 @@ export default function OG() {
             justifyContent: "space-between",
             alignItems: "flex-end",
             zIndex: 10,
-            color: "rgba(245,245,247,0.5)",
+            color: "rgba(248,250,252,0.5)",
             fontSize: 16,
             fontFamily: "ui-monospace, monospace",
             textTransform: "uppercase",
