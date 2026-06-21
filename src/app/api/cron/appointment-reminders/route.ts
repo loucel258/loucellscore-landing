@@ -12,8 +12,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Vercel cron: appointment-reminders (Front Desk, Phase 1).
- * Schedule: hourly — see vercel.json. Each run texts clients whose appointment
- * starts ~lead_hours from now (default 24h), exactly once (idempotent).
+ * Schedule: daily — see vercel.json (Vercel Hobby allows daily crons only).
+ * Each run texts clients whose appointment is ~lead_hours away (default 24h),
+ * exactly once (idempotent ledger).
  *
  * Walks every LIVE ai_front_desk agent that has reminders enabled in its
  * integrations config, reads its Google Calendar, and sends via its Twilio.

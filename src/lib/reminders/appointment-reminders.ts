@@ -119,11 +119,12 @@ export async function runRemindersForAgent(
     failed: 0,
   };
 
-  // Target events starting in the [lead, lead+1h] band so an hourly cron sends
-  // each reminder ~leadHours before the appointment exactly once.
+  // Daily cron (Vercel Hobby allows daily crons only). Use a 24h-wide band
+  // centered on leadHours so each appointment lands in exactly one daily run
+  // (~the day before); the idempotency ledger backstops any overlap.
   const now = Date.now();
-  const timeMinIso = new Date(now + s.leadHours * 3600_000).toISOString();
-  const timeMaxIso = new Date(now + (s.leadHours + 1) * 3600_000).toISOString();
+  const timeMinIso = new Date(now + (s.leadHours - 12) * 3600_000).toISOString();
+  const timeMaxIso = new Date(now + (s.leadHours + 12) * 3600_000).toISOString();
 
   const list = await listEvents({ calendarId: s.calendarId, timeMinIso, timeMaxIso });
   if (!list.ok) {
