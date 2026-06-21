@@ -19,6 +19,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { KpiCard } from "@/components/admin/kpi-card";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ConfigPanel } from "./config-panel";
+import { IntegrationsPanel } from "./integrations-panel";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -331,6 +332,10 @@ export default async function AgentDetailPage({
           }}
           baseUrl={(process.env.NEXT_PUBLIC_APP_URL ?? "https://loucellscore.com").replace(/\/$/, "")}
         />
+      )}
+
+      {!a.archived_at && (
+        <IntegrationsPanel agentId={a.id} integrations={a.integrations} />
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

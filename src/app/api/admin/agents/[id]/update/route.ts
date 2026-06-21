@@ -45,6 +45,26 @@ const InputSchema = z.object({
   monthlyTokenBudget: z.number().int().min(0).max(1_000_000_000).optional(),
   maxTokensPerMessage: z.number().int().min(256).max(8192).optional(),
   notes: z.string().max(4000).nullable().optional(),
+  integrations: z
+    .object({
+      calendar: z
+        .object({
+          provider: z.literal("google").optional(),
+          calendar_id: z.string().max(300).optional(),
+          timezone: z.string().max(60).optional(),
+        })
+        .optional(),
+      reminders: z
+        .object({
+          enabled: z.boolean().optional(),
+          lead_hours: z.number().int().min(1).max(168).optional(),
+          channel: z.enum(["sms", "whatsapp"]).optional(),
+          from_number: z.string().max(20).optional(),
+        })
+        .optional(),
+      locale: z.enum(["es", "en"]).optional(),
+    })
+    .optional(),
 });
 
 type AgentRow = {
@@ -58,6 +78,7 @@ type AgentRow = {
   uat_started_at: string | null;
   live_started_at: string | null;
   archived_at: string | null;
+  integrations: Record<string, unknown> | null;
 };
 
 export async function POST(
@@ -84,7 +105,7 @@ export async function POST(
 
   const { data: existing } = await sb
     .from("client_agents")
-    .select("id, slug, workspace_id, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at")
+    .select("id, slug, workspace_id, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at, integrations")
     .eq("id", id)
     .maybeSingle();
   if (!existing) {
@@ -130,6 +151,24 @@ export async function POST(
   if (input.notes !== undefined) {
     update.notes = input.notes;
     changed.push("notes");
+  }
+
+  // Integrations config (calendar + reminders). Deep-merge into the existing
+  // jsonb so we never clobber sibling keys (e.g. a future "crm" block).
+  if (input.integrations !== undefined) {
+    const cur = (agent.integrations ?? {}) as Record<string, Record<string, unknown>>;
+    const next: Record<string, unknown> = { ...cur };
+    if (input.integrations.calendar) {
+      next.calendar = { ...(cur.calendar ?? {}), ...input.integrations.calendar };
+    }
+    if (input.integrations.reminders) {
+      next.reminders = { ...(cur.reminders ?? {}), ...input.integrations.reminders };
+    }
+    if (input.integrations.locale !== undefined) {
+      next.locale = input.integrations.locale;
+    }
+    update.integrations = next;
+    changed.push("integrations");
   }
 
   // Origins: every entry must canonicalize. We reject the whole write on
