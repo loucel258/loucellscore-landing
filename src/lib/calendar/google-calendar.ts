@@ -16,7 +16,9 @@ import crypto from "node:crypto";
  * reminder cron skips gracefully before Google is wired up.
  */
 
-const SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+// Read + write: we read for reminders/availability and write the appointment
+// mirror. The salon shares her calendar with "Make changes to events".
+const SCOPE = "https://www.googleapis.com/auth/calendar";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 export type CalendarEvent = {
@@ -147,5 +149,99 @@ export async function listEvents(args: {
     return { ok: true, events };
   } catch (e) {
     return { ok: false, reason: "fetch_failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export type WriteEventResult =
+  | { ok: true; eventId: string }
+  | { ok: false; reason: "no_service_account" | "auth_failed" | "write_failed"; error?: string };
+
+/** Create an event (the appointment mirror in the client's calendar). */
+export async function createEvent(args: {
+  calendarId: string;
+  summary: string;
+  description?: string;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+}): Promise<WriteEventResult> {
+  if (!getServiceAccount()) return { ok: false, reason: "no_service_account" };
+  const token = await getAccessToken();
+  if (!token) return { ok: false, reason: "auth_failed" };
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(args.calendarId)}/events`;
+  const body = {
+    summary: args.summary,
+    description: args.description ?? "",
+    start: { dateTime: args.startIso, timeZone: args.timezone },
+    end: { dateTime: args.endIso, timeZone: args.timezone },
+  };
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      return { ok: false, reason: "write_failed", error: `${res.status}: ${t.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { id?: string };
+    return { ok: true, eventId: data.id ?? "" };
+  } catch (e) {
+    return { ok: false, reason: "write_failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Move an event's time (reschedule). */
+export async function updateEventTime(args: {
+  calendarId: string;
+  eventId: string;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+}): Promise<WriteEventResult> {
+  if (!getServiceAccount()) return { ok: false, reason: "no_service_account" };
+  const token = await getAccessToken();
+  if (!token) return { ok: false, reason: "auth_failed" };
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(args.calendarId)}/events/${encodeURIComponent(args.eventId)}`;
+  const body = {
+    start: { dateTime: args.startIso, timeZone: args.timezone },
+    end: { dateTime: args.endIso, timeZone: args.timezone },
+  };
+  try {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const t = await res.text();
+      return { ok: false, reason: "write_failed", error: `${res.status}: ${t.slice(0, 200)}` };
+    }
+    return { ok: true, eventId: args.eventId };
+  } catch (e) {
+    return { ok: false, reason: "write_failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Delete an event (cancellation). Tolerates already-gone (404/410). */
+export async function deleteEvent(args: {
+  calendarId: string;
+  eventId: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!getServiceAccount()) return { ok: false, error: "no_service_account" };
+  const token = await getAccessToken();
+  if (!token) return { ok: false, error: "auth_failed" };
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(args.calendarId)}/events/${encodeURIComponent(args.eventId)}`;
+  try {
+    const res = await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok || res.status === 404 || res.status === 410) return { ok: true };
+    const t = await res.text();
+    return { ok: false, error: `${res.status}: ${t.slice(0, 200)}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
