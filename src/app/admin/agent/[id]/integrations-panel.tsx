@@ -221,7 +221,7 @@ export function IntegrationsPanel({
               className={inputCls}
               value={twilioToken}
               onChange={(e) => setTwilioToken(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder="Paste Twilio Auth Token"
             />
           </div>
         </div>
