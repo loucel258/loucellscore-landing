@@ -1,17 +1,18 @@
 import "server-only";
 import { getServiceClient } from "@/lib/audit/client";
 import { writeAuditEntry } from "@/lib/audit/writer";
+import { encryptMessage, decryptMessage, encryptionAvailable } from "@/lib/portal/encrypt";
 
 /**
- * Credential vault wrapper.
+ * Credential vault — application-layer AES-256-GCM.
  *
- * - Writes always go through service_role and call vault_write_credential
- *   (which encrypts in the database with pgsodium AEAD bound to workspace_id).
- * - Reads always go through vault_read_credential, which enforces JWT
- *   workspace match before decrypting.
- * - Every successful read is logged to audit_logs (source='dlp' for now;
- *   future: dedicated 'vault_read' source). This is non-negotiable — token
- *   usage MUST be traceable.
+ * History: the original vault (mig 004) encrypted in-DB via pgsodium, which
+ * fails in production ("permission denied for function crypto_aead_det_encrypt")
+ * and is deprecated by Supabase. This implementation keeps the SAME interface
+ * but encrypts in Node with the proven envelope used for conversation
+ * transcripts (lib/portal/encrypt.ts, keyed by CONVERSATION_ENCRYPTION_KEY) and
+ * stores base64 ciphertext in vault_credentials (mig 050). The DB never sees
+ * plaintext. Every read is still audited.
  */
 
 export type Provider =
@@ -46,27 +47,57 @@ export type ReadResult = {
   expires_at: string | null;
 };
 
+/** Per-(workspace,provider) encryption context — the AES key salt. */
+function ctx(workspaceId: string, provider: Provider): string {
+  return `vault_v1::${workspaceId}::${provider}`;
+}
+
+function enc(workspaceId: string, provider: Provider, value?: string | null): string | null {
+  if (value == null || value === "") return null;
+  return encryptMessage(ctx(workspaceId, provider), value);
+}
+
+function dec(workspaceId: string, provider: Provider, cipher?: string | null): string | null {
+  if (cipher == null || cipher === "") return null;
+  try {
+    return decryptMessage(ctx(workspaceId, provider), cipher);
+  } catch {
+    return null; // key rotated or corrupt — fail safe, caller handles missing
+  }
+}
+
 export async function writeCredential(
   input: WriteInput,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (!encryptionAvailable()) {
+    return { ok: false, error: "CONVERSATION_ENCRYPTION_KEY missing — cannot encrypt credentials" };
+  }
   const client = getServiceClient();
   if (!client) return { ok: false, error: "Supabase not configured" };
 
-  const { data, error } = await client.rpc("vault_write_credential", {
-    p_workspace_id: input.workspace_id,
-    p_provider: input.provider,
-    p_access_token: input.access_token ?? null,
-    p_refresh_token: input.refresh_token ?? null,
-    p_webhook_secret: input.webhook_secret ?? null,
-    p_account_identifier: input.account_identifier ?? null,
-    p_scopes: input.scopes ?? [],
-    p_expires_at: input.expires_at ? input.expires_at.toISOString() : null,
-  });
+  const { data, error } = await client
+    .from("vault_credentials")
+    .upsert(
+      {
+        workspace_id: input.workspace_id,
+        provider: input.provider,
+        account_identifier: input.account_identifier ?? null,
+        access_token_enc: enc(input.workspace_id, input.provider, input.access_token),
+        refresh_token_enc: enc(input.workspace_id, input.provider, input.refresh_token),
+        webhook_secret_enc: enc(input.workspace_id, input.provider, input.webhook_secret),
+        scopes: input.scopes ?? [],
+        expires_at: input.expires_at ? input.expires_at.toISOString() : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "workspace_id,provider" },
+    )
+    .select("id")
+    .maybeSingle();
 
   if (error || !data) {
-    return { ok: false, error: error?.message ?? "vault_write_credential failed" };
+    return { ok: false, error: error?.message ?? "vault upsert failed" };
   }
-  return { ok: true, id: data as string };
+  return { ok: true, id: (data as { id: string }).id };
 }
 
 export async function readCredential(input: {
@@ -80,23 +111,42 @@ export async function readCredential(input: {
   const client = getServiceClient();
   if (!client) return { ok: false, error: "Supabase not configured" };
 
-  const { data, error } = await client.rpc("vault_read_credential", {
-    p_workspace_id: input.workspace_id,
-    p_provider: input.provider,
-  });
+  const { data, error } = await client
+    .from("vault_credentials")
+    .select("provider, account_identifier, access_token_enc, refresh_token_enc, webhook_secret_enc, scopes, expires_at")
+    .eq("workspace_id", input.workspace_id)
+    .eq("provider", input.provider)
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
-  if (!data || (data as ReadResult[]).length === 0) {
+  if (!data) {
     return {
       ok: false,
       error: `No credential found for workspace=${input.workspace_id} provider=${input.provider}`,
     };
   }
-  const credential = (data as ReadResult[])[0];
 
-  // Forensic record of the read. We DO NOT log the token, only that it was
-  // retrieved and by which actor for which purpose. The audit chain captures
-  // this as a normal ALLOW with a vault-read reason.
+  const row = data as {
+    provider: string;
+    account_identifier: string | null;
+    access_token_enc: string | null;
+    refresh_token_enc: string | null;
+    webhook_secret_enc: string | null;
+    scopes: string[] | null;
+    expires_at: string | null;
+  };
+
+  const credential: ReadResult = {
+    provider: row.provider as Provider,
+    access_token: dec(input.workspace_id, input.provider, row.access_token_enc),
+    refresh_token: dec(input.workspace_id, input.provider, row.refresh_token_enc),
+    webhook_secret: dec(input.workspace_id, input.provider, row.webhook_secret_enc),
+    account_identifier: row.account_identifier,
+    scopes: row.scopes ?? [],
+    expires_at: row.expires_at,
+  };
+
+  // Forensic record of the read — never the token itself.
   await writeAuditEntry({
     request_id: `vault_${crypto.randomUUID().slice(0, 8)}`,
     workspace_id: input.workspace_id,

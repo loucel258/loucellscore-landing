@@ -36,31 +36,16 @@ const InputSchema = z.object({
 
 async function resolveWorkspace(
   id: string,
-): Promise<{ workspaceId: string; name: string } | null> {
+): Promise<string | null> {
   const sb = getServiceClient();
   if (!sb) return null;
   const { data } = await sb
     .from("client_agents")
-    .select("workspace_id, name, engagement_ref")
+    .select("workspace_id")
     .eq("id", id)
     .maybeSingle();
-  const row = data as { workspace_id?: string; name?: string; engagement_ref?: string } | null;
-  if (!row?.workspace_id) return null;
-  return { workspaceId: row.workspace_id, name: row.name || row.engagement_ref || "Client" };
-}
-
-/**
- * The vault's client_credentials FKs to clients(workspace_id). Agent
- * workspaces don't get a clients row at creation, so ensure one exists
- * (idempotent) before writing a credential. Requires migration 048 so the
- * longer agent workspace_id passes the clients CHECK.
- */
-async function ensureClientRow(workspaceId: string, name: string): Promise<void> {
-  const sb = getServiceClient();
-  if (!sb) return;
-  await sb
-    .from("clients")
-    .upsert({ workspace_id: workspaceId, name }, { onConflict: "workspace_id", ignoreDuplicates: true });
+  const row = data as { workspace_id?: string } | null;
+  return row?.workspace_id ?? null;
 }
 
 export async function GET(
@@ -79,9 +64,9 @@ export async function GET(
 
   // Provider names only — never the encrypted blobs.
   const { data } = await sb
-    .from("client_credentials")
+    .from("vault_credentials")
     .select("provider, account_identifier, updated_at")
-    .eq("workspace_id", ws.workspaceId);
+    .eq("workspace_id", ws);
 
   return NextResponse.json({ ok: true, configured: data ?? [] });
 }
@@ -106,10 +91,8 @@ export async function POST(
   const ws = await resolveWorkspace(id);
   if (!ws) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
 
-  await ensureClientRow(ws.workspaceId, ws.name);
-
   const result = await writeCredential({
-    workspace_id: ws.workspaceId,
+    workspace_id: ws,
     provider: input.provider as Provider,
     account_identifier: input.account_identifier ?? null,
     access_token: input.access_token ?? null,
