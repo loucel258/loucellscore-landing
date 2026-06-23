@@ -82,13 +82,16 @@ export async function checkAvailability(
   const durationMin = (svc as { duration_min: number } | null)?.duration_min;
   if (!durationMin) return { ok: false, error: "service_not_found" };
 
+  // Overlap semantics: any appt that ends after the window start AND starts
+  // before the window end conflicts — including one that began before the
+  // window but runs into it (the bracket-by-start_at version missed those).
   const { data: appts } = await sb
     .from("appointments")
     .select("start_at, end_at")
     .eq("workspace_id", args.workspaceId)
     .neq("status", "cancelled")
-    .gte("start_at", args.fromIso)
-    .lte("start_at", args.toIso);
+    .gt("end_at", args.fromIso)
+    .lt("start_at", args.toIso);
   const busy = ((appts as { start_at: string; end_at: string }[]) ?? []).map((a) => [
     new Date(a.start_at).getTime(),
     new Date(a.end_at).getTime(),

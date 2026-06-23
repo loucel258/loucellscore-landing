@@ -91,35 +91,63 @@ export async function rescheduleAppointment(
 ): Promise<ApptResult> {
   const { data: appt } = await sb
     .from("appointments")
-    .select("id, service_id, gcal_event_id, status")
+    .select("id, service_id, contact_id, start_at, end_at, gcal_event_id, status")
     .eq("workspace_id", args.workspaceId)
     .eq("id", args.appointmentId)
     .maybeSingle();
-  const a = appt as { id: string; service_id: string | null; gcal_event_id: string | null; status: string } | null;
+  const a = appt as {
+    id: string;
+    service_id: string | null;
+    contact_id: string;
+    start_at: string;
+    end_at: string;
+    gcal_event_id: string | null;
+    status: string;
+  } | null;
   if (!a) return { ok: false, error: "appointment_not_found" };
   if (a.status === "cancelled") return { ok: false, error: "appointment_cancelled" };
 
-  let durationMin = 60;
-  if (a.service_id) {
-    const svc = await loadService(sb, args.workspaceId, a.service_id);
-    if (svc) durationMin = svc.duration_min;
-  }
+  // Duration: prefer the service; else reuse the original appointment's span
+  // (never silently assume 60 if we have a real delta).
+  const svc = a.service_id ? await loadService(sb, args.workspaceId, a.service_id) : null;
+  const deltaMin = Math.round((new Date(a.end_at).getTime() - new Date(a.start_at).getTime()) / 60_000);
+  const durationMin = svc?.duration_min ?? (deltaMin > 0 ? deltaMin : 60);
   const endIso = new Date(new Date(args.newStartIso).getTime() + durationMin * 60_000).toISOString();
 
   const { error } = await sb
     .from("appointments")
     .update({ start_at: args.newStartIso, end_at: endIso, status: "scheduled", updated_at: new Date().toISOString() })
+    .eq("workspace_id", args.workspaceId)
     .eq("id", args.appointmentId);
   if (error) return { ok: false, error: error.message };
 
-  if (args.cal.calendarId && a.gcal_event_id) {
-    await updateEventTime({
-      calendarId: args.cal.calendarId,
-      eventId: a.gcal_event_id,
-      startIso: args.newStartIso,
-      endIso,
-      timezone: args.cal.timezone,
-    });
+  // Mirror: move the existing event, or recreate it if the original mirror
+  // never landed (so the owner's calendar doesn't silently stay out of sync).
+  if (args.cal.calendarId) {
+    if (a.gcal_event_id) {
+      await updateEventTime({
+        calendarId: args.cal.calendarId,
+        eventId: a.gcal_event_id,
+        startIso: args.newStartIso,
+        endIso,
+        timezone: args.cal.timezone,
+      });
+    } else {
+      const contact = await sb.from("contacts").select("name, phone").eq("id", a.contact_id).maybeSingle();
+      const c = contact.data as { name: string | null; phone: string } | null;
+      const who = c?.name || c?.phone || "Client";
+      const mirror = await createEvent({
+        calendarId: args.cal.calendarId,
+        summary: `${svc?.name ?? "Appointment"} — ${who}`,
+        description: c ? `Client: ${who}\nPhone: ${c.phone}` : "",
+        startIso: args.newStartIso,
+        endIso,
+        timezone: args.cal.timezone,
+      });
+      if (mirror.ok) {
+        await sb.from("appointments").update({ gcal_event_id: mirror.eventId }).eq("id", a.id);
+      }
+    }
   }
   return { ok: true, appointmentId: a.id, startIso: args.newStartIso, endIso };
 }

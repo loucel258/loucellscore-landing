@@ -33,7 +33,7 @@ export async function getOrCreateContact(
     .maybeSingle();
   if (existing.data) return existing.data as Contact;
 
-  const { data, error } = await sb
+  const ins = await sb
     .from("contacts")
     .insert({
       workspace_id: args.workspaceId,
@@ -43,8 +43,17 @@ export async function getOrCreateContact(
     })
     .select(CONTACT_COLS)
     .maybeSingle();
-  if (error || !data) return null;
-  return data as Contact;
+  if (ins.data) return ins.data as Contact;
+
+  // Lost a concurrent insert race (unique workspace_id+phone) — the other
+  // writer created it; re-select rather than dropping the message.
+  const again = await sb
+    .from("contacts")
+    .select(CONTACT_COLS)
+    .eq("workspace_id", args.workspaceId)
+    .eq("phone", args.phone)
+    .maybeSingle();
+  return (again.data as Contact) ?? null;
 }
 
 export async function getContactByPhone(
@@ -89,6 +98,7 @@ export async function recordConsent(
   await sb
     .from("contacts")
     .update({ [col]: args.granted, updated_at: new Date().toISOString() })
+    .eq("workspace_id", args.workspaceId)
     .eq("id", args.contactId);
 }
 
@@ -102,6 +112,7 @@ export async function setOptedOut(
   await sb
     .from("contacts")
     .update({ opted_out: true, updated_at: new Date().toISOString() })
+    .eq("workspace_id", args.workspaceId)
     .eq("id", contact.id);
   await sb.from("consent_events").insert({
     workspace_id: args.workspaceId,

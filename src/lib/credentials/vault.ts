@@ -146,6 +146,17 @@ export async function readCredential(input: {
     expires_at: row.expires_at,
   };
 
+  // A stored ciphertext that fails to decrypt (e.g. key rotated/corrupt) must
+  // fail loudly — never hand back a half-decrypted credential the caller would
+  // treat as "not configured" or use as null.
+  if (
+    (row.access_token_enc && credential.access_token === null) ||
+    (row.refresh_token_enc && credential.refresh_token === null) ||
+    (row.webhook_secret_enc && credential.webhook_secret === null)
+  ) {
+    return { ok: false, error: "decrypt_failed" };
+  }
+
   // Forensic record of the read — never the token itself.
   await writeAuditEntry({
     request_id: `vault_${crypto.randomUUID().slice(0, 8)}`,
