@@ -1,4 +1,5 @@
 import "server-only";
+import crypto from "node:crypto";
 import { readCredential } from "@/lib/credentials/vault";
 
 /**
@@ -74,6 +75,31 @@ export async function sendSms(args: {
 export function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   return digits.length >= 4 ? `••${digits.slice(-4)}` : "••";
+}
+
+/**
+ * Verify an inbound Twilio webhook's X-Twilio-Signature.
+ * Twilio signs base64(HMAC-SHA1(authToken, url + each sorted POST key+value)).
+ * The url must be exactly the public URL Twilio posted to.
+ */
+export function validateTwilioSignature(args: {
+  authToken: string;
+  url: string;
+  params: Record<string, string>;
+  signature: string | null;
+}): boolean {
+  if (!args.authToken || !args.signature) return false;
+  const data = Object.keys(args.params)
+    .sort()
+    .reduce((acc, k) => acc + k + args.params[k], args.url);
+  const expected = crypto
+    .createHmac("sha1", args.authToken)
+    .update(Buffer.from(data, "utf-8"))
+    .digest("base64");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(args.signature);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /** Best-effort E.164 normalizer for US numbers parsed from free text. */
