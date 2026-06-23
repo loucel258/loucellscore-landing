@@ -194,9 +194,13 @@ export async function dispatchBookingTool(
     case "escalate_to_human": {
       const reason = String(input.reason ?? "unspecified");
       const summary = typeof input.summary === "string" ? input.summary : "";
+      // The SMS body is attacker-controlled; escape before it reaches the
+      // owner's HTML alert email (prevents HTML/link injection into the inbox).
+      const esc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       await sendInternalAlert({
         subject: `Front Desk escalation — ${ctx.agentSlug}`,
-        bodyHtml: `<p>The Front Desk agent escalated a conversation.</p><p><b>Reason:</b> ${reason}</p><p><b>Summary:</b> ${summary}</p><p>Workspace: ${ctx.workspaceId}</p>`,
+        bodyHtml: `<p>The Front Desk agent escalated a conversation.</p><p><b>Reason:</b> ${esc(reason)}</p><p><b>Summary:</b> ${esc(summary)}</p><p>Workspace: ${esc(ctx.workspaceId)}</p>`,
       });
       return {
         content: "Escalated to a human. Tell the customer a team member will follow up shortly.",
