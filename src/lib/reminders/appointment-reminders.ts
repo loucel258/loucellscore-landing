@@ -33,6 +33,7 @@ export type ReminderRunResult = {
   skippedNoPhone: number;
   skippedAlreadySent: number;
   failed: number;
+  skippedNoConsent?: number; // mirror path: opted out / no transactional consent
   error?: string;
 };
 
@@ -184,6 +185,138 @@ export async function runRemindersForAgent(
       res.sent++;
     } else {
       // Roll back the claim so a transient failure retries next run.
+      await sb.from("appointment_reminders_sent").delete().eq("id", claimId);
+      res.failed++;
+    }
+  }
+
+  return res;
+}
+
+// ── External-backend workspaces: remind off the mirror, not Google Calendar ─────
+
+/** Reminder settings for a mirror (external-backend) workspace — no calendar needed. */
+export function parseExternalReminderSettings(agent: {
+  workspace_id: string;
+  name: string;
+  integrations: unknown;
+}): ReminderAgentSettings | null {
+  const integ = (agent.integrations ?? {}) as Record<string, unknown>;
+  const calendar = (integ.calendar ?? {}) as Record<string, unknown>;
+  const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
+
+  if (reminders.enabled !== true) return null;
+  const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
+  if (!fromNumber) return null;
+
+  return {
+    workspaceId: agent.workspace_id,
+    salonName: agent.name,
+    calendarId: "", // unused for the mirror path
+    timezone: typeof calendar.timezone === "string" ? calendar.timezone : "America/New_York",
+    leadHours: typeof reminders.lead_hours === "number" ? reminders.lead_hours : 24,
+    fromNumber,
+    locale: integ.locale === "en" ? "en" : "es",
+  };
+}
+
+type MirrorReminderRow = {
+  id: string;
+  start_at: string;
+  contacts: { phone: string; opted_out: boolean; consent_transactional: boolean } | null;
+};
+
+/**
+ * 24h reminders driven by the appointments MIRROR (fed by the external app's
+ * events). Unlike the calendar path we hold the contact's consent + opt-out
+ * state, so we gate proactive sends properly (opted-out or no transactional
+ * consent → skip). Idempotency keyed by the mirror appointment id.
+ */
+export async function runRemindersFromMirror(
+  sb: SupabaseClient,
+  s: ReminderAgentSettings,
+  maxSends = 100,
+): Promise<ReminderRunResult> {
+  const res: ReminderRunResult = {
+    workspaceId: s.workspaceId,
+    scanned: 0,
+    sent: 0,
+    skippedNoPhone: 0,
+    skippedAlreadySent: 0,
+    failed: 0,
+    skippedNoConsent: 0,
+  };
+
+  const now = Date.now();
+  const timeMinIso = new Date(now + (s.leadHours - 12) * 3600_000).toISOString();
+  const timeMaxIso = new Date(now + (s.leadHours + 12) * 3600_000).toISOString();
+
+  const { data, error } = await sb
+    .from("appointments")
+    .select("id, start_at, contacts!inner(phone, opted_out, consent_transactional)")
+    .eq("workspace_id", s.workspaceId)
+    .in("status", ["scheduled", "confirmed"])
+    .gte("start_at", timeMinIso)
+    .lte("start_at", timeMaxIso);
+
+  if (error) {
+    res.error = `mirror:${error.message}`;
+    return res;
+  }
+  const rows = (data ?? []) as unknown as MirrorReminderRow[];
+  res.scanned = rows.length;
+
+  for (const row of rows) {
+    if (res.sent >= maxSends) break;
+    const c = row.contacts;
+    if (!c || !c.phone) {
+      res.skippedNoPhone++;
+      continue;
+    }
+    // Proactive-send gate (the calendar path can't do this — fixes the opt-out gap).
+    if (c.opted_out || !c.consent_transactional) {
+      res.skippedNoConsent = (res.skippedNoConsent ?? 0) + 1;
+      continue;
+    }
+    const phone = toE164US(c.phone) ?? c.phone;
+
+    const { data: claimed, error: claimErr } = await sb
+      .from("appointment_reminders_sent")
+      .upsert(
+        {
+          workspace_id: s.workspaceId,
+          event_id: row.id,
+          kind: `reminder_${s.leadHours}h`,
+          channel: "sms",
+          recipient_mask: maskPhone(phone),
+          event_start: row.start_at,
+        },
+        { onConflict: "workspace_id,event_id,kind", ignoreDuplicates: true },
+      )
+      .select("id");
+
+    if (claimErr) {
+      res.failed++;
+      continue;
+    }
+    if (!claimed || claimed.length === 0) {
+      res.skippedAlreadySent++;
+      continue;
+    }
+    const claimId = (claimed[0] as { id: string }).id;
+
+    const sms = await sendSms({
+      workspaceId: s.workspaceId,
+      to: phone,
+      from: s.fromNumber,
+      body: formatReminder(s, row.start_at),
+      actor: `front_desk:${s.workspaceId}`,
+    });
+
+    if (sms.ok) {
+      await sb.from("appointment_reminders_sent").update({ provider_sid: sms.sid }).eq("id", claimId);
+      res.sent++;
+    } else {
       await sb.from("appointment_reminders_sent").delete().eq("id", claimId);
       res.failed++;
     }

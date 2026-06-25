@@ -5,6 +5,7 @@ import { getClaudeClient } from "@/lib/ai/claude-client";
 import { classifyIntent, shouldEscalate } from "./intent";
 import { BOOKING_TOOLS, dispatchBookingTool, type BookingToolCtx } from "./tools";
 import type { BusinessHours } from "./availability";
+import { getExternalBookingBackend, type BookingBackend } from "@/lib/integration/agent-client";
 
 /**
  * Front Desk conversational turn. Haiku pre-classifies for escalation; if it's
@@ -32,6 +33,7 @@ export type OrchestratorInput = {
   history: { role: "user" | "assistant"; content: string }[];
   message: string;
   hasUpcomingAppointment?: boolean;
+  contactPhone?: string; // for external-backend lookups (scoped to this customer)
 };
 
 export type OrchestratorResult = { reply: string; escalated: boolean; toolsUsed: string[] };
@@ -72,12 +74,16 @@ export async function runFrontDeskTurn(
   sb: SupabaseClient,
   input: OrchestratorInput,
 ): Promise<OrchestratorResult> {
+  // Resolve the per-workspace booking backend once (null = local Loucells booking).
+  const externalBackend = await getExternalBookingBackend(input.workspaceId);
+  const ctx = toCtx(input, externalBackend);
+
   // 1. Fast escalation pre-filter (Haiku). Complaints / unclear → human.
   const intent = await classifyIntent(input.message, {
     hasUpcomingAppointment: input.hasUpcomingAppointment,
   });
   if (shouldEscalate(intent)) {
-    await dispatchBookingTool(sb, toCtx(input), "escalate_to_human", {
+    await dispatchBookingTool(sb, ctx, "escalate_to_human", {
       reason: intent?.intent ?? "classifier_unavailable",
       summary: input.message.slice(0, 200),
     });
@@ -88,7 +94,6 @@ export async function runFrontDeskTurn(
   const client = getClaudeClient();
   if (!client) return { reply: fallbackReply(input.locale), escalated: false, toolsUsed: [] };
 
-  const ctx = toCtx(input);
   const system = buildSystem(input);
   const messages: Anthropic.Messages.MessageParam[] = [
     ...input.history.map((h) => ({ role: h.role, content: h.content })),
@@ -145,7 +150,7 @@ export async function runFrontDeskTurn(
   return { reply: replyText || fallbackReply(input.locale), escalated, toolsUsed };
 }
 
-function toCtx(input: OrchestratorInput): BookingToolCtx {
+function toCtx(input: OrchestratorInput, externalBackend: BookingBackend | null): BookingToolCtx {
   return {
     workspaceId: input.workspaceId,
     contactId: input.contactId,
@@ -153,5 +158,7 @@ function toCtx(input: OrchestratorInput): BookingToolCtx {
     timezone: input.timezone,
     businessHours: input.businessHours,
     agentSlug: input.agentSlug,
+    externalBackend,
+    contactPhone: input.contactPhone,
   };
 }

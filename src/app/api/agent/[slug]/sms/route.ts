@@ -147,6 +147,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
     kb,
     history,
     message: body,
+    contactPhone: fromPhone,
   });
 
   // ── Reply via REST + log outbound ────────────────────────────────────────

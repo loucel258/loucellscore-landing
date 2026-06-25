@@ -3,9 +3,12 @@ import { getServiceClient } from "@/lib/audit/client";
 import { verifyCronAuth } from "@/lib/notify/resend";
 import {
   parseAgentReminderSettings,
+  parseExternalReminderSettings,
   runRemindersForAgent,
+  runRemindersFromMirror,
   type ReminderRunResult,
 } from "@/lib/reminders/appointment-reminders";
+import { getExternalBookingBackend } from "@/lib/integration/agent-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,11 +53,19 @@ async function handle(req: Request): Promise<Response> {
 
   const results: ReminderRunResult[] = [];
   for (const agent of agents ?? []) {
-    const settings = parseAgentReminderSettings(
-      agent as { workspace_id: string; name: string; integrations: unknown },
-    );
-    if (!settings) continue; // reminders not enabled / not configured
-    results.push(await runRemindersForAgent(sb, settings));
+    const a = agent as { workspace_id: string; name: string; integrations: unknown };
+    // External-backend workspaces remind off the mirror (and gate on consent);
+    // everyone else keeps the Google Calendar path unchanged.
+    const backend = await getExternalBookingBackend(a.workspace_id);
+    if (backend) {
+      const settings = parseExternalReminderSettings(a);
+      if (!settings) continue;
+      results.push(await runRemindersFromMirror(sb, settings));
+    } else {
+      const settings = parseAgentReminderSettings(a);
+      if (!settings) continue; // reminders not enabled / not configured
+      results.push(await runRemindersForAgent(sb, settings));
+    }
   }
 
   return NextResponse.json({

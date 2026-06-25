@@ -9,6 +9,7 @@ import {
   getContactAppointments,
 } from "./appointments";
 import { sendInternalAlert } from "@/lib/notify/resend";
+import { callAgentApi, type BookingBackend } from "@/lib/integration/agent-client";
 
 /**
  * The narrow tool surface the LLM may call. Every handler is scoped to the
@@ -25,6 +26,10 @@ export type BookingToolCtx = {
   timezone: string;
   businessHours?: BusinessHours;
   agentSlug: string;
+  // When set, this workspace delegates booking to its own app (source of truth);
+  // the booking tools call that app's signed API instead of local Postgres.
+  externalBackend?: BookingBackend | null;
+  contactPhone?: string;
 };
 
 export const BOOKING_TOOLS: Anthropic.Messages.Tool[] = [
@@ -114,6 +119,12 @@ export async function dispatchBookingTool(
   name: string,
   input: Record<string, unknown>,
 ): Promise<DispatchResult> {
+  // External booking backend: the workspace's own app is the source of truth.
+  // Route booking actions to its signed API; escalation stays local (shared).
+  if (ctx.externalBackend && name !== "escalate_to_human") {
+    return dispatchExternalBookingTool(sb, ctx, ctx.externalBackend, name, input);
+  }
+
   const cal = { calendarId: ctx.calendarId, timezone: ctx.timezone };
 
   switch (name) {
@@ -206,6 +217,117 @@ export async function dispatchBookingTool(
         content: "Escalated to a human. Tell the customer a team member will follow up shortly.",
         escalated: true,
       };
+    }
+
+    default:
+      return { content: `Unknown tool: ${name}` };
+  }
+}
+
+// ── External booking backend dispatch ──────────────────────────────────────────
+
+type ExtAppointment = {
+  id: string;
+  startTime: string;
+  services?: { nameEs?: string; nameEn?: string }[];
+};
+type ExtAvailability = { days?: { slots?: string[] }[] };
+type ExtLookup = { appointments?: ExtAppointment[] };
+
+/** Confirm an external appointment id belongs to THIS contact (lookup is phone-scoped). */
+async function externalOwns(
+  backend: BookingBackend,
+  ctx: BookingToolCtx,
+  appointmentId: string,
+): Promise<boolean> {
+  const res = await callAgentApi<ExtLookup>(backend, "/api/agent/lookup", { phone: ctx.contactPhone });
+  if (!res.ok) return false;
+  return (res.data.appointments ?? []).some((a) => a.id === appointmentId);
+}
+
+async function dispatchExternalBookingTool(
+  sb: SupabaseClient,
+  ctx: BookingToolCtx,
+  backend: BookingBackend,
+  name: string,
+  input: Record<string, unknown>,
+): Promise<DispatchResult> {
+  switch (name) {
+    case "check_availability": {
+      // Map the Loucells service id the model sees to the external app's slug.
+      const serviceId = String(input.service_id ?? "");
+      const { data } = await sb
+        .from("services")
+        .select("external_slug")
+        .eq("workspace_id", ctx.workspaceId)
+        .eq("id", serviceId)
+        .maybeSingle();
+      const slug = (data as { external_slug?: string | null } | null)?.external_slug;
+      if (!slug) return { content: "That service isn't available for online booking." };
+
+      const res = await callAgentApi<ExtAvailability>(backend, "/api/agent/availability", {
+        serviceSlugs: [slug],
+      });
+      if (!res.ok) return { content: `No availability data (${res.error}).` };
+
+      const slots = (res.data.days ?? []).flatMap((d) => d.slots ?? []).slice(0, 8);
+      if (slots.length === 0) return { content: "No open slots in that range." };
+      const fmt = slots.map((s) =>
+        new Intl.DateTimeFormat("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: ctx.timezone,
+        }).format(new Date(s)),
+      );
+      return {
+        content: JSON.stringify({ slots: slots.map((s, i) => ({ start_iso: s, label: fmt[i] })) }),
+      };
+    }
+
+    case "create_appointment":
+      // The salon's own website owns new bookings — the agent doesn't create here.
+      return {
+        content:
+          "New bookings are made on the salon's website, not over SMS. Share the booking link with the customer, or escalate if they need help.",
+      };
+
+    case "get_my_appointments": {
+      const res = await callAgentApi<ExtLookup>(backend, "/api/agent/lookup", { phone: ctx.contactPhone });
+      if (!res.ok) return { content: "Could not look up appointments right now." };
+      const appts = (res.data.appointments ?? []).map((a) => ({
+        appointment_id: a.id,
+        start_iso: a.startTime,
+        services: (a.services ?? []).map((s) => s.nameEs || s.nameEn || ""),
+      }));
+      return { content: JSON.stringify({ appointments: appts }) };
+    }
+
+    case "reschedule_appointment": {
+      const id = String(input.appointment_id ?? "");
+      if (!(await externalOwns(backend, ctx, id))) {
+        return { content: "That appointment was not found for this customer." };
+      }
+      const res = await callAgentApi(backend, "/api/agent/reschedule", {
+        appointmentId: id,
+        startIso: String(input.new_start_iso ?? ""),
+      });
+      return res.ok
+        ? { content: JSON.stringify({ rescheduled: true }) }
+        : { content: `Could not reschedule: ${res.error}.` };
+    }
+
+    case "cancel_appointment": {
+      const id = String(input.appointment_id ?? "");
+      if (!(await externalOwns(backend, ctx, id))) {
+        return { content: "That appointment was not found for this customer." };
+      }
+      const res = await callAgentApi(backend, "/api/agent/cancel", { appointmentId: id });
+      return res.ok
+        ? { content: JSON.stringify({ cancelled: true }) }
+        : { content: `Could not cancel: ${res.error}.` };
     }
 
     default:

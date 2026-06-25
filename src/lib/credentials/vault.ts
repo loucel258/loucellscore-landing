@@ -24,7 +24,11 @@ export type Provider =
   | "stripe"
   | "servicetitan"
   | "microsoft_graph"
-  | "gmail";
+  | "gmail"
+  // External booking backend (workspace owns its booking system; Loucells
+  // delegates + mirrors). webhook_secret = shared HMAC secret;
+  // account_identifier = the external app base URL.
+  | "external_booking";
 
 export type WriteInput = {
   workspace_id: string;
