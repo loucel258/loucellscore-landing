@@ -139,7 +139,15 @@ export async function runFrontDeskTurn(
         results.push({ type: "tool_result", tool_use_id: tu.id, content: "Unknown tool." });
         continue;
       }
-      const out = await dispatchBookingTool(sb, ctx, tu.name, tu.input as Record<string, unknown>);
+      let out: { content: string; escalated?: boolean };
+      try {
+        out = await dispatchBookingTool(sb, ctx, tu.name, tu.input as Record<string, unknown>);
+      } catch (e) {
+        // A throwing tool (e.g. a malformed external API response) must degrade to
+        // a tool error, never crash the whole turn.
+        console.error("tool dispatch failed", tu.name, e);
+        out = { content: "That action couldn't be completed right now." };
+      }
       if (out.escalated) escalated = true;
       toolsUsed.push(tu.name);
       results.push({ type: "tool_result", tool_use_id: tu.id, content: out.content });

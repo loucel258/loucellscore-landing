@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { verifyCronAuth } from "@/lib/notify/resend";
 import { getExternalBookingBackend, callAgentApi } from "@/lib/integration/agent-client";
-import { upsertMirrorAppointment, type MirrorAppointmentData } from "@/lib/integration/mirror";
+import {
+  upsertMirrorAppointment,
+  retireRescheduledOriginal,
+  type MirrorAppointmentData,
+} from "@/lib/integration/mirror";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +62,9 @@ async function handle(req: Request): Promise<Response> {
     let reconciled = 0;
     let failed = 0;
     for (const a of appts) {
+      // Same reschedule handling as live ingestion: retire the original so a
+      // dropped reschedule event doesn't leave a stale slot getting reminders.
+      if (a.rescheduledFromId) await retireRescheduledOriginal(sb, ws, a.rescheduledFromId);
       const r = await upsertMirrorAppointment(sb, ws, a);
       if (r.ok) reconciled++;
       else failed++;

@@ -270,7 +270,10 @@ async function dispatchExternalBookingTool(
       });
       if (!res.ok) return { content: `No availability data (${res.error}).` };
 
-      const slots = (res.data.days ?? []).flatMap((d) => d.slots ?? []).slice(0, 8);
+      const slots = (res.data.days ?? [])
+        .flatMap((d) => d.slots ?? [])
+        .filter((s) => !Number.isNaN(new Date(s).getTime()))
+        .slice(0, 8);
       if (slots.length === 0) return { content: "No open slots in that range." };
       const fmt = slots.map((s) =>
         new Intl.DateTimeFormat("en-US", {

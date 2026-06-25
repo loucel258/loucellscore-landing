@@ -58,7 +58,8 @@ export async function getExternalBookingBackend(
   if (!cred.ok) return null;
   const baseUrl = cred.credential.account_identifier?.replace(/\/+$/, "");
   const secret = cred.credential.webhook_secret;
-  if (!baseUrl || !secret) return null;
+  // Fail closed on a missing/weak shared secret (must match the external app's >=16).
+  if (!baseUrl || !secret || secret.length < 16) return null;
   return { baseUrl, secret };
 }
 

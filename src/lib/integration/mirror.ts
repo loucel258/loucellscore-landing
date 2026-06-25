@@ -28,7 +28,14 @@ export type MirrorAppointmentData = {
 };
 
 export function isValidMirrorData(data: MirrorAppointmentData | undefined): data is MirrorAppointmentData {
-  return Boolean(data?.id && data.client?.phone?.trim() && data.startTime && data.endTime && data.status);
+  if (!(data?.id && data.client?.phone?.trim() && data.startTime && data.endTime && data.status)) {
+    return false;
+  }
+  // Reject unparseable times before they reach Postgres / date formatting.
+  return (
+    !Number.isNaN(new Date(data.startTime).getTime()) &&
+    !Number.isNaN(new Date(data.endTime).getTime())
+  );
 }
 
 export async function upsertMirrorAppointment(
@@ -56,13 +63,12 @@ export async function upsertMirrorAppointment(
   let contactId: string;
   if (existing) {
     contactId = (existing as { id: string }).id;
+    // Update profile only. Consent + opted_out are owned by the SMS opt-in/STOP
+    // flow — an inbound booking event must NEVER re-grant consent (a replayed or
+    // stale event could otherwise resurrect messaging to a contact who texted STOP).
     await sb
       .from("contacts")
-      .update({
-        name: client?.name ?? undefined,
-        updated_at: now,
-        ...(client?.smsOptIn ? { consent_transactional: true } : {}),
-      })
+      .update({ name: client?.name ?? undefined, updated_at: now })
       .eq("workspace_id", workspaceId)
       .eq("id", contactId);
   } else {

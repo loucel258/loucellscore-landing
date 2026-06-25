@@ -13,9 +13,11 @@ alter table public.appointments add column if not exists external_id text;
 alter table public.services add column if not exists external_slug text;
 
 -- One mirror appointment per external id, per workspace (lets ingestion upsert).
+-- NOT partial: a partial unique index can't be used as an ON CONFLICT arbiter by
+-- PostgREST/supabase upsert. Local-booking rows have external_id NULL, and
+-- Postgres treats NULLs as distinct, so they remain unconstrained.
 create unique index if not exists appointments_workspace_external_id_uniq
-  on public.appointments (workspace_id, external_id)
-  where external_id is not null;
+  on public.appointments (workspace_id, external_id);
 
 create index if not exists services_workspace_external_slug_idx
   on public.services (workspace_id, external_slug)
