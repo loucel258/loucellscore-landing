@@ -24,6 +24,7 @@ const PROVIDERS = [
   "stripe",
   "microsoft_graph",
   "gmail",
+  "external_booking",
 ] as const;
 
 const InputSchema = z.object({

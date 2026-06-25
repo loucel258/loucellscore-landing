@@ -37,6 +37,9 @@ export function IntegrationsPanel({
   const [twilioSid, setTwilioSid] = useState("");
   const [twilioToken, setTwilioToken] = useState("");
 
+  const [externalUrl, setExternalUrl] = useState("");
+  const [externalSecret, setExternalSecret] = useState("");
+
   const [configured, setConfigured] = useState<ConfiguredProvider[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -51,6 +54,7 @@ export function IntegrationsPanel({
   }, [agentId]);
 
   const twilioConfigured = configured.find((c) => c.provider === "twilio");
+  const externalConfigured = configured.find((c) => c.provider === "external_booking");
 
   async function saveReminders() {
     setSaving("reminders");
@@ -109,6 +113,44 @@ export function IntegrationsPanel({
         setTwilioToken("");
         const r = await fetch(`/api/admin/agents/${agentId}/credentials`).then((x) => x.json());
         if (r.ok) setConfigured(r.configured ?? []);
+      } else {
+        setMsg({ ok: false, text: d.detail || d.error || "Save failed." });
+      }
+    } catch {
+      setMsg({ ok: false, text: "Network error." });
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveExternalBooking() {
+    if (!externalUrl.trim() || !externalSecret.trim()) {
+      setMsg({ ok: false, text: "Enter the app URL and the shared secret." });
+      return;
+    }
+    if (externalSecret.trim().length < 16) {
+      setMsg({ ok: false, text: "Shared secret must be at least 16 characters." });
+      return;
+    }
+    setSaving("external_booking");
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/agents/${agentId}/credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: "external_booking",
+          account_identifier: externalUrl.trim().replace(/\/+$/, ""),
+          webhook_secret: externalSecret.trim(),
+        }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setMsg({ ok: true, text: "External booking backend stored in vault." });
+        setExternalSecret("");
+        const r = await fetch(`/api/admin/agents/${agentId}/credentials`).then((x) => x.json());
+        if (r.ok) setConfigured(r.configured ?? []);
+        router.refresh();
       } else {
         setMsg({ ok: false, text: d.detail || d.error || "Save failed." });
       }
@@ -231,6 +273,54 @@ export function IntegrationsPanel({
           className="mt-3 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-900 disabled:opacity-50"
         >
           {saving === "twilio" ? "Saving…" : "Save Twilio keys to vault"}
+        </button>
+      </div>
+
+      {/* External booking backend */}
+      <div className="mt-6 border-t border-neutral-100 pt-4">
+        <h4 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
+          <KeyRound className="size-4" /> External booking backend
+          {externalConfigured && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+              <Check className="size-2.5" /> configured
+              {externalConfigured.account_identifier
+                ? ` (${externalConfigured.account_identifier})`
+                : ""}
+            </span>
+          )}
+        </h4>
+        <p className="mt-1 text-xs text-neutral-500">
+          When set, this workspace delegates booking to its own app (source of truth) and Loucells
+          mirrors it. The secret must match the app&apos;s <code>LOUCELLS_INTEGRATION_SECRET</code>.
+          The secret is write-only and never shown again.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <span className={labelCls}>App URL</span>
+            <input
+              className={inputCls}
+              value={externalUrl}
+              onChange={(e) => setExternalUrl(e.target.value)}
+              placeholder="https://nailestudio.com"
+            />
+          </div>
+          <div>
+            <span className={labelCls}>Shared secret (≥16 chars)</span>
+            <input
+              type="password"
+              className={inputCls}
+              value={externalSecret}
+              onChange={(e) => setExternalSecret(e.target.value)}
+              placeholder="Paste the shared HMAC secret"
+            />
+          </div>
+        </div>
+        <button
+          onClick={saveExternalBooking}
+          disabled={saving === "external_booking"}
+          className="mt-3 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-900 disabled:opacity-50"
+        >
+          {saving === "external_booking" ? "Saving…" : "Save external booking to vault"}
         </button>
       </div>
 
