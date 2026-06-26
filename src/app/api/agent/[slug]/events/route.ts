@@ -6,6 +6,7 @@ import {
   isValidMirrorData,
   type MirrorAppointmentData,
 } from "@/lib/integration/mirror";
+import { sendBookingConfirmation } from "@/lib/booking/confirmations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,10 +28,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const { data: agentRow } = await sb
     .from("client_agents")
-    .select("workspace_id, status")
+    .select("workspace_id, status, name, integrations")
     .eq("slug", slug)
     .maybeSingle();
-  const agent = agentRow as { workspace_id: string; status: string } | null;
+  const agent = agentRow as {
+    workspace_id: string;
+    status: string;
+    name: string;
+    integrations: Record<string, unknown> | null;
+  } | null;
   if (!agent) return Response.json({ error: "not_found" }, { status: 404 });
 
   const ws = agent.workspace_id;
@@ -61,6 +67,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
 
   const res = await upsertMirrorAppointment(sb, ws, data);
   if (!res.ok) return Response.json({ error: res.error }, { status: 500 });
+
+  // On confirmation, text the customer so they know the salon accepted the
+  // appointment. Best-effort + gated (TCPA) + idempotent — never blocks ingest.
+  if (event.type === "booking.confirmed") {
+    try {
+      await sendBookingConfirmation(sb, agent, data);
+    } catch (e) {
+      console.error("sendBookingConfirmation failed", e);
+    }
+  }
 
   return Response.json({ ok: true });
 }
