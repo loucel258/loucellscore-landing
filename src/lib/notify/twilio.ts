@@ -71,6 +71,65 @@ export async function sendSms(args: {
   }
 }
 
+/**
+ * Send a WhatsApp message via Twilio. For PROACTIVE sends (outside the 24h
+ * customer-service window) WhatsApp requires a pre-approved template: pass
+ * `contentSid` (+ `contentVariables`). Free-form `body` is only valid inside an
+ * open session. Numbers are passed without the `whatsapp:` prefix; we add it.
+ */
+export async function sendWhatsApp(args: {
+  workspaceId: string;
+  to: string; // E.164 (no prefix)
+  from: string; // WhatsApp sender, E.164 (no prefix)
+  actor: string;
+  body?: string; // free-form (only inside an open 24h session)
+  contentSid?: string; // approved template SID (for proactive)
+  contentVariables?: Record<string, string>;
+}): Promise<SendSmsResult> {
+  if (!args.from) return { ok: false, reason: "no_from" };
+
+  const cred = await readCredential({
+    workspace_id: args.workspaceId,
+    provider: "twilio",
+    reason: `send_whatsapp to ${maskPhone(args.to)}`,
+    actor: args.actor,
+  });
+  if (!cred.ok) return { ok: false, reason: "no_credential", error: cred.error };
+
+  const sid = cred.credential.account_identifier;
+  const token = cred.credential.access_token;
+  if (!sid || !token) {
+    return { ok: false, reason: "no_credential", error: "Twilio SID/token missing in vault" };
+  }
+
+  const params = new URLSearchParams({ To: `whatsapp:${args.to}`, From: `whatsapp:${args.from}` });
+  if (args.contentSid) {
+    params.set("ContentSid", args.contentSid);
+    if (args.contentVariables) params.set("ContentVariables", JSON.stringify(args.contentVariables));
+  } else if (args.body) {
+    params.set("Body", args.body);
+  } else {
+    return { ok: false, reason: "send_failed", error: "no template or body" };
+  }
+  const auth = Buffer.from(`${sid}:${token}`).toString("base64");
+
+  try {
+    const res = await fetch(`${TWILIO_BASE}/Accounts/${sid}/Messages.json`, {
+      method: "POST",
+      headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, reason: "send_failed", error: `${res.status}: ${errBody.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { sid?: string };
+    return { ok: true, sid: data.sid ?? "unknown" };
+  } catch (e) {
+    return { ok: false, reason: "send_failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 /** "+15615551234" -> "••1234" — for logs/idempotency, never store the full number. */
 export function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");

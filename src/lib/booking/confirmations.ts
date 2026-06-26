@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendSms, toE164US, maskPhone } from "@/lib/notify/twilio";
+import { toE164US, maskPhone } from "@/lib/notify/twilio";
+import { sendProactive, readWhatsAppConfig } from "@/lib/notify/proactive";
 import { canSendProactive } from "./gates";
 
 /**
@@ -34,7 +35,9 @@ export async function sendBookingConfirmation(
   const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
   const calendar = (integ.calendar ?? {}) as Record<string, unknown>;
   const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
-  if (!fromNumber) return; // no SMS sender configured
+  const whatsapp = readWhatsAppConfig(integ);
+  const waReady = Boolean(whatsapp?.from_number && whatsapp?.templates?.confirmation);
+  if (!fromNumber && !waReady) return; // no sender configured on either channel
   const timezone = typeof calendar.timezone === "string" ? calendar.timezone : "America/New_York";
 
   // Authoritative consent/opt-out from the mirror contact.
@@ -85,8 +88,19 @@ export async function sendBookingConfirmation(
       ? `¡Hola! Tu cita en ${agent.name} el ${when} quedó confirmada. ¡Te esperamos! Para reprogramar o cancelar, responde a este mensaje.`
       : `Hi! Your appointment at ${agent.name} on ${when} is confirmed. See you soon! To reschedule or cancel, just reply to this message.`;
 
+  // Prefer WhatsApp (approved "confirmation" template) when configured, else SMS.
+  // The WhatsApp template must use {{1}} = salon name, {{2}} = date/time.
   const to = toE164US(phone) ?? phone;
-  const sent = await sendSms({ workspaceId: ws, to, from: fromNumber, body, actor: "front_desk:confirmation" });
+  const { result: sent } = await sendProactive({
+    workspaceId: ws,
+    to,
+    actor: "front_desk:confirmation",
+    whatsapp,
+    templateKey: "confirmation",
+    templateVariables: { "1": agent.name, "2": when },
+    smsFrom: fromNumber,
+    smsBody: body,
+  });
 
   if (sent.ok) {
     await sb.from("appointment_reminders_sent").update({ provider_sid: sent.sid }).eq("id", claimId);
