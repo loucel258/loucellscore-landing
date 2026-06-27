@@ -34,7 +34,7 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
 
   return (
     <div className="mx-auto mt-20 max-w-sm px-4">
-      <div className="rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-6 shadow-sm">
+      <div className="rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-6 shadow-sm">
         <div className="inline-flex size-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
           <Lock className="size-4" />
         </div>

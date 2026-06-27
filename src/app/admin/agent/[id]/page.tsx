@@ -185,7 +185,7 @@ export default async function AgentDetailPage({
 
       {/* Lifecycle ribbon */}
       {!a.archived_at && (
-        <section className="mb-6 rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-4">
+        <section className="mb-6 rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-4">
           <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Build lifecycle
           </h2>
@@ -340,7 +340,7 @@ export default async function AgentDetailPage({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Channels + integrations */}
-        <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
+        <section className="rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Channels + integrations
           </h2>
@@ -365,7 +365,7 @@ export default async function AgentDetailPage({
               {Object.entries(a.integrations).map(([key, val]) => (
                 <div
                   key={key}
-                  className="rounded-md border border-neutral-200 bg-white/60 px-2.5 py-1.5"
+                  className="rounded-md border border-neutral-200 bg-white/55 px-2.5 py-1.5"
                 >
                   <dt className="text-[10px] uppercase tracking-wider text-neutral-500">
                     {key}
@@ -386,7 +386,7 @@ export default async function AgentDetailPage({
         </section>
 
         {/* Baselines + notes */}
-        <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
+        <section className="rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Baselines (set on go-live)
           </h2>
@@ -413,7 +413,7 @@ export default async function AgentDetailPage({
             </div>
           </dl>
           {a.notes && (
-            <div className="mt-4 rounded-md border border-neutral-200 bg-white/60 p-3">
+            <div className="mt-4 rounded-md border border-neutral-200 bg-white/55 p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Notes
               </p>
@@ -425,7 +425,7 @@ export default async function AgentDetailPage({
         </section>
 
         {/* Recent DENYs OR pre-live placeholder */}
-        <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5 lg:col-span-2">
+        <section className="rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5 lg:col-span-2">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Recent DENYs · last 15
           </h2>
@@ -448,7 +448,7 @@ export default async function AgentDetailPage({
                 blocked_by: string | null;
                 reason: string;
               }> | null) ?? []).length === 0 ? (
-            <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-white/60 px-4 py-6 text-center">
+            <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-white/55 px-4 py-6 text-center">
               <p className="text-xs text-neutral-500">
                 <Lightbulb className="mr-1 inline size-3" />
                 Zero DENYs in the last 24h — agent is running clean.
@@ -457,7 +457,7 @@ export default async function AgentDetailPage({
           ) : (
             <div className="mt-3 overflow-hidden rounded-md border border-neutral-200">
               <table className="w-full text-left">
-                <thead className="bg-white/60 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+                <thead className="bg-white/55 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
                   <tr>
                     <th className="px-3 py-2">When</th>
                     <th className="px-3 py-2">Blocked by</th>

@@ -183,7 +183,7 @@ export function OverviewTab({
             <Stat label="Created" value={formatShortDate(e.created_at)} />
           </dl>
           {e.notes && (
-            <div className="mt-4 rounded-md border border-neutral-200 bg-white/60 p-3">
+            <div className="mt-4 rounded-md border border-neutral-200 bg-white/55 p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Notes
               </p>
@@ -324,7 +324,7 @@ export function OverviewTab({
             {agents.map((a) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 px-4 py-3 text-xs hover:border-cyan-300 hover:bg-cyan-50/40 transition-colors"
+                className="flex items-center justify-between gap-3 rounded-lg border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 px-4 py-3 text-xs hover:border-cyan-300 hover:bg-cyan-50/40 transition-colors"
               >
                 <Link href={`/admin/agent/${a.id}`} className="font-medium hover:text-cyan-700">
                   {a.name} <span className="text-neutral-500">({a.agent_type})</span>
@@ -387,7 +387,7 @@ function DocRow({
   const dotCls =
     tone === "good" ? "bg-emerald-500" : tone === "bad" ? "bg-rose-500" : "bg-neutral-300";
   return (
-    <li className="flex items-center justify-between rounded-md border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 px-3 py-2">
+    <li className="flex items-center justify-between rounded-md border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 px-3 py-2">
       <div className="flex items-center gap-2">
         <span className={`size-1.5 rounded-full ${dotCls}`} aria-hidden />
         <span className="text-neutral-800">{label}</span>

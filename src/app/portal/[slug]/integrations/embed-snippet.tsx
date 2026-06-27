@@ -27,7 +27,7 @@ export function EmbedSnippet({ snippet, allowedOrigins, status, lang }: Props) {
   }
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-6 shadow-sm">
+    <article className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-6 shadow-sm">
       <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-cyan-100/40 blur-3xl" aria-hidden />
       <div className="relative">
         <header className="flex flex-wrap items-start justify-between gap-3">

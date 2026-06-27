@@ -295,7 +295,7 @@ export default async function PortalResumenPage({
         <Panel title={lang === "es" ? "Estado del servicio" : "Service status"} tone="muted">
           <ul className="flex flex-col gap-3">
             {incidents.map((i) => (
-              <li key={i.id} className="rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-3">
+              <li key={i.id} className="rounded-lg border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-3">
                 <header className="flex items-start justify-between gap-3">
                   <p className="text-sm font-semibold text-neutral-900">{i.title}</p>
                   <span
@@ -392,7 +392,7 @@ function MoneyButton({
           </p>
           {pending.slice(0, 2).map((p) => (
             <div key={p.id} className="mt-3 flex items-center gap-2 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-md bg-white/58 px-2 py-0.5 font-semibold text-neutral-700 ring-1 ring-neutral-200">
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/55 px-2 py-0.5 font-semibold text-neutral-700 ring-1 ring-neutral-200">
                 {p.action_type.replace(/_/g, " ")}
               </span>
               <p className="max-w-md truncate text-neutral-600">{p.proposed_text}</p>

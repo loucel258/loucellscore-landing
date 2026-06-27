@@ -63,7 +63,7 @@ export function NotesEditor({
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
         rows={5}
-        className="block w-full rounded-lg border border-neutral-300 bg-white/60 px-3 py-2 text-sm leading-relaxed text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+        className="block w-full rounded-lg border border-neutral-300 bg-white/55 px-3 py-2 text-sm leading-relaxed text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
       />
       <div className="mt-3 flex items-center gap-3">
         <button

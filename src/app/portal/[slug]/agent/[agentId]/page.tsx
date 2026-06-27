@@ -222,7 +222,7 @@ export default async function PortalAgentDetailPage({
                   {Object.entries(a.integrations).map(([key, val]) => (
                     <div
                       key={key}
-                      className="rounded-md border border-neutral-200 bg-white/60 px-2.5 py-1.5"
+                      className="rounded-md border border-neutral-200 bg-white/55 px-2.5 py-1.5"
                     >
                       <dt className="text-[10px] uppercase tracking-wider text-neutral-500">{key}</dt>
                       <dd className="font-medium text-neutral-800">{String(val)}</dd>
@@ -305,7 +305,7 @@ export default async function PortalAgentDetailPage({
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {audit.slice(0, 30).map((r) => (
-                  <tr key={r.id} className="hover:bg-white/60">
+                  <tr key={r.id} className="hover:bg-white/55">
                     <td className="px-2 py-2 tabular-nums text-[10px] text-neutral-500">
                       {new Date(r.inserted_at).toLocaleString("en-US", {
                         month: "short",

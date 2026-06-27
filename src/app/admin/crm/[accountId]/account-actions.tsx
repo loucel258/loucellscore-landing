@@ -88,7 +88,7 @@ export function AddTask({ accountId }: { accountId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white/52 p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white/55 p-3">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -185,7 +185,7 @@ export function LifecycleSelect({
       value={value}
       onChange={(e) => change(e.target.value)}
       disabled={pending}
-      className="rounded-md border border-white/65 bg-white/58 px-2 py-1 text-xs font-semibold capitalize text-neutral-700 outline-none focus:border-cyan-500 disabled:opacity-50"
+      className="rounded-md border border-white/65 bg-white/55 px-2 py-1 text-xs font-semibold capitalize text-neutral-700 outline-none focus:border-cyan-500 disabled:opacity-50"
     >
       {LIFECYCLES.map((l) => (
         <option key={l} value={l}>

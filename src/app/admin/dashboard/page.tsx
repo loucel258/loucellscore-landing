@@ -241,19 +241,19 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-3">
-              <Link href="/admin/crm" className="rounded-lg border border-neutral-200 bg-white/52 p-3 transition-colors hover:border-amber-300">
+              <Link href="/admin/crm" className="rounded-lg border border-neutral-200 bg-white/55 p-3 transition-colors hover:border-amber-300">
                 <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">Follow-ups due</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums text-neutral-900">{dueTasks.length}</p>
                 <p className="mt-0.5 truncate text-[11px] text-neutral-500">
                   {dueTasks[0] ? `${dueTasks[0].accountName} — ${dueTasks[0].title}` : "Nothing due"}
                 </p>
               </Link>
-              <Link href="/admin/agents" className="rounded-lg border border-neutral-200 bg-white/52 p-3 transition-colors hover:border-cyan-300">
+              <Link href="/admin/agents" className="rounded-lg border border-neutral-200 bg-white/55 p-3 transition-colors hover:border-cyan-300">
                 <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">Pending approvals</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums text-neutral-900">{pendingApprovals}</p>
                 <p className="mt-0.5 text-[11px] text-neutral-500">HITL actions awaiting sign-off</p>
               </Link>
-              <Link href="/admin/crm" className="rounded-lg border border-neutral-200 bg-white/52 p-3 transition-colors hover:border-rose-300">
+              <Link href="/admin/crm" className="rounded-lg border border-neutral-200 bg-white/55 p-3 transition-colors hover:border-rose-300">
                 <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">Churn risk</p>
                 <p className="mt-1.5 text-2xl font-semibold tabular-nums text-neutral-900">{churnAccounts.length}</p>
                 <p className="mt-0.5 truncate text-[11px] text-neutral-500">

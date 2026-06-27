@@ -80,13 +80,13 @@ export function NewEngagementForm() {
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
           <dt className="text-neutral-600">Reference:</dt>
           <dd>
-            <code className="rounded bg-white px-1.5 py-0.5">
+            <code className="rounded bg-white/55 px-1.5 py-0.5">
               {state.engagementRef}
             </code>
           </dd>
           <dt className="text-neutral-600">Engagement ID:</dt>
           <dd>
-            <code className="rounded bg-white px-1.5 py-0.5">
+            <code className="rounded bg-white/55 px-1.5 py-0.5">
               {state.engagementId}
             </code>
           </dd>
@@ -97,7 +97,7 @@ export function NewEngagementForm() {
         <ol className="mt-1 list-decimal pl-5 text-xs text-neutral-700">
           <li>
             Run locally:{" "}
-            <code className="rounded bg-white px-1 py-0.5 text-[10px]">
+            <code className="rounded bg-white/55 px-1 py-0.5 text-[10px]">
               bash gap-audit-kit/bin/new-engagement.sh &quot;
               {clientLegalName}&quot; {vertical} {language}
             </code>
@@ -126,7 +126,7 @@ export function NewEngagementForm() {
           onChange={(e) => setClientLegalName(e.target.value)}
           disabled={state.kind === "submitting"}
           placeholder="Sunset Roofing LLC"
-          className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+          className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
         />
       </Field>
 
@@ -138,7 +138,7 @@ export function NewEngagementForm() {
           onChange={(e) => setClientEmail(e.target.value)}
           disabled={state.kind === "submitting"}
           placeholder="owner@sunsetroofing.com"
-          className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+          className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
         />
       </Field>
 
@@ -148,7 +148,7 @@ export function NewEngagementForm() {
             value={vertical}
             onChange={(e) => setVertical(e.target.value)}
             disabled={state.kind === "submitting"}
-            className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+            className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
           >
             {VERTICALS.map((v) => (
               <option key={v} value={v}>
@@ -163,7 +163,7 @@ export function NewEngagementForm() {
             value={language}
             onChange={(e) => setLanguage(e.target.value as "en" | "es")}
             disabled={state.kind === "submitting"}
-            className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+            className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
           >
             <option value="en">English</option>
             <option value="es">Spanish</option>
@@ -179,7 +179,7 @@ export function NewEngagementForm() {
               setEngagementType(e.target.value as typeof engagementType)
             }
             disabled={state.kind === "submitting"}
-            className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+            className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
           >
             <option value="gap_audit">Gap Audit ($500)</option>
             <option value="smv_build">SMV Build</option>
@@ -195,7 +195,7 @@ export function NewEngagementForm() {
             value={auditFeeUsd}
             onChange={(e) => setAuditFeeUsd(e.target.value)}
             disabled={state.kind === "submitting"}
-            className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+            className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
           />
         </Field>
       </div>
@@ -207,7 +207,7 @@ export function NewEngagementForm() {
           disabled={state.kind === "submitting"}
           rows={3}
           placeholder="Source of lead, anything unusual to remember, …"
-          className="w-full rounded-md border border-white/65 bg-white/58 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
+          className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
         />
       </Field>
 

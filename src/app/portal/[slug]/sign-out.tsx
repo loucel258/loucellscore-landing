@@ -29,7 +29,7 @@ export function PortalSignOutButton({
     <button
       type="button"
       onClick={signOut}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-white/60"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-white/55"
     >
       <LogOut className="size-3.5" />
       Sign out

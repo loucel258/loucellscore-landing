@@ -73,7 +73,7 @@ export function TakeoverPanel({
 
   if (!composing && !isPaused) {
     return (
-      <div className="border-t border-neutral-200 bg-white/52 px-5 py-3">
+      <div className="border-t border-neutral-200 bg-white/55 px-5 py-3">
         <button
           type="button"
           onClick={() => setComposing(true)}
@@ -105,7 +105,7 @@ export function TakeoverPanel({
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
           rows={2}
-          className="block flex-1 rounded-lg border border-white/65 bg-white/58 px-3 py-2 text-sm text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+          className="block flex-1 rounded-lg border border-white/65 bg-white/55 px-3 py-2 text-sm text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
         />
         <button
           type="button"
@@ -122,7 +122,7 @@ export function TakeoverPanel({
           type="button"
           disabled={busy !== null}
           onClick={release}
-          className="inline-flex items-center gap-1.5 rounded-md border border-white/65 bg-white/58 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-white/60 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-white/65 bg-white/55 px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-white/55 disabled:opacity-50"
         >
           {busy === "release" ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
           {releaseLabel}

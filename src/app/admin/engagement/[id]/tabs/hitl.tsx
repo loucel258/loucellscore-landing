@@ -95,7 +95,7 @@ export function HitlTab({
                 <header className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700 ring-1 ring-neutral-200">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-white/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700 ring-1 ring-neutral-200">
                         {r.action_type}
                       </span>
                       {r.risk_score !== null && r.risk_score > 0 && (
@@ -130,7 +130,7 @@ export function HitlTab({
                     {daysAgo(r.created_at)}d ago
                   </p>
                 </header>
-                <p className="mt-3 whitespace-pre-wrap rounded-md border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-3 text-xs text-neutral-800">
+                <p className="mt-3 whitespace-pre-wrap rounded-md border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-3 text-xs text-neutral-800">
                   {r.proposed_text}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -145,7 +145,7 @@ export function HitlTab({
                   <button
                     type="button"
                     disabled
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 ring-1 ring-neutral-300 opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/55 px-3 py-1.5 text-xs font-medium text-neutral-700 ring-1 ring-neutral-300 opacity-60"
                     title="Edit before approving"
                   >
                     Edit & approve
@@ -153,7 +153,7 @@ export function HitlTab({
                   <button
                     type="button"
                     disabled
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200 opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/55 px-3 py-1.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200 opacity-60"
                     title="Reject"
                   >
                     <XCircle className="size-3.5" /> Reject

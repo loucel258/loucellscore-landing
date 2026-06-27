@@ -34,7 +34,7 @@ export function PortalLoginForm({ slug }: { slug: string }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-6 rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-6 shadow-sm"
+      className="mt-6 rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-6 shadow-sm"
     >
       <label className="block text-xs font-medium text-neutral-700" htmlFor="passcode">
         Passcode
