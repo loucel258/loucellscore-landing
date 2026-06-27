@@ -148,7 +148,7 @@ export function ChatPulseDashboard({
               .map(([k, v]) => (
                 <li
                   key={k}
-                  className="flex items-center justify-between rounded border border-neutral-200 bg-white/55 px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded border border-white/70 bg-white/72 shadow-sm shadow-slate-900/10 px-3 py-2 text-sm"
                 >
                   <code className="text-xs text-neutral-700">{k}</code>
                   <span className="font-mono font-semibold">{v}</span>
@@ -178,9 +178,9 @@ export function ChatPulseDashboard({
         {data.leadsAll.length === 0 ? (
           <p className="mt-2 text-sm text-neutral-500">no leads yet</p>
         ) : (
-          <div className="mt-2 overflow-x-auto rounded border border-neutral-200">
+          <div className="mt-2 overflow-x-auto rounded border border-white/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white/55 text-neutral-600">
+              <thead className="bg-white/72 text-neutral-600">
                 <tr>
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Name</th>
@@ -242,9 +242,9 @@ export function ChatPulseDashboard({
         {data.deniesLast50.length === 0 ? (
           <p className="mt-2 text-sm text-neutral-500">no denies</p>
         ) : (
-          <div className="mt-2 overflow-x-auto rounded border border-neutral-200">
+          <div className="mt-2 overflow-x-auto rounded border border-white/60">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white/55 text-neutral-600">
+              <thead className="bg-white/72 text-neutral-600">
                 <tr>
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Blocked by</th>
@@ -276,7 +276,7 @@ export function ChatPulseDashboard({
         )}
       </section>
 
-      <footer className="mt-12 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
+      <footer className="mt-12 border-t border-white/60 pt-4 text-xs text-neutral-500">
         chat-pulse · single-operator dashboard · refresh page for latest
       </footer>
     </main>
@@ -299,7 +299,7 @@ function KpiCard({
       className={`rounded border p-4 ${
         accent === "warn"
           ? "border-amber-300 bg-amber-50"
-          : "border-neutral-200 bg-white"
+          : "border-white/70 bg-white/72 shadow-sm shadow-slate-900/10"
       }`}
     >
       <div className="text-xs uppercase tracking-wider text-neutral-500">
@@ -321,7 +321,7 @@ function FunnelBlock({
   const total =
     counts.offered + counts.confirmed + counts.rescheduled + counts.cancelled + counts.abandoned;
   return (
-    <div className="rounded border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-4">
+    <div className="rounded border border-white/70 bg-white/72 shadow-sm shadow-slate-900/10 shadow-sm shadow-slate-900/10 p-4">
       <div className="text-xs uppercase tracking-wider text-neutral-500">
         {title}
       </div>
