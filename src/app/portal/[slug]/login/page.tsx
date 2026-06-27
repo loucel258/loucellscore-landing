@@ -52,10 +52,10 @@ export default async function PortalLoginPage({
           What you&apos;ll see inside
         </p>
         <ul className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-neutral-700">
-          <li className="rounded-lg bg-neutral-50 px-2 py-1.5">Your conversations</li>
-          <li className="rounded-lg bg-neutral-50 px-2 py-1.5">Approval queue</li>
-          <li className="rounded-lg bg-neutral-50 px-2 py-1.5">Cost transparency</li>
-          <li className="rounded-lg bg-neutral-50 px-2 py-1.5">Audit chain</li>
+          <li className="rounded-lg bg-white/60 px-2 py-1.5">Your conversations</li>
+          <li className="rounded-lg bg-white/60 px-2 py-1.5">Approval queue</li>
+          <li className="rounded-lg bg-white/60 px-2 py-1.5">Cost transparency</li>
+          <li className="rounded-lg bg-white/60 px-2 py-1.5">Audit chain</li>
         </ul>
       </div>
     </div>

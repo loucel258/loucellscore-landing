@@ -174,7 +174,7 @@ export default async function AgentsListPage() {
                         ? ((retainerUsd - (cost?.estimatedUsd ?? 0)) / retainerUsd) * 100
                         : null;
                     return (
-                      <tr key={a.id} className="hover:bg-neutral-50">
+                      <tr key={a.id} className="hover:bg-white/60">
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-violet-500 text-white">

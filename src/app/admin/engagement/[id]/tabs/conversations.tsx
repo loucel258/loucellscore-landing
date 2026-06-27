@@ -150,7 +150,7 @@ export function ConversationsTab({
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {sessions.slice(0, 25).map((s) => (
-                  <tr key={s.sessionId} className="hover:bg-neutral-50">
+                  <tr key={s.sessionId} className="hover:bg-white/60">
                     <td className="px-2 py-2 font-mono text-[10px] text-neutral-700">
                       {s.sessionId.slice(0, 24)}…
                     </td>
@@ -208,7 +208,7 @@ export function ConversationsTab({
                 key={s.sessionId}
                 className="rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10"
               >
-                <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-neutral-50">
+                <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-white/60">
                   <span className="font-mono text-[10px] text-neutral-700">
                     {s.sessionId.slice(0, 24)}…
                   </span>

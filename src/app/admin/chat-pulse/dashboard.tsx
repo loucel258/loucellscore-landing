@@ -148,7 +148,7 @@ export function ChatPulseDashboard({
               .map(([k, v]) => (
                 <li
                   key={k}
-                  className="flex items-center justify-between rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded border border-neutral-200 bg-white/60 px-3 py-2 text-sm"
                 >
                   <code className="text-xs text-neutral-700">{k}</code>
                   <span className="font-mono font-semibold">{v}</span>
@@ -180,7 +180,7 @@ export function ChatPulseDashboard({
         ) : (
           <div className="mt-2 overflow-x-auto rounded border border-neutral-200">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50 text-neutral-600">
+              <thead className="bg-white/60 text-neutral-600">
                 <tr>
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Name</th>
@@ -244,7 +244,7 @@ export function ChatPulseDashboard({
         ) : (
           <div className="mt-2 overflow-x-auto rounded border border-neutral-200">
             <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-50 text-neutral-600">
+              <thead className="bg-white/60 text-neutral-600">
                 <tr>
                   <th className="px-3 py-2 font-medium">When</th>
                   <th className="px-3 py-2 font-medium">Blocked by</th>

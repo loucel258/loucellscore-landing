@@ -79,7 +79,7 @@ export default async function PortalAgentsPage({
         actions={
           <Link
             href={`/portal/${slug}`}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-neutral-800 ring-1 ring-neutral-200 transition-colors hover:bg-neutral-50"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-neutral-800 ring-1 ring-neutral-200 transition-colors hover:bg-white/60"
           >
             Back to overview
           </Link>

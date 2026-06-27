@@ -128,7 +128,7 @@ export default async function CustomersPage({
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {customers.map((c) => (
-                  <tr key={c.email} className="hover:bg-neutral-50">
+                  <tr key={c.email} className="hover:bg-white/60">
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <span className="inline-flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 text-[10px] font-semibold text-white">

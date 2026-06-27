@@ -183,7 +183,7 @@ export function OverviewTab({
             <Stat label="Created" value={formatShortDate(e.created_at)} />
           </dl>
           {e.notes && (
-            <div className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+            <div className="mt-4 rounded-md border border-neutral-200 bg-white/60 p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Notes
               </p>

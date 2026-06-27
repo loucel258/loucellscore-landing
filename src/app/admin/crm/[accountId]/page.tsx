@@ -117,7 +117,7 @@ export default async function AccountDetailPage({
               <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
                 {engagements.map((e) => (
                   <li key={e.engagementId}>
-                    <Link href={`/admin/engagement/${e.engagementId}`} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-neutral-50/60">
+                    <Link href={`/admin/engagement/${e.engagementId}`} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/52">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-neutral-900">{e.type.replace(/_/g, " ")}</p>
                         <p className="mt-0.5 font-mono text-[10px] text-neutral-400">{e.engagementRef}</p>
@@ -194,7 +194,7 @@ export default async function AccountDetailPage({
                 </summary>
                 <ul className="mt-2 space-y-2">
                   {doneTasks.map((t) => (
-                    <li key={t.id} className="flex items-start gap-2.5 rounded-lg border border-neutral-100 bg-neutral-50/50 p-3">
+                    <li key={t.id} className="flex items-start gap-2.5 rounded-lg border border-neutral-100 bg-white/60/50 p-3">
                       <TaskToggle taskId={t.id} done={true} />
                       <p className="text-sm text-neutral-400 line-through">{t.title}</p>
                     </li>

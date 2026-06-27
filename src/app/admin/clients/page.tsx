@@ -270,7 +270,7 @@ function EngagementsTable({
   return (
     <div className="overflow-hidden rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10">
       <table className="w-full text-left">
-        <thead className="bg-neutral-50 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+        <thead className="bg-white/60 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
           <tr>
             <th className="px-4 py-2.5">Client</th>
             <th className="px-4 py-2.5">Reference</th>
@@ -288,7 +288,7 @@ function EngagementsTable({
             return (
               <tr
                 key={r.id}
-                className="text-xs transition-colors hover:bg-neutral-50"
+                className="text-xs transition-colors hover:bg-white/60"
               >
                 <td className="px-4 py-2.5">
                   <Link

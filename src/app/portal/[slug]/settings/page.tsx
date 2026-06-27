@@ -328,7 +328,7 @@ async function ActivityTab({
             </thead>
             <tbody className="divide-y divide-neutral-100">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-neutral-50">
+                <tr key={r.id} className="hover:bg-white/60">
                   <td className="px-2 py-2 tabular-nums text-[10px] text-neutral-500">
                     {new Date(r.inserted_at).toLocaleString(lang === "es" ? "es-ES" : "en-US", {
                       month: "short",

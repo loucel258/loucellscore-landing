@@ -130,7 +130,7 @@ export default async function CrmHubPage() {
           {LANES.map((lane) => {
             const deals = dealsByLane.get(lane.key)!;
             return (
-              <div key={lane.key} className="flex flex-col rounded-xl border border-neutral-200 bg-neutral-50/60">
+              <div key={lane.key} className="flex flex-col rounded-xl border border-neutral-200 bg-white/52">
                 <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
                   <span className="text-xs font-semibold text-neutral-700">{lane.label}</span>
                   <span className="tabular-nums rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 ring-1 ring-neutral-200">
@@ -172,7 +172,7 @@ export default async function CrmHubPage() {
         ) : (
           <div className="overflow-hidden rounded-xl border border-neutral-200">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+              <thead className="bg-white/60 text-left text-[10px] uppercase tracking-wider text-neutral-500">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Account</th>
                   <th className="px-4 py-2.5 font-medium">Stage</th>
@@ -185,7 +185,7 @@ export default async function CrmHubPage() {
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {accounts.map((a: AccountSummary) => (
-                  <tr key={a.id} className="transition-colors hover:bg-neutral-50/60">
+                  <tr key={a.id} className="transition-colors hover:bg-white/52">
                     <td className="px-4 py-3">
                       <Link href={`/admin/crm/${a.id}`} className="font-medium text-neutral-900 hover:text-cyan-700">
                         {a.name}

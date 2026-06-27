@@ -239,7 +239,7 @@ export default async function BandejaPage({
                     href={`/portal/${slug}/bandeja?${qs.toString()}`}
                     aria-current={active ? "true" : undefined}
                     className={`block px-4 py-3 transition-colors ${
-                      active ? "bg-cyan-50" : "hover:bg-neutral-50"
+                      active ? "bg-cyan-50" : "hover:bg-white/60"
                     }`}
                   >
                     <div className="flex items-start gap-3">

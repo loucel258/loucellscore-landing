@@ -104,7 +104,7 @@ export function AuditTab({
               {recent.slice(0, 50).map((r) => {
                 const date = new Date(r.inserted_at);
                 return (
-                  <tr key={r.id} className="hover:bg-neutral-50">
+                  <tr key={r.id} className="hover:bg-white/60">
                     <td className="px-2 py-2 tabular-nums text-[10px] text-neutral-500">
                       {date.toLocaleString("en-US", {
                         month: "short",

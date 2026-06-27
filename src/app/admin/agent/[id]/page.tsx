@@ -365,7 +365,7 @@ export default async function AgentDetailPage({
               {Object.entries(a.integrations).map(([key, val]) => (
                 <div
                   key={key}
-                  className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5"
+                  className="rounded-md border border-neutral-200 bg-white/60 px-2.5 py-1.5"
                 >
                   <dt className="text-[10px] uppercase tracking-wider text-neutral-500">
                     {key}
@@ -413,7 +413,7 @@ export default async function AgentDetailPage({
             </div>
           </dl>
           {a.notes && (
-            <div className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-3">
+            <div className="mt-4 rounded-md border border-neutral-200 bg-white/60 p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Notes
               </p>
@@ -448,7 +448,7 @@ export default async function AgentDetailPage({
                 blocked_by: string | null;
                 reason: string;
               }> | null) ?? []).length === 0 ? (
-            <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-center">
+            <div className="mt-3 rounded-md border border-dashed border-neutral-200 bg-white/60 px-4 py-6 text-center">
               <p className="text-xs text-neutral-500">
                 <Lightbulb className="mr-1 inline size-3" />
                 Zero DENYs in the last 24h — agent is running clean.
@@ -457,7 +457,7 @@ export default async function AgentDetailPage({
           ) : (
             <div className="mt-3 overflow-hidden rounded-md border border-neutral-200">
               <table className="w-full text-left">
-                <thead className="bg-neutral-50 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
+                <thead className="bg-white/60 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
                   <tr>
                     <th className="px-3 py-2">When</th>
                     <th className="px-3 py-2">Blocked by</th>
