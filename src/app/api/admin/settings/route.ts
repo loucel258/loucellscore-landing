@@ -27,6 +27,10 @@ const PatchSchema = z
     session_ttl_hours: z.number().int().min(1).max(168).optional(),
     default_monthly_budget: z.number().int().min(0).max(1_000_000_000).optional(),
     budget_alert_pct: z.number().gt(0).max(1).optional(),
+    business_hours_start: z.number().int().min(0).max(23).optional(),
+    business_hours_end: z.number().int().min(1).max(24).optional(),
+    business_timezone: z.string().min(1).max(64).optional(),
+    default_retention_days: z.number().int().min(1).max(3650).optional(),
   })
   .strict();
 

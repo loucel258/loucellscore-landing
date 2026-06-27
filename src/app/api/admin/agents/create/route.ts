@@ -95,9 +95,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const workspaceId = `ws_client_${normalizeForWorkspace(engagementRef)}_${normalizeForWorkspace(input.slug)}`;
 
-  // Default token budget for new agents comes from /admin/settings; an
-  // explicit value in the wizard still wins.
-  const { defaultMonthlyBudget } = await getAdminSettings();
+  // Defaults for new agents (token budget, data retention) come from
+  // /admin/settings; an explicit value in the wizard still wins.
+  const { defaultMonthlyBudget, defaultRetentionDays } = await getAdminSettings();
 
   const { data: created, error } = await sb
     .from("client_agents")
@@ -114,6 +114,7 @@ export async function POST(req: Request): Promise<Response> {
       greeting_message: input.greetingMessage ?? null,
       brand_color: input.brandColor ?? null,
       monthly_token_budget: input.monthlyTokenBudget ?? defaultMonthlyBudget,
+      conversation_retention_days: defaultRetentionDays,
       channels: ["chat_widget"],
       integrations: {},
     })

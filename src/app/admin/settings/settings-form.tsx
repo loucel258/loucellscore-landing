@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, ShieldCheck, Wallet, Check, AlertTriangle, KeyRound } from "lucide-react";
+import { Bell, ShieldCheck, Wallet, Check, AlertTriangle, KeyRound, Send, Clock } from "lucide-react";
 import type { AdminSettings } from "@/lib/admin/settings";
 
 const card =
@@ -60,9 +60,39 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
   const [sessionHours, setSessionHours] = useState(initial.sessionTtlHours);
   const [defaultBudget, setDefaultBudget] = useState(initial.defaultMonthlyBudget);
   const [budgetPct, setBudgetPct] = useState(Math.round(initial.budgetAlertPct * 100));
+  const [bhStart, setBhStart] = useState(initial.businessHoursStart);
+  const [bhEnd, setBhEnd] = useState(initial.businessHoursEnd);
+  const [timezone, setTimezone] = useState(initial.businessTimezone);
+  const [retentionDays, setRetentionDays] = useState(initial.defaultRetentionDays);
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function sendTestAlert() {
+    setTesting(true);
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/admin/settings/test-alert", { method: "POST" });
+      const d = await res.json();
+      if (d.ok) {
+        setTestMsg({ ok: true, text: "Test alert sent — check the inbox." });
+      } else {
+        const why =
+          d.reason === "no_api_key"
+            ? "RESEND_API_KEY not set in Vercel."
+            : d.reason === "alerts_disabled"
+              ? "Master switch is off (save it on first)."
+              : "Send failed — check the inbox address.";
+        setTestMsg({ ok: false, text: why });
+      }
+    } catch {
+      setTestMsg({ ok: false, text: "Network error." });
+    } finally {
+      setTesting(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -80,6 +110,10 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
           session_ttl_hours: Number(sessionHours),
           default_monthly_budget: Number(defaultBudget),
           budget_alert_pct: Math.min(1, Math.max(0.01, Number(budgetPct) / 100)),
+          business_hours_start: Number(bhStart),
+          business_hours_end: Number(bhEnd),
+          business_timezone: timezone.trim() || "America/New_York",
+          default_retention_days: Number(retentionDays),
         }),
       });
       const d = await res.json();
@@ -154,6 +188,29 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
             </p>
           </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/60 pt-4">
+          <button
+            type="button"
+            onClick={sendTestAlert}
+            disabled={testing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white/70 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white disabled:opacity-50"
+          >
+            <Send className="size-3.5" />
+            {testing ? "Sending…" : "Send test alert"}
+          </button>
+          <span className="text-[11px] text-neutral-400">
+            Sends a test email to the inbox above using current settings.
+          </span>
+          {testMsg && (
+            <span
+              className={`flex w-full items-center gap-1.5 text-xs ${testMsg.ok ? "text-emerald-600" : "text-rose-600"}`}
+            >
+              {testMsg.ok ? <Check className="size-3.5" /> : <AlertTriangle className="size-3.5" />}
+              {testMsg.text}
+            </span>
+          )}
+        </div>
       </section>
 
       {/* Operator & security */}
@@ -185,6 +242,54 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
             Rotating it signs out every existing session.
           </span>
         </div>
+      </section>
+
+      {/* Business hours */}
+      <section className={card}>
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
+          <Clock className="size-4" /> Business hours
+        </h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Used by chat-health to suppress off-hours noise (the &quot;no leads&quot; / regression
+          alert only fires on weekdays within this window).
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <span className={label}>Start hour (0–23)</span>
+            <input
+              className={input}
+              type="number"
+              min={0}
+              max={23}
+              value={bhStart}
+              onChange={(e) => setBhStart(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <span className={label}>End hour (1–24)</span>
+            <input
+              className={input}
+              type="number"
+              min={1}
+              max={24}
+              value={bhEnd}
+              onChange={(e) => setBhEnd(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <span className={label}>Timezone</span>
+            <input
+              className={input}
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              placeholder="America/New_York"
+            />
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] text-neutral-400">
+          Hours are interpreted in this IANA timezone (e.g. {bhStart}:00–{bhEnd}:00 local).
+        </p>
       </section>
 
       {/* Costs & budget */}
@@ -226,6 +331,20 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
             />
             <p className="mt-1 text-[11px] text-neutral-400">
               First alert at this %; 100% (exhausted) always alerts.
+            </p>
+          </div>
+          <div>
+            <span className={label}>Default data retention (days, new agents)</span>
+            <input
+              className={input}
+              type="number"
+              min={1}
+              max={3650}
+              value={retentionDays}
+              onChange={(e) => setRetentionDays(Number(e.target.value))}
+            />
+            <p className="mt-1 text-[11px] text-neutral-400">
+              How long new agents keep conversation data. Per-agent value stays editable.
             </p>
           </div>
         </div>

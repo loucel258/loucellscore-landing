@@ -25,6 +25,10 @@ export type AdminSettings = {
   sessionTtlHours: number;
   defaultMonthlyBudget: number;
   budgetAlertPct: number;
+  businessHoursStart: number;
+  businessHoursEnd: number;
+  businessTimezone: string;
+  defaultRetentionDays: number;
   updatedAt: string | null;
 };
 
@@ -37,6 +41,10 @@ export const ADMIN_SETTINGS_DEFAULTS: AdminSettings = {
   sessionTtlHours: 8,
   defaultMonthlyBudget: 2_000_000,
   budgetAlertPct: 0.8,
+  businessHoursStart: 9,
+  businessHoursEnd: 18,
+  businessTimezone: "America/New_York",
+  defaultRetentionDays: 365,
   updatedAt: null,
 };
 
@@ -53,6 +61,10 @@ function rowToSettings(row: Record<string, unknown>): AdminSettings {
     sessionTtlHours: Number(row.session_ttl_hours ?? 8),
     defaultMonthlyBudget: Number(row.default_monthly_budget ?? 2_000_000),
     budgetAlertPct: Number(row.budget_alert_pct ?? 0.8),
+    businessHoursStart: Number(row.business_hours_start ?? 9),
+    businessHoursEnd: Number(row.business_hours_end ?? 18),
+    businessTimezone: (row.business_timezone as string | null) ?? "America/New_York",
+    defaultRetentionDays: Number(row.default_retention_days ?? 365),
     updatedAt: (row.updated_at as string | null) ?? null,
   };
 }
@@ -85,6 +97,10 @@ export type AdminSettingsPatch = Partial<{
   session_ttl_hours: number;
   default_monthly_budget: number;
   budget_alert_pct: number;
+  business_hours_start: number;
+  business_hours_end: number;
+  business_timezone: string;
+  default_retention_days: number;
 }>;
 
 export async function updateAdminSettings(patch: AdminSettingsPatch): Promise<boolean> {
@@ -97,6 +113,35 @@ export async function updateAdminSettings(patch: AdminSettingsPatch): Promise<bo
   if (error) return false;
   invalidateAdminSettings();
   return true;
+}
+
+/**
+ * Whether `now` falls within the configured business hours, evaluated in the
+ * operator's timezone, on a weekday. Used by chat-health to suppress
+ * off-hours noise. An invalid timezone fails OPEN (returns true) so alerts
+ * keep firing rather than silently never firing.
+ */
+export function isWithinBusinessHours(
+  now: Date,
+  startHour: number,
+  endHour: number,
+  timeZone: string,
+): boolean {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      hour: "numeric",
+      hour12: false,
+    }).formatToParts(now);
+    const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+    let hour = Number.parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+    if (hour === 24) hour = 0; // some ICU builds emit "24" at midnight
+    const isWeekday = !["Sat", "Sun"].includes(weekday);
+    return isWeekday && hour >= startHour && hour < endHour;
+  } catch {
+    return true;
+  }
 }
 
 /**

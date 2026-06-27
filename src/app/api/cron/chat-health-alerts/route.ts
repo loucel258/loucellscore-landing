@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { sendInternalAlert, verifyCronAuth } from "@/lib/notify/resend";
-import { getAdminSettings } from "@/lib/admin/settings";
+import { getAdminSettings, isWithinBusinessHours } from "@/lib/admin/settings";
 import { logCronRun } from "@/lib/ops/cron-log";
 
 export const runtime = "nodejs";
@@ -263,10 +263,13 @@ async function handleCron(req: Request): Promise<Response> {
   // → chat regressed, prospects can't reach the agent
   // ──────────────────────────────────────────────────────────────
   // Only fire on weekdays during business hours to avoid weekend noise.
-  const dayOfWeek = now.getUTCDay(); // 0=Sun, 6=Sat
-  const utcHour = now.getUTCHours();
-  // South Florida = ET (UTC-5 standard / UTC-4 DST). Treat 14-22 UTC as business hours.
-  const isBusinessHours = dayOfWeek >= 1 && dayOfWeek <= 5 && utcHour >= 14 && utcHour <= 22;
+  // Hours + timezone are operator-configurable (admin_settings).
+  const isBusinessHours = isWithinBusinessHours(
+    now,
+    settings.businessHoursStart,
+    settings.businessHoursEnd,
+    settings.businessTimezone,
+  );
 
   // Window is operator-configurable (admin_settings.alert_no_leads_hours);
   // 0 disables the rule entirely.
