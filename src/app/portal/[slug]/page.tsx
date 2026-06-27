@@ -295,7 +295,7 @@ export default async function PortalResumenPage({
         <Panel title={lang === "es" ? "Estado del servicio" : "Service status"} tone="muted">
           <ul className="flex flex-col gap-3">
             {incidents.map((i) => (
-              <li key={i.id} className="rounded-lg border border-neutral-200 bg-white p-3">
+              <li key={i.id} className="rounded-lg border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-3">
                 <header className="flex items-start justify-between gap-3">
                   <p className="text-sm font-semibold text-neutral-900">{i.title}</p>
                   <span

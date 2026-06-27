@@ -47,7 +47,7 @@ export function LanguageSwitcher({
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="inline-flex rounded-xl border border-neutral-200 bg-white p-1">
+      <div className="inline-flex rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-1">
         {(["en", "es"] as const).map((opt) => (
           <button
             key={opt}

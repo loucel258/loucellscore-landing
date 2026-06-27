@@ -198,7 +198,7 @@ export default async function PortalLayout({
           openLabel={t(lang, "nav.open_menu")}
           closeLabel={t(lang, "nav.close_menu")}
         />
-        <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/50 bg-white/55 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+        <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/70 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
           <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</main>
           <footer className="border-t border-white/40 bg-white/25 px-6 py-4 text-[10px] text-slate-500 lg:px-8">
             <div className="flex flex-wrap items-center justify-between gap-2">

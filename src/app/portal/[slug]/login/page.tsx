@@ -47,7 +47,7 @@ export default async function PortalLoginPage({
 
       <PortalLoginForm slug={slug} />
 
-      <div className="mt-6 rounded-xl border border-neutral-200/70 bg-white/60 p-4 text-center">
+      <div className="mt-6 rounded-xl border border-white/60 bg-white/72/60 p-4 text-center">
         <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
           What you&apos;ll see inside
         </p>

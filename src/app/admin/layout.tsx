@@ -78,7 +78,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             initials: "L",
           }}
         />
-        <main className="mt-3 flex-1 rounded-3xl border border-white/50 bg-white/55 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+        <main className="mt-3 flex-1 rounded-3xl border border-white/60 bg-white/70 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
           {children}
         </main>
       </div>

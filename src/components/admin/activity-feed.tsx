@@ -66,7 +66,7 @@ export function ActivityFeed({
   emptyMessage?: string;
 }) {
   return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-4">
+    <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-4">
       <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
         {title}
       </h2>

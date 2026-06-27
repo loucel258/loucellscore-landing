@@ -185,7 +185,7 @@ export default async function AgentDetailPage({
 
       {/* Lifecycle ribbon */}
       {!a.archived_at && (
-        <section className="mb-6 rounded-xl border border-neutral-200 bg-white p-4">
+        <section className="mb-6 rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-4">
           <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Build lifecycle
           </h2>
@@ -340,7 +340,7 @@ export default async function AgentDetailPage({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Channels + integrations */}
-        <section className="rounded-xl border border-neutral-200 bg-white p-5">
+        <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Channels + integrations
           </h2>
@@ -386,7 +386,7 @@ export default async function AgentDetailPage({
         </section>
 
         {/* Baselines + notes */}
-        <section className="rounded-xl border border-neutral-200 bg-white p-5">
+        <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Baselines (set on go-live)
           </h2>
@@ -425,7 +425,7 @@ export default async function AgentDetailPage({
         </section>
 
         {/* Recent DENYs OR pre-live placeholder */}
-        <section className="rounded-xl border border-neutral-200 bg-white p-5 lg:col-span-2">
+        <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5 lg:col-span-2">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Recent DENYs · last 15
           </h2>

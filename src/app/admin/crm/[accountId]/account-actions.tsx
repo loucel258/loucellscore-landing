@@ -185,7 +185,7 @@ export function LifecycleSelect({
       value={value}
       onChange={(e) => change(e.target.value)}
       disabled={pending}
-      className="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold capitalize text-neutral-700 outline-none focus:border-cyan-500 disabled:opacity-50"
+      className="rounded-md border border-white/65 bg-white/80 px-2 py-1 text-xs font-semibold capitalize text-neutral-700 outline-none focus:border-cyan-500 disabled:opacity-50"
     >
       {LIFECYCLES.map((l) => (
         <option key={l} value={l}>

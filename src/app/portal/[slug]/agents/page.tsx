@@ -133,7 +133,7 @@ export default async function PortalAgentsPage({
               <Link
                 key={a.id}
                 href={`/portal/${slug}/agent/${a.id}`}
-                className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
+                className="group relative overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
               >
                 <div className="absolute -right-12 -top-12 size-32 rounded-full bg-cyan-100/40 blur-2xl transition-opacity group-hover:opacity-80" aria-hidden />
                 <div className="relative">

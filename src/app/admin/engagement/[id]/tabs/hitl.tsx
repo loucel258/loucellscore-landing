@@ -130,7 +130,7 @@ export function HitlTab({
                     {daysAgo(r.created_at)}d ago
                   </p>
                 </header>
-                <p className="mt-3 whitespace-pre-wrap rounded-md border border-neutral-200 bg-white p-3 text-xs text-neutral-800">
+                <p className="mt-3 whitespace-pre-wrap rounded-md border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-3 text-xs text-neutral-800">
                   {r.proposed_text}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
