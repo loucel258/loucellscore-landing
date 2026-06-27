@@ -174,7 +174,7 @@ export default async function PortalLayout({
     .join("");
 
   return (
-    <div data-shell className="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div data-shell className="flex min-h-screen bg-gradient-to-b from-[#0a1e46] via-[#1e4fa3] to-[#e8f1fc] text-slate-900">
       <Sidebar
         brand={{
           workspaceName: displayName,
@@ -186,7 +186,7 @@ export default async function PortalLayout({
         footer={<PortalSidebarFooter slug={slug} lang={lang} />}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col p-3 lg:p-4">
         <MobileNav
           brand={{
             workspaceName: displayName,
@@ -198,17 +198,19 @@ export default async function PortalLayout({
           openLabel={t(lang, "nav.open_menu")}
           closeLabel={t(lang, "nav.close_menu")}
         />
-        <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</main>
-        <footer className="border-t border-neutral-200/70 bg-white px-6 py-4 text-[10px] text-neutral-500 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p>
-              {lang === "es"
-                ? "Cada decisión queda registrada en nuestra cadena de auditoría inmutable."
-                : "Every decision is logged in our append-only audit chain."}
-            </p>
-            <p>Loucells Core · loucellscore.com</p>
-          </div>
-        </footer>
+        <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/50 bg-white/55 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+          <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</main>
+          <footer className="border-t border-white/40 bg-white/25 px-6 py-4 text-[10px] text-slate-500 lg:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p>
+                {lang === "es"
+                  ? "Cada decisión queda registrada en nuestra cadena de auditoría inmutable."
+                  : "Every decision is logged in our append-only audit chain."}
+              </p>
+              <p>Loucells Core · loucellscore.com</p>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
   );

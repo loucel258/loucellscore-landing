@@ -49,12 +49,12 @@ export function Sidebar({
   footer?: ReactNode;
 }) {
   return (
-    <aside className="sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col gap-1 border-r border-neutral-800/80 bg-neutral-950 text-neutral-200 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col gap-1 border-r border-white/10 bg-slate-950/35 text-slate-200 backdrop-blur-2xl lg:flex">
       {/* Brand strip */}
-      <div className="relative border-b border-neutral-800/80 px-3 py-3">
+      <div className="relative border-b border-white/10 px-3 py-3">
         <Link
           href="/"
-          className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-neutral-900"
+          className="group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-white/8"
         >
           <span className="relative inline-flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 via-cyan-500 to-violet-600 text-white shadow-md shadow-cyan-500/20">
             {brand.initials ? (
@@ -98,8 +98,8 @@ export function Sidebar({
                       aria-current={active ? "page" : undefined}
                       className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors ${
                         active
-                          ? "bg-gradient-to-r from-cyan-500/10 via-violet-500/10 to-transparent text-white"
-                          : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-100"
+                          ? "bg-gradient-to-r from-cyan-400/20 via-violet-500/15 to-transparent text-white"
+                          : "text-slate-300 hover:bg-white/8 hover:text-white"
                       }`}
                     >
                       {active && (
@@ -126,7 +126,7 @@ export function Sidebar({
                           className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
                             active
                               ? "bg-cyan-400/20 text-cyan-200"
-                              : "bg-neutral-800 text-neutral-400"
+                              : "bg-white/10 text-slate-300"
                           }`}
                         >
                           {item.badge}
@@ -143,7 +143,7 @@ export function Sidebar({
 
       {/* Footer slot */}
       {footer && (
-        <div className="border-t border-neutral-800/80 p-3">{footer}</div>
+        <div className="border-t border-white/10 p-3">{footer}</div>
       )}
     </aside>
   );
@@ -155,7 +155,7 @@ export function Sidebar({
  */
 export function MobileBrandBar({ brand }: { brand: SidebarBrand }) {
   return (
-    <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-neutral-800/80 bg-neutral-950 px-4 py-3 text-neutral-100">
+    <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 text-neutral-100 backdrop-blur-xl">
       <Link href="/" className="flex items-center gap-2">
         <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 text-white">
           <ShieldCheck className="size-3.5" />

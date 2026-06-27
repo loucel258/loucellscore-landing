@@ -54,7 +54,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   ];
 
   return (
-    <div className="flex min-h-screen bg-neutral-50 text-neutral-900">
+    <div className="flex min-h-screen bg-gradient-to-b from-[#0a1e46] via-[#1e4fa3] to-[#e8f1fc] text-slate-900">
       <Sidebar
         brand={{
           workspaceName: "Loucells Core HQ",
@@ -65,12 +65,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         pathname={pathname}
         footer={
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] text-neutral-500">8-hour session</p>
+            <p className="text-[10px] text-slate-400">8-hour session</p>
             <AdminSignOutButton />
           </div>
         }
       />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col p-3 lg:p-4">
         <MobileBrandBar
           brand={{
             workspaceName: "Loucells Core HQ",
@@ -78,12 +78,18 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             initials: "L",
           }}
         />
-        <main className="flex-1">{children}</main>
+        <main className="mt-3 flex-1 rounded-3xl border border-white/50 bg-white/55 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+          {children}
+        </main>
       </div>
     </div>
   );
 }
 
 function BareShell({ children }: { children: ReactNode }) {
-  return <div className="min-h-screen bg-neutral-50 text-neutral-900">{children}</div>;
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0a1e46] via-[#1e4fa3] to-[#e8f1fc] text-slate-900">
+      {children}
+    </div>
+  );
 }
