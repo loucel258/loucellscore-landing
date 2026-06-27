@@ -223,7 +223,7 @@ export default async function BandejaPage({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Conversation list */}
-        <aside className="overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 shadow-sm">
+        <aside className="overflow-hidden rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 shadow-sm">
           <ul className="max-h-[calc(100vh-260px)] overflow-y-auto divide-y divide-neutral-100">
             {sessionList.map(([sid, group]) => {
               const active = sid === sessionId;
@@ -289,7 +289,7 @@ export default async function BandejaPage({
         </aside>
 
         {/* Transcript view */}
-        <section className="overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 shadow-sm">
           {selected ? (
             <>
               <header className="border-b border-neutral-200 bg-gradient-to-r from-cyan-50/60 to-violet-50/60 px-5 py-3">

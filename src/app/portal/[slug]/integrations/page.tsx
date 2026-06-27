@@ -157,7 +157,7 @@ function IntegrationCard({
 }) {
   const icon = VENDOR_ICONS[i.id.toLowerCase()] ?? <Plug className="size-5" />;
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md">
+    <article className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md">
       <div className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full bg-cyan-100/40 blur-2xl" aria-hidden />
       <div className="relative">
         <header className="flex items-start justify-between gap-3">

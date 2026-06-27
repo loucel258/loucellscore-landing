@@ -145,7 +145,7 @@ export default async function CrmHubPage() {
                       <Link
                         key={d.engagementId}
                         href={`/admin/engagement/${d.engagementId}`}
-                        className="group rounded-lg border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-2.5 transition-shadow hover:shadow-sm"
+                        className="group rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-2.5 transition-shadow hover:shadow-sm"
                       >
                         <p className="truncate text-xs font-semibold text-neutral-900 group-hover:text-cyan-700">
                           {d.accountName}

@@ -31,7 +31,7 @@ export function RevenueCharts({
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
       {/* MRR trend, 12 months */}
-      <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
+      <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             12-month MRR trend
@@ -100,7 +100,7 @@ export function RevenueCharts({
 
       {/* Breakdown donut + Top 5 clients */}
       <div className="flex flex-col gap-6">
-        <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
+        <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
           <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Quarter revenue mix
           </h2>
@@ -150,7 +150,7 @@ export function RevenueCharts({
           )}
         </section>
 
-        <section className="rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
+        <section className="rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
           <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
             Top clients by MRR
           </h2>

@@ -63,7 +63,7 @@ export function HeroCard({
 
         {/* Right: optional AI summary card */}
         {aiSummary && (
-          <div className="rounded-2xl border border-violet-200/70 bg-white/70 p-4 shadow-sm backdrop-blur">
+          <div className="rounded-2xl border border-violet-200/70 bg-white/52 p-4 shadow-sm backdrop-blur">
             <header className="flex items-center gap-2">
               <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-sm shadow-violet-500/30">
                 <Sparkles className="size-3.5" />

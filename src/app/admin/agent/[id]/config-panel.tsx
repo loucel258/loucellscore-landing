@@ -193,7 +193,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
   const labelCls = "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-neutral-500";
 
   return (
-    <section className="mt-6 rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
+    <section className="mt-6 rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
           <Settings2 className="size-3.5" /> Configuration

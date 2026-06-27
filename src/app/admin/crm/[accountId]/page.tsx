@@ -143,7 +143,7 @@ export default async function AccountDetailPage({
             ) : (
               <ul className="space-y-3">
                 {notes.map((n) => (
-                  <li key={n.id} className="rounded-lg border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-3">
+                  <li key={n.id} className="rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-3">
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-800">{n.body}</p>
                     <p className="mt-2 text-[11px] text-neutral-400">{n.author} · {formatShortDate(n.createdAt)}</p>
                   </li>
@@ -164,7 +164,7 @@ export default async function AccountDetailPage({
             {openTasks.length > 0 && (
               <ul className="mb-4 space-y-2">
                 {openTasks.map((t) => (
-                  <li key={t.id} className="flex items-start gap-2.5 rounded-lg border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-3">
+                  <li key={t.id} className="flex items-start gap-2.5 rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-3">
                     <TaskToggle taskId={t.id} done={false} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-neutral-800">{t.title}</p>

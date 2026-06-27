@@ -22,7 +22,7 @@ export default function PortalError({
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="max-w-md rounded-2xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-8 text-center shadow-sm">
+      <div className="max-w-md rounded-2xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-8 text-center shadow-sm">
         <span className="mx-auto inline-flex size-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-500">
           <CloudOff className="size-6" />
         </span>

@@ -268,7 +268,7 @@ function EngagementsTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5">
+    <div className="overflow-hidden rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10">
       <table className="w-full text-left">
         <thead className="bg-neutral-50 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
           <tr>

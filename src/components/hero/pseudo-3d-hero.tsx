@@ -314,7 +314,7 @@ export function Pseudo3DHero({
           {secondaryCta && secondaryHref && (
             <a
               href={secondaryHref}
-              className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white/80 px-6 py-3 text-sm font-medium text-zinc-900 backdrop-blur transition-colors hover:border-zinc-300 hover:bg-white"
+              className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-white/58 px-6 py-3 text-sm font-medium text-zinc-900 backdrop-blur transition-colors hover:border-zinc-300 hover:bg-white"
             >
               {secondaryCta}
             </a>

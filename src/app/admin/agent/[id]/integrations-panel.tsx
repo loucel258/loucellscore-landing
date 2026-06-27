@@ -166,7 +166,7 @@ export function IntegrationsPanel({
   const labelCls = "block text-xs font-medium text-neutral-600 mb-1";
 
   return (
-    <section className="mt-6 rounded-xl border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5 p-5">
+    <section className="mt-6 rounded-xl border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10 p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
         <CalendarClock className="size-4" /> Front Desk — Reminders &amp; Keys
       </h3>

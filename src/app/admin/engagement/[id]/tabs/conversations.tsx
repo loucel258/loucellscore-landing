@@ -206,7 +206,7 @@ export function ConversationsTab({
             {transcriptSessions.map((s) => (
               <details
                 key={s.sessionId}
-                className="rounded-lg border border-white/60 bg-white/75 shadow-sm shadow-slate-900/5"
+                className="rounded-lg border border-white/60 bg-white/52 shadow-sm shadow-slate-900/10"
               >
                 <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-neutral-50">
                   <span className="font-mono text-[10px] text-neutral-700">
