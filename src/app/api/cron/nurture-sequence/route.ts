@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { sendEmail, verifyCronAuth } from "@/lib/notify/resend";
+import { logCronRun } from "@/lib/ops/cron-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,6 +146,10 @@ async function handleCron(req: Request): Promise<Response> {
     }
   }
 
+  await logCronRun({
+    job: "nurture-sequence",
+    summary: `pdf:${counts.pdf} audit:${counts.audit} call:${counts.call} failed:${counts.failed}`,
+  });
   return NextResponse.json({ ok: true, counts });
 }
 

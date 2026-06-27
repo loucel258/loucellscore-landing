@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { verifyCronAuth } from "@/lib/notify/resend";
 import { getExternalBookingBackend, callAgentApi } from "@/lib/integration/agent-client";
+import { logCronRun } from "@/lib/ops/cron-log";
 import {
   upsertMirrorAppointment,
   retireRescheduledOriginal,
@@ -72,5 +73,9 @@ async function handle(req: Request): Promise<Response> {
     results.push({ workspaceId: ws, fetched: appts.length, reconciled, failed });
   }
 
+  await logCronRun({
+    job: "booking-sync",
+    summary: `${results.length} workspace(s) synced`,
+  });
   return NextResponse.json({ ok: true, workspaces: results.length, results });
 }

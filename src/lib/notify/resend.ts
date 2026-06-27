@@ -1,5 +1,6 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
+import { getAdminSettings, resolveAlertInbox } from "@/lib/admin/settings";
 
 /**
  * Minimal Resend client over fetch — no SDK dep added.
@@ -13,15 +14,6 @@ const RESEND_API_URL = "https://api.resend.com/emails";
 // Display name must not contain "@" (RFC 5322 special char) — Resend
 // rejects `Steven @ Brand <addr>` with a 400 validation error.
 const FROM_DEFAULT = "Loucells Core <contact@loucellscore.com>";
-// Where internal alerts (HITL, escalations, budget) land. Env-overridable
-// because the contact@ MAILBOX doesn't exist yet — sending FROM it only
-// needs domain verification, but receiving needs a real inbox. Until the
-// mailbox is provisioned, point this at Steven's Gmail via Vercel env.
-// trim + strip quotes defensively: env values pasted into dashboards
-// often arrive wrapped or padded, and Resend 400s on them.
-const INTERNAL_INBOX = (process.env.INTERNAL_ALERT_INBOX ?? "contact@loucellscore.com")
-  .trim()
-  .replace(/^["']|["']$/g, "");
 
 export type SendEmailInput = {
   to: string | string[];
@@ -34,7 +26,7 @@ export type SendEmailInput = {
 
 export type SendEmailResult =
   | { ok: true; id: string }
-  | { ok: false; reason: "no_api_key" | "send_failed"; error?: string };
+  | { ok: false; reason: "no_api_key" | "send_failed" | "alerts_disabled"; error?: string };
 
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   // trim + unquote: a key pasted into a dashboard with a stray newline,
@@ -87,8 +79,14 @@ export async function sendInternalAlert(args: {
   bodyHtml: string;
   bodyText?: string;
 }): Promise<SendEmailResult> {
+  // Master switch: when alerts are disabled in /admin/settings, no internal
+  // alert goes out regardless of caller. Intentional, so no warning logged.
+  const settings = await getAdminSettings();
+  if (!settings.alertsEnabled) return { ok: false, reason: "alerts_disabled" };
+
+  const inbox = await resolveAlertInbox();
   const result = await sendEmail({
-    to: INTERNAL_INBOX,
+    to: inbox,
     subject: `[Loucells Core ops] ${args.subject}`,
     html: args.bodyHtml,
     text: args.bodyText ?? stripHtml(args.bodyHtml),

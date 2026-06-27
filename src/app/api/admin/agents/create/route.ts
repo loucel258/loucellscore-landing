@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServiceClient } from "@/lib/audit/client";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { canonicalizeOrigin } from "@/lib/agents/resolver";
+import { getAdminSettings } from "@/lib/admin/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,6 +95,10 @@ export async function POST(req: Request): Promise<Response> {
 
   const workspaceId = `ws_client_${normalizeForWorkspace(engagementRef)}_${normalizeForWorkspace(input.slug)}`;
 
+  // Default token budget for new agents comes from /admin/settings; an
+  // explicit value in the wizard still wins.
+  const { defaultMonthlyBudget } = await getAdminSettings();
+
   const { data: created, error } = await sb
     .from("client_agents")
     .insert({
@@ -108,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
       system_prompt: input.systemPrompt ?? null,
       greeting_message: input.greetingMessage ?? null,
       brand_color: input.brandColor ?? null,
-      monthly_token_budget: input.monthlyTokenBudget ?? 2_000_000,
+      monthly_token_budget: input.monthlyTokenBudget ?? defaultMonthlyBudget,
       channels: ["chat_widget"],
       integrations: {},
     })

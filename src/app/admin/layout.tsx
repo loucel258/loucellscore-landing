@@ -47,7 +47,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     {
       label: "Account",
       items: [
-        { href: "/admin/settings", label: "Settings", icon: <Settings className="size-4" />, match: "/admin/settings", comingSoon: true },
+        { href: "/admin/settings", label: "Settings", icon: <Settings className="size-4" />, match: "/admin/settings", prefix: true },
         { href: "https://github.com/anthropics/claude-code/issues", label: "Help & feedback", icon: <HelpCircle className="size-4" />, match: "_never_" },
       ],
     },

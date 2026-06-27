@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { sendInternalAlert, verifyCronAuth } from "@/lib/notify/resend";
+import { getAdminSettings } from "@/lib/admin/settings";
+import { logCronRun } from "@/lib/ops/cron-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,15 +45,17 @@ async function handleCron(req: Request): Promise<Response> {
     return new Response("unauthorized", { status: 401 });
   }
 
+  const startedAt = Date.now();
   const sb = getServiceClient();
   if (!sb) {
+    await logCronRun({ job: "chat-health-alerts", status: "skipped", summary: "no_supabase" });
     return NextResponse.json({ ok: true, skipped: "no_supabase" });
   }
 
+  const settings = await getAdminSettings();
   const now = new Date();
   const fifteenMinAgo = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const dedupeCutoff = new Date(now.getTime() - DEDUPE_WINDOW_HOURS * 3600_000).toISOString();
 
   const results: Array<{ rule: string; fired: boolean; sent: boolean; detail?: string }> = [];
@@ -126,7 +130,7 @@ async function handleCron(req: Request): Promise<Response> {
       counts.set(uid, (counts.get(uid) ?? 0) + 1);
     }
     const worst = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (worst && worst[1] >= 3) {
+    if (worst && worst[1] >= 3 && settings.alertOnPii) {
       const sent = await maybeAlert(
         "pii_attack_pattern",
         `🟠 PII attack pattern — ${worst[1]} blocks in one session`,
@@ -264,36 +268,54 @@ async function handleCron(req: Request): Promise<Response> {
   // South Florida = ET (UTC-5 standard / UTC-4 DST). Treat 14-22 UTC as business hours.
   const isBusinessHours = dayOfWeek >= 1 && dayOfWeek <= 5 && utcHour >= 14 && utcHour <= 22;
 
-  if (isBusinessHours) {
+  // Window is operator-configurable (admin_settings.alert_no_leads_hours);
+  // 0 disables the rule entirely.
+  const noLeadsHours = settings.alertNoLeadsHours;
+  if (isBusinessHours && noLeadsHours > 0) {
+    const windowStart = new Date(now.getTime() - noLeadsHours * 3600_000).toISOString();
     const r4 = await sb
       .from("audit_logs")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", "ws_chat_loucel_landing")
       .eq("role", "visitor")
       .eq("decision", "ALLOW")
-      .gte("inserted_at", oneDayAgo);
+      .gte("inserted_at", windowStart);
 
     if ((r4.count ?? 0) === 0) {
       const sent = await maybeAlert(
-        "no_user_messages_24h",
-        `🟡 Zero user messages in 24h — chat may be regressed`,
-        `<p>The chat agent has logged <strong>zero</strong> user_message events in the last 24 hours during business hours.</p>
+        "no_user_messages_window",
+        `🟡 Zero user messages in ${noLeadsHours}h — chat may be regressed`,
+        `<p>The chat agent has logged <strong>zero</strong> user_message events in the last ${noLeadsHours} hours during business hours.</p>
          <p>This usually means: the chat widget isn't loading, the API route is broken, or traffic dried up.</p>
          <p><strong>Action:</strong> Test the chat manually at <a href="https://loucellscore.com">loucellscore.com</a>. Check <a href="https://loucellscore.com/admin/chat-pulse">/admin/chat-pulse</a> for fresh data.</p>`,
         dedupeCutoff,
       );
-      results.push({ rule: "no_user_messages_24h", fired: true, sent });
+      results.push({ rule: "no_user_messages_window", fired: true, sent });
     } else {
       results.push({
-        rule: "no_user_messages_24h",
+        rule: "no_user_messages_window",
         fired: false,
         sent: false,
         detail: `${r4.count} messages`,
       });
     }
   } else {
-    results.push({ rule: "no_user_messages_24h", fired: false, sent: false, detail: "off-hours" });
+    results.push({
+      rule: "no_user_messages_window",
+      fired: false,
+      sent: false,
+      detail: noLeadsHours === 0 ? "disabled" : "off-hours",
+    });
   }
+
+  const fired = results.filter((r) => r.fired);
+  const sentCount = results.filter((r) => r.sent).length;
+  await logCronRun({
+    job: "chat-health-alerts",
+    status: "ok",
+    summary: `${fired.length} rule(s) fired, ${sentCount} alert(s) sent`,
+    durationMs: Date.now() - startedAt,
+  });
 
   return NextResponse.json({ ok: true, results });
 }

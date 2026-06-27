@@ -9,6 +9,7 @@ import {
   type ReminderRunResult,
 } from "@/lib/reminders/appointment-reminders";
 import { getExternalBookingBackend } from "@/lib/integration/agent-client";
+import { logCronRun } from "@/lib/ops/cron-log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,14 +69,21 @@ async function handle(req: Request): Promise<Response> {
     }
   }
 
+  const sent = results.reduce((n, r) => n + r.sent, 0);
+  const failed = results.reduce((n, r) => n + r.failed, 0);
+  await logCronRun({
+    job: "appointment-reminders",
+    status: failed > 0 ? "error" : "ok",
+    summary: `${results.length} agent(s), ${sent} sent, ${failed} failed`,
+  });
   return NextResponse.json({
     ok: true,
     agents: results.length,
     totals: {
-      sent: results.reduce((n, r) => n + r.sent, 0),
+      sent,
       skippedNoPhone: results.reduce((n, r) => n + r.skippedNoPhone, 0),
       skippedAlreadySent: results.reduce((n, r) => n + r.skippedAlreadySent, 0),
-      failed: results.reduce((n, r) => n + r.failed, 0),
+      failed,
     },
     results,
   });

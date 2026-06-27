@@ -8,6 +8,7 @@ import {
   ADMIN_COOKIE_NAME,
 } from "@/lib/admin/auth";
 import { rateLimit } from "@/lib/rate-limit/limiter";
+import { getAdminSettings } from "@/lib/admin/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,9 +46,11 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const token = mintSessionToken();
+  const { sessionTtlHours } = await getAdminSettings();
+  const ttlSec = sessionTtlHours * 3600;
+  const token = mintSessionToken(ttlSec);
   const jar = await cookies();
-  jar.set(ADMIN_COOKIE_NAME, token, sessionCookieOptions());
+  jar.set(ADMIN_COOKIE_NAME, token, sessionCookieOptions(ttlSec));
   return NextResponse.json({ ok: true });
 }
 

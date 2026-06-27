@@ -1,6 +1,7 @@
 import "server-only";
 import { getServiceClient } from "@/lib/audit/client";
 import { sendInternalAlert } from "@/lib/notify/resend";
+import { getAdminSettings } from "@/lib/admin/settings";
 
 /**
  * Per-tenant monthly token budget (migration 042). The chat route calls
@@ -64,6 +65,9 @@ export async function recordUsage(
   // cron needed. Best-effort: an alert failure never affects the turn.
   if (monthlyBudget <= 0) return;
   try {
+    const settings = await getAdminSettings();
+    if (!settings.alertOnBudget) return;
+
     const month = new Date();
     const monthKey = `${month.getUTCFullYear()}-${String(month.getUTCMonth() + 1).padStart(2, "0")}-01`;
     const { data } = await sb
@@ -77,11 +81,16 @@ export async function recordUsage(
     const used = row.tokens_in + row.tokens_out;
     const prev = used - (tokensIn + tokensOut);
 
-    for (const pct of [0.8, 1] as const) {
+    // First warning threshold is operator-configurable (admin_settings);
+    // 100% (exhaustion) always alerts. Dedup by crossing detection.
+    const warnPct = settings.budgetAlertPct > 0 && settings.budgetAlertPct < 1
+      ? settings.budgetAlertPct
+      : 0.8;
+    for (const pct of [warnPct, 1] as const) {
       const limit = monthlyBudget * pct;
       if (prev < limit && used >= limit) {
         await sendInternalAlert({
-          subject: `[Budget ${pct === 1 ? "EXHAUSTED" : "80%"}] workspace ${workspaceId}`,
+          subject: `[Budget ${pct === 1 ? "EXHAUSTED" : `${Math.round(pct * 100)}%`}] workspace ${workspaceId}`,
           bodyHtml: `
             <p>Workspace <strong>${workspaceId}</strong> just crossed <strong>${pct * 100}%</strong> of its monthly token budget.</p>
             <p>Used: <strong>${used.toLocaleString()}</strong> / ${monthlyBudget.toLocaleString()} tokens</p>

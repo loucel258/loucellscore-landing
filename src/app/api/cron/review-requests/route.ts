@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/audit/client";
 import { verifyCronAuth } from "@/lib/notify/resend";
+import { logCronRun } from "@/lib/ops/cron-log";
 import {
   parseAgentReviewSettings,
   runReviewRequestsForAgent,
@@ -46,14 +47,21 @@ async function handle(req: Request): Promise<Response> {
     results.push(await runReviewRequestsForAgent(sb, settings));
   }
 
+  const sent = results.reduce((n, r) => n + r.sent, 0);
+  const failed = results.reduce((n, r) => n + r.failed, 0);
+  await logCronRun({
+    job: "review-requests",
+    status: failed > 0 ? "error" : "ok",
+    summary: `${results.length} agent(s), ${sent} sent, ${failed} failed`,
+  });
   return NextResponse.json({
     ok: true,
     agents: results.length,
     totals: {
-      sent: results.reduce((n, r) => n + r.sent, 0),
+      sent,
       skippedNoConsent: results.reduce((n, r) => n + r.skippedNoConsent, 0),
       skippedAlreadySent: results.reduce((n, r) => n + r.skippedAlreadySent, 0),
-      failed: results.reduce((n, r) => n + r.failed, 0),
+      failed,
     },
     results,
   });
