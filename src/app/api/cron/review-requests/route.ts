@@ -36,7 +36,11 @@ async function handle(req: Request): Promise<Response> {
     .select("workspace_id, name, integrations, status, agent_type")
     .eq("status", "live")
     .eq("agent_type", "ai_front_desk");
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("[review-requests] load agents failed:", error.message);
+    return NextResponse.json({ ok: false, error: "internal_error" }, { status: 500 });
+  }
 
   const results: ReviewRunResult[] = [];
   for (const agent of agents ?? []) {

@@ -2,6 +2,17 @@ import { siteConfig } from "@/lib/site-config";
 import type { Locale } from "@/i18n/config";
 
 /**
+ * Serializes an object for a <script type="application/ld+json"> block and
+ * escapes `<` so embedded values can never break out of the script element
+ * (a stray "</script>" or "<!--" in any field). The data is static today,
+ * but this keeps the injection point safe if a dynamic/user-derived field is
+ * ever added. Standard JSON-LD XSS hardening.
+ */
+function jsonLd(obj: unknown): string {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
+/**
  * Tri-county South Florida service area. Used by Organization + Service schemas
  * to anchor local SEO and geo-targeted AI search results.
  */
@@ -128,12 +139,12 @@ export function StructuredData({ locale }: { locale: Locale }) {
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(organization) }}
       />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusiness) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(localBusiness) }}
       />
     </>
   );
@@ -187,7 +198,7 @@ export function ServiceSchema({
     <script
       type="application/ld+json"
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: jsonLd(data) }}
     />
   );
 }
@@ -217,7 +228,7 @@ export function BreadcrumbSchema({
     <script
       type="application/ld+json"
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: jsonLd(data) }}
     />
   );
 }
@@ -247,7 +258,7 @@ export function FAQSchema({
     <script
       type="application/ld+json"
       // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: jsonLd(data) }}
     />
   );
 }

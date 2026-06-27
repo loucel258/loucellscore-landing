@@ -49,7 +49,9 @@ async function handle(req: Request): Promise<Response> {
     .eq("agent_type", "ai_front_desk");
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    // eslint-disable-next-line no-console
+    console.error("[appointment-reminders] load agents failed:", error.message);
+    return NextResponse.json({ ok: false, error: "internal_error" }, { status: 500 });
   }
 
   const results: ReminderRunResult[] = [];

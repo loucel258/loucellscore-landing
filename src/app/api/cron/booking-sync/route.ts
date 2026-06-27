@@ -43,7 +43,11 @@ async function handle(req: Request): Promise<Response> {
     .select("workspace_id, status, agent_type")
     .eq("status", "live")
     .eq("agent_type", "ai_front_desk");
-  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("[booking-sync] load agents failed:", error.message);
+    return NextResponse.json({ ok: false, error: "internal_error" }, { status: 500 });
+  }
 
   const since = new Date(Date.now() - WINDOW_HOURS * 3600_000).toISOString();
   const results: Array<Record<string, unknown>> = [];

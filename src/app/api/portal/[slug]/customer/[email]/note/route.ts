@@ -91,7 +91,10 @@ export async function PUT(
     );
 
   if (error) {
-    return NextResponse.json({ ok: false, error: "save_failed", detail: error.message }, { status: 500 });
+    // Never echo raw DB errors to the client (leaks schema/internals).
+    // eslint-disable-next-line no-console
+    console.error("[portal/note] save failed:", error.message);
+    return NextResponse.json({ ok: false, error: "save_failed" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
