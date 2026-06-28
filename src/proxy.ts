@@ -38,5 +38,11 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|api|.*\\..*).*)"],
+  // Exclude Next's root metadata routes (icon / apple-icon / opengraph-image /
+  // twitter-image / sitemap / robots / manifest) from locale routing — they
+  // have no file extension, so the `.*\..*` rule didn't catch them and the
+  // proxy was redirecting /icon → /en/icon → 404 (the "favicons 404" bug).
+  matcher: [
+    "/((?!_next|api|icon|apple-icon|opengraph-image|twitter-image|sitemap|robots|manifest|.*\\..*).*)",
+  ],
 };

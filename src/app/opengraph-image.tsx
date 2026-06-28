@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { brandMarkDataUri } from "@/lib/brand-mark";
 
 export const alt = "Loucells Core — AI Architecture Built to Scale Your Business";
 export const size = { width: 1200, height: 630 };
@@ -68,19 +69,17 @@ export default function OG() {
             zIndex: 10,
           }}
         >
-          <div
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 999,
-              background:
-                "radial-gradient(circle at 30% 30%, #06B6D4 0%, #8B5CF6 55%, #7C3AED 100%)",
-              boxShadow: "0 0 24px 4px rgba(6,182,212,0.4)",
-            }}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            width={56}
+            height={56}
+            src={brandMarkDataUri()}
+            alt=""
+            style={{ borderRadius: 14, boxShadow: "0 8px 30px rgba(6,182,212,0.35)" }}
           />
           <span
             style={{
-              fontSize: 22,
+              fontSize: 28,
               fontWeight: 600,
               color: "#F8FAFC",
               letterSpacing: -0.5,
