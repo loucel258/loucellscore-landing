@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClaudeClient } from "@/lib/ai/claude-client";
+import { getClaudeClient, cachedSystem } from "@/lib/ai/claude-client";
 import { sanitize } from "@/lib/dlp/sanitizer";
 import { sanitizeWithLLM } from "@/lib/dlp/sanitizer-llm";
 import { rateLimit } from "@/lib/rate-limit/limiter";
@@ -478,7 +478,7 @@ export async function POST(
     const first = await client.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
       max_tokens: agent.maxTokens,
-      system,
+      system: cachedSystem(system),
       tools: allowedTools.length > 0 ? allowedTools : undefined,
       messages: parsed.messages.map((m) => ({
         role: m.role as "user" | "assistant",
@@ -875,7 +875,7 @@ export async function POST(
     const followUp = await client.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
       max_tokens: agent.maxTokens,
-      system,
+      system: cachedSystem(system),
       tools: allowedTools.length > 0 ? allowedTools : undefined,
       messages: [
         ...parsed.messages.map((m) => ({

@@ -1,7 +1,7 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getClaudeClient } from "@/lib/ai/claude-client";
+import { getClaudeClient, cachedSystem } from "@/lib/ai/claude-client";
 import { classifyIntent, shouldEscalate } from "./intent";
 import { BOOKING_TOOLS, dispatchBookingTool, type BookingToolCtx } from "./tools";
 import type { BusinessHours } from "./availability";
@@ -112,7 +112,7 @@ export async function runFrontDeskTurn(
         model: DRAFT_MODEL,
         max_tokens: 700,
         temperature: 0.3,
-        system,
+        system: cachedSystem(system),
         messages,
         tools: BOOKING_TOOLS,
       });

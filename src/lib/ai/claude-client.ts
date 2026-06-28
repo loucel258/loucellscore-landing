@@ -35,6 +35,19 @@ export function getClaudeModel(): string {
 }
 
 /**
+ * Wraps a system prompt as a single cached text block so Anthropic prompt
+ * caching reuses it across turns (~10% input cost on a cache hit, 5-min TTL).
+ * The agent's system prompt (persona + policies + KB) is stable per agent, so
+ * it's the ideal cache prefix and it's re-sent on every turn today.
+ *
+ * Caching only engages above the model's minimum cacheable size (~1024 tokens
+ * for Haiku/Sonnet); below that it's a harmless no-op.
+ */
+export function cachedSystem(text: string): Anthropic.Messages.TextBlockParam[] {
+  return [{ type: "text", text, cache_control: { type: "ephemeral" } }];
+}
+
+/**
  * Run a single-turn classification call with a tool-use schema. The model
  * MUST respond by calling the provided tool — that's our structured-output
  * guarantee. If it tries to free-text instead, we return null.
