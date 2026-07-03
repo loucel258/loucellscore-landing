@@ -149,22 +149,3 @@ export function Sidebar({
   );
 }
 
-/**
- * Mobile fallback — top strip with brand only. The full sidebar is hidden
- * below lg. For v1 the portal is desktop-first; mobile design later.
- */
-export function MobileBrandBar({ brand }: { brand: SidebarBrand }) {
-  return (
-    <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 text-slate-100 backdrop-blur-xl">
-      <Link href="/" className="flex items-center gap-2">
-        <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 text-white">
-          <ShieldCheck className="size-3.5" />
-        </span>
-        <span className="text-xs font-semibold">{brand.workspaceName}</span>
-      </Link>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-slate-300">
-        {brand.subtitle ?? "Loucells Core"}
-      </p>
-    </div>
-  );
-}

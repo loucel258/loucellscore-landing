@@ -10,7 +10,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Sidebar, MobileBrandBar } from "@/components/shell/sidebar";
+import { Sidebar } from "@/components/shell/sidebar";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { getPathname } from "@/lib/shell/pathname";
 import { AdminSignOutButton } from "./sign-out";
 
@@ -71,12 +72,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         }
       />
       <div className="flex min-w-0 flex-1 flex-col p-3 lg:p-4">
-        <MobileBrandBar
+        <MobileNav
           brand={{
             workspaceName: "Loucells Core HQ",
             subtitle: "Admin",
             initials: "L",
           }}
+          sections={sections}
+          footer={
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[10px] text-slate-400">8-hour session</p>
+              <AdminSignOutButton />
+            </div>
+          }
+          openLabel="Open menu"
+          closeLabel="Close menu"
         />
         <main className="mt-3 flex-1 rounded-3xl border border-white/60 bg-white/45 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] lg:mt-0">
           {children}
