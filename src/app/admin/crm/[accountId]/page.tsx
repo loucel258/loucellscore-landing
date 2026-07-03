@@ -114,7 +114,7 @@ export default async function AccountDetailPage({
             {engagements.length === 0 ? (
               <EmptyState title="No engagements" description="This account has no engagements yet." />
             ) : (
-              <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
+              <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-white/60">
                 {engagements.map((e) => (
                   <li key={e.engagementId}>
                     <Link href={`/admin/engagement/${e.engagementId}`} className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/55">

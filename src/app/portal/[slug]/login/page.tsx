@@ -37,18 +37,18 @@ export default async function PortalLoginPage({
         <div className="mx-auto inline-flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 text-white shadow-lg shadow-cyan-500/20">
           <ShieldCheck className="size-7" />
         </div>
-        <h1 className="mt-5 text-2xl font-bold tracking-tight text-neutral-900">
+        <h1 className="mt-5 text-2xl font-bold tracking-tight text-white">
           Welcome back
         </h1>
-        <p className="mt-2 text-sm text-neutral-600">
+        <p className="mt-2 text-sm text-slate-200">
           Enter the passcode Loucells Core shared with you to access your portal.
         </p>
       </div>
 
       <PortalLoginForm slug={slug} />
 
-      <div className="mt-6 rounded-xl border border-white/60 bg-white/55/60 p-4 text-center">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+      <div className="mt-6 rounded-xl border border-white/60 bg-white/40 p-4 text-center">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-600">
           What you&apos;ll see inside
         </p>
         <ul className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-neutral-700">

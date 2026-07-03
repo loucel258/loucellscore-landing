@@ -140,7 +140,7 @@ export function ConversationsTab({
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-600">
                   <th className="px-2 py-2 font-semibold">Session</th>
                   <th className="px-2 py-2 font-semibold">Started</th>
                   <th className="px-2 py-2 font-semibold">Messages</th>

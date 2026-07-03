@@ -116,7 +116,7 @@ export default async function CustomersPage({
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-600">
                   <th className="px-3 py-2 font-semibold">{t(lang, "customers.col_name")}</th>
                   <th className="px-3 py-2 font-semibold">Email</th>
                   <th className="px-3 py-2 font-semibold tabular-nums">{t(lang, "customers.col_sessions")}</th>

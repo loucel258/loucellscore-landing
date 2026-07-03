@@ -152,7 +152,7 @@ export function ApprovalCard({
 
   if (result?.kind === "rejected") {
     return (
-      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white/55 p-6">
+      <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/55 p-6">
         <div className="flex items-center gap-3">
           <span className="inline-flex size-10 items-center justify-center rounded-xl bg-neutral-500 text-white">
             <XCircle className="size-5" />
@@ -169,7 +169,7 @@ export function ApprovalCard({
   return (
     <div
       className={`overflow-hidden rounded-2xl border bg-white/55 shadow-sm ${
-        isHighRisk ? "border-rose-300" : isMediumRisk ? "border-amber-300" : "border-neutral-200"
+        isHighRisk ? "border-rose-300" : isMediumRisk ? "border-amber-300" : "border-white/60"
       }`}
     >
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3">

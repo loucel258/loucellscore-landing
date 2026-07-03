@@ -9,19 +9,19 @@ export default function PortalLoading() {
   return (
     <div className="animate-pulse space-y-7" aria-busy="true" aria-live="polite">
       {/* Hero surface */}
-      <div className="h-44 rounded-3xl border border-neutral-200 bg-gradient-to-br from-neutral-100 via-white to-neutral-100" />
+      <div className="h-44 rounded-3xl border border-white/60 bg-white/35" />
 
       {/* Metric row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="h-24 rounded-2xl border border-neutral-200 bg-neutral-100" />
-        <div className="h-24 rounded-2xl border border-neutral-200 bg-neutral-100" />
-        <div className="h-24 rounded-2xl border border-neutral-200 bg-neutral-100" />
+        <div className="h-24 rounded-2xl border border-white/60 bg-white/30" />
+        <div className="h-24 rounded-2xl border border-white/60 bg-white/30" />
+        <div className="h-24 rounded-2xl border border-white/60 bg-white/30" />
       </div>
 
       {/* Content panels */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="h-64 rounded-2xl border border-neutral-200 bg-neutral-100" />
-        <div className="h-64 rounded-2xl border border-neutral-200 bg-neutral-100" />
+        <div className="h-64 rounded-2xl border border-white/60 bg-white/30" />
+        <div className="h-64 rounded-2xl border border-white/60 bg-white/30" />
       </div>
 
       <span className="sr-only">Loading…</span>

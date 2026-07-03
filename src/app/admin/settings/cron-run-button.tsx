@@ -36,7 +36,7 @@ export function CronRunButton({ job }: { job: string }) {
     <button
       onClick={run}
       disabled={running}
-      className="inline-flex items-center gap-1 rounded-md border border-white/60 bg-white/60 px-2 py-1 text-[11px] font-medium text-neutral-700 transition-colors hover:bg-white/80 disabled:opacity-50"
+      className="inline-flex items-center gap-1 rounded-md border border-white/60 bg-white/70 px-2 py-1 text-[11px] font-medium text-neutral-700 transition-colors hover:bg-white/85 disabled:opacity-50"
       title="Trigger this cron now"
     >
       {running ? (

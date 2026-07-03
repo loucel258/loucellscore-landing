@@ -4,11 +4,11 @@ import type { ReactNode } from "react";
 
 /**
  * Sidebar shell — server-rendered persistent left nav. Used by both the
- * /admin layout and the /portal/[slug] layout. The visual language is
- * deliberately calmer than HighLevel: neutral-900 base with a thin
- * cyan→violet rail and pastel chips for active states. We want clients to
- * feel "this is a serious operations tool" not "this is yet another SaaS
- * dashboard".
+ * /admin layout and the /portal/[slug] layout. Visual language: dark
+ * translucent glass (slate-950/35 + blur) over the shell's blue gradient,
+ * with a thin cyan→violet rail for active states. Shell chrome uses the
+ * slate palette; content surfaces use neutral. We want clients to feel
+ * "this is a serious operations tool" not "yet another SaaS dashboard".
  */
 
 export type SidebarItem = {
@@ -62,14 +62,14 @@ export function Sidebar({
             ) : (
               <ShieldCheck className="size-4.5" />
             )}
-            <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-emerald-400 ring-2 ring-neutral-950" />
+            <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-emerald-400 ring-2 ring-slate-900/60" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-white">
               {brand.workspaceName}
             </p>
             {brand.subtitle && (
-              <p className="truncate text-[10px] text-neutral-400">
+              <p className="truncate text-[10px] text-slate-400">
                 {brand.subtitle}
               </p>
             )}
@@ -82,7 +82,7 @@ export function Sidebar({
         {sections.map((section, sIdx) => (
           <div key={sIdx} className={sIdx === 0 ? "" : "mt-5"}>
             {section.label && (
-              <p className="mb-1 px-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+              <p className="mb-1 px-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                 {section.label}
               </p>
             )}
@@ -110,14 +110,14 @@ export function Sidebar({
                       )}
                       <span
                         className={`inline-flex size-4 items-center justify-center ${
-                          active ? "text-cyan-300" : "text-neutral-500 group-hover:text-neutral-300"
+                          active ? "text-cyan-300" : "text-slate-400 group-hover:text-slate-200"
                         }`}
                       >
                         {item.icon}
                       </span>
                       <span className="flex-1 truncate">{item.label}</span>
                       {item.comingSoon && (
-                        <span className="rounded-full border border-neutral-700 px-1.5 py-px text-[9px] text-neutral-500">
+                        <span className="rounded-full border border-slate-600 px-1.5 py-px text-[9px] text-slate-400">
                           soon
                         </span>
                       )}
@@ -155,14 +155,14 @@ export function Sidebar({
  */
 export function MobileBrandBar({ brand }: { brand: SidebarBrand }) {
   return (
-    <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 text-neutral-100 backdrop-blur-xl">
+    <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 text-slate-100 backdrop-blur-xl">
       <Link href="/" className="flex items-center gap-2">
         <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 text-white">
           <ShieldCheck className="size-3.5" />
         </span>
         <span className="text-xs font-semibold">{brand.workspaceName}</span>
       </Link>
-      <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-slate-300">
         {brand.subtitle ?? "Loucells Core"}
       </p>
     </div>

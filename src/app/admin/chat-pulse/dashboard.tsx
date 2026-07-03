@@ -321,7 +321,7 @@ function FunnelBlock({
   const total =
     counts.offered + counts.confirmed + counts.rescheduled + counts.cancelled + counts.abandoned;
   return (
-    <div className="rounded border border-white/70 bg-white/72 shadow-sm shadow-slate-900/10 shadow-sm shadow-slate-900/10 p-4">
+    <div className="rounded border border-white/70 bg-white/72 shadow-sm shadow-slate-900/10 p-4">
       <div className="text-xs uppercase tracking-wider text-neutral-500">
         {title}
       </div>

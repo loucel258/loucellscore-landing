@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Bot } from "lucide-react";
 import type { ReactNode } from "react";
 
 /**
@@ -26,7 +26,7 @@ export function HeroCard({
   };
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-gradient-to-br from-white via-cyan-50/40 to-violet-50/40 p-7 shadow-sm">
+    <section className="relative overflow-hidden rounded-3xl border border-white/65 bg-gradient-to-br from-white/70 via-cyan-100/30 to-violet-100/30 p-7 shadow-sm shadow-slate-900/10">
       {/* Decorative glows */}
       <div
         className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-cyan-300/25 blur-3xl"
@@ -63,10 +63,10 @@ export function HeroCard({
 
         {/* Right: optional AI summary card */}
         {aiSummary && (
-          <div className="rounded-2xl border border-violet-200/70 bg-white/52 p-4 shadow-sm backdrop-blur">
+          <div className="rounded-2xl border border-white/65 bg-white/55 p-4 shadow-sm shadow-slate-900/10">
             <header className="flex items-center gap-2">
               <span className="inline-flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-cyan-500 text-white shadow-sm shadow-violet-500/30">
-                <Sparkles className="size-3.5" />
+                <Bot className="size-3.5" />
               </span>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-700">
                 {aiSummary.title}

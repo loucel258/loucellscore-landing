@@ -194,7 +194,7 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
             type="button"
             onClick={sendTestAlert}
             disabled={testing}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white/70 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white/70 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white/85 disabled:opacity-50"
           >
             <Send className="size-3.5" />
             {testing ? "Sending…" : "Send test alert"}

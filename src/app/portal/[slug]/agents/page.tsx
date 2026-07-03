@@ -164,19 +164,19 @@ export default async function PortalAgentsPage({
 
                   <dl className="mt-5 grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">Conversations · 30d</dt>
+                      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">Conversations · 30d</dt>
                       <dd className="mt-0.5 font-semibold tabular-nums text-neutral-900">
                         {cost?.conversations ?? 0}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">Hours saved · 30d</dt>
+                      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">Hours saved · 30d</dt>
                       <dd className="mt-0.5 font-semibold tabular-nums text-neutral-900">
                         {hoursFor(a).toFixed(1)}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">Retainer</dt>
+                      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">Retainer</dt>
                       <dd className="mt-0.5 font-semibold tabular-nums text-neutral-900">
                         {a.retainer_active ? formatUsdInt(a.monthly_retainer_cents / 100) : "—"}
                       </dd>

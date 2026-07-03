@@ -48,7 +48,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       label: "Account",
       items: [
         { href: "/admin/settings", label: "Settings", icon: <Settings className="size-4" />, match: "/admin/settings", prefix: true },
-        { href: "https://github.com/anthropics/claude-code/issues", label: "Help & feedback", icon: <HelpCircle className="size-4" />, match: "_never_" },
+        { href: "https://github.com/loucel258/loucellscore-landing/issues", label: "Help & feedback", icon: <HelpCircle className="size-4" />, match: "_never_" },
       ],
     },
   ];
@@ -78,7 +78,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             initials: "L",
           }}
         />
-        <main className="mt-3 flex-1 rounded-3xl border border-white/60 bg-white/40 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+        <main className="mt-3 flex-1 rounded-3xl border border-white/60 bg-white/45 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] lg:mt-0">
           {children}
         </main>
       </div>

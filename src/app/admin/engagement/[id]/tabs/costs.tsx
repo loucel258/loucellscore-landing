@@ -79,7 +79,7 @@ export function CostsTab({
               <Sparkline data={last30Trend} width={600} height={80} fill="#06B6D4" />
             </div>
             <div className="ml-auto text-right">
-              <p className="text-[10px] uppercase tracking-wider text-neutral-500">Peak day</p>
+              <p className="text-[10px] uppercase tracking-wider text-neutral-600">Peak day</p>
               <p className="text-sm font-semibold tabular-nums text-neutral-800">
                 {formatUsdPrecise(Math.max(...last30Trend))}
               </p>
@@ -102,7 +102,7 @@ export function CostsTab({
           />
           <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-neutral-500">
+              <dt className="text-[10px] uppercase tracking-wider text-neutral-600">
                 Input tokens (30d)
               </dt>
               <dd className="mt-0.5 font-semibold tabular-nums text-neutral-800">
@@ -111,7 +111,7 @@ export function CostsTab({
               <p className="text-[10px] text-neutral-500">$1.00 per 1M</p>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-neutral-500">
+              <dt className="text-[10px] uppercase tracking-wider text-neutral-600">
                 Output tokens (30d)
               </dt>
               <dd className="mt-0.5 font-semibold tabular-nums text-neutral-800">

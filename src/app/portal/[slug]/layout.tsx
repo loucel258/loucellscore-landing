@@ -198,9 +198,9 @@ export default async function PortalLayout({
           openLabel={t(lang, "nav.open_menu")}
           closeLabel={t(lang, "nav.close_menu")}
         />
-        <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/40 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] backdrop-blur-2xl lg:mt-0">
+        <div className="mt-3 flex flex-1 flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/45 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] lg:mt-0">
           <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</main>
-          <footer className="border-t border-white/40 bg-white/25 px-6 py-4 text-[10px] text-slate-500 lg:px-8">
+          <footer className="border-t border-white/40 bg-white/25 px-6 py-4 text-[11px] text-slate-700 lg:px-8">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p>
                 {lang === "es"
@@ -218,7 +218,7 @@ export default async function PortalLayout({
 
 function BareLoginShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-cyan-50/30">
+    <div className="min-h-screen bg-gradient-to-b from-[#1f3d77] via-[#3a5ea0] to-[#c2d6f1]">
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
     </div>
   );
@@ -227,7 +227,7 @@ function BareLoginShell({ children }: { children: ReactNode }) {
 function PortalSidebarFooter({ slug, lang }: { slug: string; lang: "en" | "es" }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <p className="text-[10px] text-neutral-500">{t(lang, "session.7day")}</p>
+      <p className="text-[10px] text-slate-400">{t(lang, "session.7day")}</p>
       <PortalSignOutButton slug={slug} variant="sidebar" />
     </div>
   );

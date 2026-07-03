@@ -65,7 +65,7 @@ export default async function PortalSettingsPage({
         <p className="mt-1 text-sm text-neutral-600">{t(lang, "settings.desc")}</p>
       </header>
 
-      <nav className="border-b border-neutral-200">
+      <nav className="border-b border-white/60">
         <ul className="flex gap-1">
           <li>
             <Link
@@ -264,7 +264,7 @@ function LanguageTab({ slug, current }: { slug: string; current: "en" | "es" }) 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">{label}</dt>
+      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">{label}</dt>
       <dd className="mt-0.5 font-medium text-neutral-800">{value}</dd>
     </div>
   );
@@ -319,7 +319,7 @@ async function ActivityTab({
         <div className="-mx-2 overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+              <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-600">
                 <th className="px-2 py-2 font-semibold">{lang === "es" ? "Momento" : "When"}</th>
                 <th className="px-2 py-2 font-semibold">{lang === "es" ? "Decisión" : "Decision"}</th>
                 <th className="px-2 py-2 font-semibold">{lang === "es" ? "Origen" : "Source"}</th>

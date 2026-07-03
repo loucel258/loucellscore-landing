@@ -107,7 +107,7 @@ export function IncidentsTab({
 function IncidentItem({ incident: i, compact = false }: { incident: IncidentRow; compact?: boolean }) {
   const tone = SEVERITY_TONES[i.severity];
   return (
-    <li className={`rounded-xl border ${compact ? "border-neutral-200 bg-white" : "border-neutral-200 bg-white"} p-4`}>
+    <li className={`rounded-xl border border-white/60 bg-white/55 p-4`}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

@@ -199,7 +199,7 @@ export default async function PortalAgentDetailPage({
         <Panel title="What it does" eyebrow="Surface & abilities" icon={<Bot className="size-4" />}>
           <div className="space-y-3 text-xs">
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-neutral-500">Channels</p>
+              <p className="text-[10px] uppercase tracking-wider text-neutral-600">Channels</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {(a.channels ?? []).length === 0 ? (
                   <span className="italic text-neutral-400">Not configured</span>
@@ -217,14 +217,14 @@ export default async function PortalAgentDetailPage({
             </div>
             {a.integrations && Object.keys(a.integrations).length > 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-neutral-500">Connected to</p>
+                <p className="text-[10px] uppercase tracking-wider text-neutral-600">Connected to</p>
                 <dl className="mt-1 grid grid-cols-2 gap-2">
                   {Object.entries(a.integrations).map(([key, val]) => (
                     <div
                       key={key}
-                      className="rounded-md border border-neutral-200 bg-white/55 px-2.5 py-1.5"
+                      className="rounded-md border border-white/60 bg-white/55 px-2.5 py-1.5"
                     >
-                      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">{key}</dt>
+                      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">{key}</dt>
                       <dd className="font-medium text-neutral-800">{String(val)}</dd>
                     </div>
                   ))}
@@ -270,14 +270,14 @@ export default async function PortalAgentDetailPage({
         <Panel title="Performance baselines" eyebrow="Set at go-live">
           <dl className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-neutral-500">Target escalation rate</dt>
+              <dt className="text-[10px] uppercase tracking-wider text-neutral-600">Target escalation rate</dt>
               <dd className="mt-0.5 font-semibold tabular-nums text-neutral-800">
                 {a.baseline_escalation_rate_pct === null ? "—" : `${a.baseline_escalation_rate_pct}%`}
               </dd>
               <p className="text-[10px] text-neutral-500">vs. current {(100 - resolutionRate).toFixed(0)}%</p>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wider text-neutral-500">Target avg response</dt>
+              <dt className="text-[10px] uppercase tracking-wider text-neutral-600">Target avg response</dt>
               <dd className="mt-0.5 font-semibold tabular-nums text-neutral-800">
                 {a.baseline_avg_response_ms === null ? "—" : `${a.baseline_avg_response_ms}ms`}
               </dd>
@@ -297,7 +297,7 @@ export default async function PortalAgentDetailPage({
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-600">
                   <th className="px-2 py-2 font-semibold">When</th>
                   <th className="px-2 py-2 font-semibold">Decision</th>
                   <th className="px-2 py-2 font-semibold">Reason</th>

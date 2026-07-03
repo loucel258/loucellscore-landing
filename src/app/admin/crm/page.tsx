@@ -130,7 +130,7 @@ export default async function CrmHubPage() {
           {LANES.map((lane) => {
             const deals = dealsByLane.get(lane.key)!;
             return (
-              <div key={lane.key} className="flex flex-col rounded-xl border border-neutral-200 bg-white/55">
+              <div key={lane.key} className="flex flex-col rounded-xl border border-white/60 bg-white/55">
                 <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
                   <span className="text-xs font-semibold text-neutral-700">{lane.label}</span>
                   <span className="tabular-nums rounded-md bg-white/55 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-500 ring-1 ring-neutral-200">
@@ -151,7 +151,7 @@ export default async function CrmHubPage() {
                           {d.accountName}
                         </p>
                         <p className="mt-0.5 font-mono text-[10px] text-neutral-400">{d.engagementRef}</p>
-                        <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-500">
+                        <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
                           {d.type.replace(/_/g, " ")}
                         </p>
                       </Link>
@@ -170,9 +170,9 @@ export default async function CrmHubPage() {
         {accounts.length === 0 ? (
           <EmptyState title="No accounts yet" description="Accounts appear here once an engagement is created." />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-neutral-200">
+          <div className="overflow-hidden rounded-xl border border-white/60">
             <table className="w-full text-sm">
-              <thead className="bg-white/55 text-left text-[10px] uppercase tracking-wider text-neutral-500">
+              <thead className="bg-white/55 text-left text-[10px] uppercase tracking-wider text-neutral-600">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Account</th>
                   <th className="px-4 py-2.5 font-medium">Stage</th>

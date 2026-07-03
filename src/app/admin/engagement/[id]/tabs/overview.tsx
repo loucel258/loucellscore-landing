@@ -183,7 +183,7 @@ export function OverviewTab({
             <Stat label="Created" value={formatShortDate(e.created_at)} />
           </dl>
           {e.notes && (
-            <div className="mt-4 rounded-md border border-neutral-200 bg-white/55 p-3">
+            <div className="mt-4 rounded-md border border-white/60 bg-white/55 p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Notes
               </p>
@@ -368,7 +368,7 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-wider text-neutral-500">{label}</dt>
+      <dt className="text-[10px] uppercase tracking-wider text-neutral-600">{label}</dt>
       <dd className="mt-0.5 font-medium text-neutral-800">{children ?? value}</dd>
       {sub && <p className="text-[10px] text-neutral-500">{sub}</p>}
     </div>

@@ -51,7 +51,7 @@ export function MobileNav({
 
   return (
     <div className="lg:hidden">
-      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-neutral-800/80 bg-neutral-950 px-4 py-2.5 text-neutral-100">
+      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-2.5 text-slate-100 backdrop-blur-xl">
         <span className="flex min-w-0 items-center gap-2">
           <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 text-white">
             {brand.initials ? (
@@ -67,7 +67,7 @@ export function MobileNav({
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-label={open ? closeLabel : openLabel}
-          className="inline-flex size-11 items-center justify-center rounded-xl text-neutral-300 transition-colors hover:bg-neutral-900 hover:text-white"
+          className="inline-flex size-11 items-center justify-center rounded-xl text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
         >
           {open ? <X className="size-5" /> : <Menu className="size-5" />}
         </button>
@@ -80,14 +80,14 @@ export function MobileNav({
             type="button"
             aria-label={closeLabel}
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-30 cursor-default bg-neutral-950/40 backdrop-blur-[2px]"
+            className="fixed inset-0 z-30 cursor-default bg-slate-950/40 backdrop-blur-[2px]"
           />
           {/* Panel */}
-          <nav className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100dvh-57px)] overflow-y-auto border-b border-neutral-800 bg-neutral-950 px-3 pb-6 pt-2 text-neutral-200 shadow-2xl">
+          <nav className="fixed inset-x-0 top-[57px] z-40 max-h-[calc(100dvh-57px)] overflow-y-auto border-b border-white/10 bg-slate-950/90 px-3 pb-6 pt-2 text-slate-200 shadow-2xl backdrop-blur-xl">
             {sections.map((section, sIdx) => (
               <div key={sIdx} className={sIdx === 0 ? "" : "mt-4"}>
                 {section.label && (
-                  <p className="mb-1 px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  <p className="mb-1 px-3 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                     {section.label}
                   </p>
                 )}
@@ -104,10 +104,10 @@ export function MobileNav({
                           className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors ${
                             active
                               ? "bg-gradient-to-r from-cyan-500/15 via-violet-500/10 to-transparent text-white"
-                              : "text-neutral-300 active:bg-neutral-900"
+                              : "text-slate-300 active:bg-white/10"
                           }`}
                         >
-                          <span className={active ? "text-cyan-300" : "text-neutral-500"}>
+                          <span className={active ? "text-cyan-300" : "text-slate-400"}>
                             {item.icon}
                           </span>
                           <span className="flex-1">{item.label}</span>
@@ -124,7 +124,7 @@ export function MobileNav({
               </div>
             ))}
             {footer && (
-              <div className="mt-5 border-t border-neutral-800/80 px-3 pt-4">{footer}</div>
+              <div className="mt-5 border-t border-white/10 px-3 pt-4">{footer}</div>
             )}
           </nav>
         </>

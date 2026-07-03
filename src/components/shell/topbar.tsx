@@ -18,7 +18,7 @@ export function TopBar({
   actions?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 z-10 border-b border-neutral-200/70 bg-white/85 backdrop-blur">
+    <div className="sticky top-0 z-10 border-b border-white/60 bg-white/55 backdrop-blur-xl">
       <div className="px-6 pt-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">

@@ -47,7 +47,10 @@ a translation afterthought.
 ## Anti-references
 
 - Generic SaaS dashboard slop: hero-metric cards in identical grids, gradient
-  text, glassmorphism.
+  text, decorative glass with no system. (The admin/portal shell IS a
+  deliberate glass system — blue gradient + one opacity scale, documented in
+  DESIGN.md. Random per-component blurs/opacities outside that scale are the
+  anti-reference.)
 - Intercom/HighLevel visual noise: 40 widgets competing for attention.
 - "AI product" clichés: sparkle emojis, purple-on-black neon, robot mascots.
 - Compliance overclaiming: never imply SOC 2 certification or guarantees the

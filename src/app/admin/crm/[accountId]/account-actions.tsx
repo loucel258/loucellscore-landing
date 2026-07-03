@@ -88,7 +88,7 @@ export function AddTask({ accountId }: { accountId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white/55 p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-white/60 bg-white/55 p-3">
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}

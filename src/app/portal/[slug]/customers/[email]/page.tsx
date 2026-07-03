@@ -88,7 +88,7 @@ export default async function CustomerDetailPage({
       </Link>
 
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-gradient-to-br from-white via-cyan-50/30 to-violet-50/30 p-7 shadow-sm">
+      <section className="relative overflow-hidden rounded-3xl border border-white/65 bg-gradient-to-br from-white/70 via-cyan-100/30 to-violet-100/30 p-7 shadow-sm shadow-slate-900/10">
         <div className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-cyan-200/25 blur-3xl" aria-hidden />
         <div className="relative flex items-start gap-5">
           <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 text-2xl font-bold text-white shadow-md shadow-cyan-500/20">
