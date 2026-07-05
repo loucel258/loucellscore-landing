@@ -71,7 +71,7 @@ export function Manifesto({ dict }: { dict: Dictionary }) {
         }}
       >
         <Image
-          src="/hero/04-swarm.webp"
+          src="/hero/02-cube.webp"
           alt=""
           fill
           quality={85}

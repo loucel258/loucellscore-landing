@@ -104,7 +104,7 @@ export const en: Dictionary = {
         {
           name: "Governed Agent Implementation",
           price: "$20K–$45K + $2.5K/mo",
-          desc: "Production agent with audit trail, RBAC, DLP, RAG, and human-in-the-loop. Multi-channel including WhatsApp Business. Built on Claude.",
+          desc: "Production agent with audit trail, RBAC, DLP, grounded knowledge, and human-in-the-loop. Multi-channel including WhatsApp Business. Built on Claude.",
         },
         {
           name: "AI Governance Setup",
@@ -554,7 +554,7 @@ export const en: Dictionary = {
         },
         {
           name: "Governed Agent Implementation",
-          desc: "Production-grade agent with audit trail, RBAC, DLP, RAG, and human-in-the-loop checkpoints. Multi-channel including WhatsApp Business. Built Claude-native, hardened from day one.",
+          desc: "Production-grade agent with audit trail, RBAC, DLP, grounded knowledge, and human-in-the-loop checkpoints. Multi-channel including WhatsApp Business. Built Claude-native, hardened from day one.",
         },
         {
           name: "Institutional AI Governance Setup",

@@ -9,7 +9,8 @@ import { ArrowRight, Check, FileDown } from "lucide-react";
  * Per workflow-architect GAP-A3 + GAP-RE1: 99% of landing visitors leave
  * without engaging. This is the lowest-friction capture: a single email
  * field that returns a Trust Stack one-pager and enrolls the visitor in
- * a 3-email nurture sequence (delivered manually via Resend for now).
+ * a 3-email nurture sequence (automated: /api/cron/nurture-sequence runs
+ * daily and sends whichever email is due per subscriber).
  *
  * Designed for footer placement — present but not pushy, doesn't compete
  * with the primary CTA (chat / Cal.com booking).
@@ -51,7 +52,7 @@ export function TrustStackPdfCta({
       });
       const data = await res.json();
       if (data.ok) {
-        setPdfUrl(data.pdfUrl ?? "/loucels-trust-stack-onepager.pdf");
+        setPdfUrl(data.pdfUrl ?? "/loucellscore-trust-stack-onepager.pdf");
         setState("success");
       } else {
         setErrorMsg(

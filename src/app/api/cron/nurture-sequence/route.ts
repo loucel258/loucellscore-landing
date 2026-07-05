@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
  * cron runs but no emails go out. Steven flips the key whenever ready.
  */
 
-const PDF_PATH = "/loucels-trust-stack-onepager.pdf";
+const PDF_PATH = "/loucellscore-trust-stack-onepager.pdf";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loucellscore.com";
 const CAL_URL = "https://cal.com/loucellscore/discovery";
 

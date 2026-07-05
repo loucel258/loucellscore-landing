@@ -34,7 +34,7 @@ const LAYERS: Layer[] = [
   { id: "ingress",    name: "Secure Ingress",     short: "HMAC · rate limit",        icon: <Shield className="size-3.5" strokeWidth={1.8} />,          tint: "cyan"   },
   { id: "identity",   name: "Identity & Access",  short: "RBAC · workspace iso",     icon: <UserCheck className="size-3.5" strokeWidth={1.8} />,       tint: "violet" },
   { id: "governance", name: "Data Governance",    short: "DLP L1 + L2 · PII mask",   icon: <Lock className="size-3.5" strokeWidth={1.8} />,            tint: "cyan"   },
-  { id: "knowledge",  name: "Knowledge & RAG",    short: "Vector + BM25 · rerank",   icon: <BookOpen className="size-3.5" strokeWidth={1.8} />,        tint: "violet" },
+  { id: "knowledge",  name: "Knowledge & Context", short: "Curated KB · workspace-scoped", icon: <BookOpen className="size-3.5" strokeWidth={1.8} />,   tint: "violet" },
   { id: "reasoning",  name: "Agent Reasoning",    short: "Claude · confidence",      icon: <Brain className="size-3.5" strokeWidth={1.8} />,           tint: "cyan"   },
   { id: "execution",  name: "Action Execution",   short: "HITL · idempotent",        icon: <PlayCircle className="size-3.5" strokeWidth={1.8} />,      tint: "violet" },
   { id: "audit",      name: "Audit & Observability", short: "Append-only · hash chain", icon: <ClipboardList className="size-3.5" strokeWidth={1.8} />, tint: "cyan"   },

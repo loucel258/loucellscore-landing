@@ -92,7 +92,7 @@ export async function POST(req: Request): Promise<Response> {
     );
     return NextResponse.json({
       ok: true,
-      pdfUrl: "/loucels-trust-stack-onepager.pdf",
+      pdfUrl: "/loucellscore-trust-stack-onepager.pdf",
       mode: "log_only",
     });
   }
@@ -109,7 +109,7 @@ export async function POST(req: Request): Promise<Response> {
     if (error.code === "23505") {
       return NextResponse.json({
         ok: true,
-        pdfUrl: "/loucels-trust-stack-onepager.pdf",
+        pdfUrl: "/loucellscore-trust-stack-onepager.pdf",
         mode: "already_subscribed",
       });
     }
@@ -118,14 +118,14 @@ export async function POST(req: Request): Promise<Response> {
     // Still return PDF URL so the UX completes
     return NextResponse.json({
       ok: true,
-      pdfUrl: "/loucels-trust-stack-onepager.pdf",
+      pdfUrl: "/loucellscore-trust-stack-onepager.pdf",
       mode: "save_failed",
     });
   }
 
   return NextResponse.json({
     ok: true,
-    pdfUrl: "/loucels-trust-stack-onepager.pdf",
+    pdfUrl: "/loucellscore-trust-stack-onepager.pdf",
     mode: "ok",
   });
 }

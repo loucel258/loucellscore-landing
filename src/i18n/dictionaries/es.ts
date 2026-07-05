@@ -106,7 +106,7 @@ export const es: Dictionary = {
         {
           name: "Implementación de Agente Gobernado",
           price: "$20K–$45K + $2.5K/mes",
-          desc: "Agente productivo con audit trail, RBAC, DLP, RAG y human-in-the-loop. Multi-canal incluyendo WhatsApp Business. Construido sobre Claude.",
+          desc: "Agente productivo con audit trail, RBAC, DLP, conocimiento curado y human-in-the-loop. Multi-canal incluyendo WhatsApp Business. Construido sobre Claude.",
         },
         {
           name: "Setup de Governance de IA",
@@ -559,7 +559,7 @@ export const es: Dictionary = {
         },
         {
           name: "Implementación de Agente Gobernado",
-          desc: "Agente productivo con audit trail, RBAC, DLP, RAG y checkpoints human-in-the-loop. Multicanal incluyendo WhatsApp Business. Construido Claude-native, blindado desde el día uno.",
+          desc: "Agente productivo con audit trail, RBAC, DLP, conocimiento curado y checkpoints human-in-the-loop. Multicanal incluyendo WhatsApp Business. Construido Claude-native, blindado desde el día uno.",
         },
         {
           name: "Setup de Gobernanza de IA Institucional",

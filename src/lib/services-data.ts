@@ -497,8 +497,8 @@ export const services: ServiceDetail[] = [
       es: "Un agente que tu equipo de seguridad aprueba.",
     },
     description: {
-      en: "We design, build, and deploy a production-grade AI agent on the Loucells Core Trust Stack: append-only audit trail, role-based access control, data loss prevention, RAG over your sources, and human-in-the-loop for sensitive decisions. Built on Claude. Multi-channel: web chat, WhatsApp Business, email, Slack. We run it; your data and keys stay yours.",
-      es: "Diseñamos, construimos y desplegamos un agente de IA grado producción sobre el Loucells Core Trust Stack: audit trail append-only, control de acceso por roles, prevención de pérdida de datos (DLP), RAG sobre tus fuentes y human-in-the-loop para decisiones sensibles. Construido sobre Claude. Multi-canal: chat web, WhatsApp Business, email, Slack. Nosotros lo operamos; tus datos y tus llaves siguen siendo tuyos.",
+      en: "We design, build, and deploy a production-grade AI agent on the Loucells Core Trust Stack: append-only audit trail, role-based access control, data loss prevention, a curated knowledge base built from your sources, and human-in-the-loop for sensitive decisions. Built on Claude. Multi-channel: web chat, WhatsApp Business, email, Slack. We run it; your data and keys stay yours.",
+      es: "Diseñamos, construimos y desplegamos un agente de IA grado producción sobre el Loucells Core Trust Stack: audit trail append-only, control de acceso por roles, prevención de pérdida de datos (DLP), base de conocimiento curada a partir de tus fuentes y human-in-the-loop para decisiones sensibles. Construido sobre Claude. Multi-canal: chat web, WhatsApp Business, email, Slack. Nosotros lo operamos; tus datos y tus llaves siguen siendo tuyos.",
     },
     priceLabel: {
       en: "$20K-$45K setup + $2.5K/mo",
@@ -509,7 +509,7 @@ export const services: ServiceDetail[] = [
       en: [
         "Architecture document signed by stakeholders",
         "Multi-channel deployment (web + WhatsApp Business + email)",
-        "RAG pipeline over your knowledge sources (Notion, Drive, etc.)",
+        "Curated knowledge base built from your sources (docs, site, SOPs)",
         "Immutable audit log of every agent decision",
         "Role-based access control + data classification rules",
         "DLP rules: PII detection, masking, escalation",
@@ -521,7 +521,7 @@ export const services: ServiceDetail[] = [
       es: [
         "Documento de arquitectura firmado por stakeholders",
         "Despliegue multi-canal (web + WhatsApp Business + email)",
-        "Pipeline RAG sobre tus fuentes de conocimiento (Notion, Drive, etc.)",
+        "Base de conocimiento curada a partir de tus fuentes (docs, sitio, SOPs)",
         "Audit log inmutable de cada decisión del agente",
         "Control de acceso por roles + reglas de clasificación de datos",
         "Reglas DLP: detección de PII, masking, escalación",
