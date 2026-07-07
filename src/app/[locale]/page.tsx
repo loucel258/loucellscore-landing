@@ -6,6 +6,7 @@ import { ScrollProgress } from "@/components/scroll-progress";
 import { Nav } from "@/components/nav";
 import { Hero } from "@/components/sections/hero";
 import { LogosMarquee } from "@/components/sections/logos-marquee";
+import { SmsDemo } from "@/components/sections/sms-demo";
 import { Manifesto } from "@/components/sections/manifesto";
 import { Offer } from "@/components/sections/offer";
 import { Templates } from "@/components/sections/templates";
@@ -35,6 +36,7 @@ export default async function HomePage({
       <main className="relative bg-bg">
         <Hero dict={dict} />
         <LogosMarquee locale={locale} />
+        <SmsDemo dict={dict} />
         <Offer dict={dict} />
         <Templates dict={dict} />
         <Manifesto dict={dict} />

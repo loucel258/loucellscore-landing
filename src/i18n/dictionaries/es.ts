@@ -13,11 +13,27 @@ export const es: Dictionary = {
     contact: "Agenda una llamada",
   },
   hero: {
-    eyebrow: "Estudio de Automatización · Sur de Florida",
-    titleLines: ["Arquitectura de IA", "para Escalar", "Tu Negocio."],
+    eyebrow: "Agentes de IA · Sur de Florida",
+    titleLines: ["Respondido. Agendado. Registrado.", "Mientras tú atiendes tu negocio."],
     subtitle:
-      "La IA no es solo para corporaciones gigantes. Construimos sistemas sencillos que automatizan tus tareas más repetitivas. El objetivo es simple: que tu equipo deje de funcionar como robots haciendo trabajo manual, y use ese tiempo para hacer crecer tu negocio.",
+      "Un agente de IA gobernado responde, agenda y da seguimiento sobre las herramientas que ya usas — cada acción queda registrada y las delicadas esperan tu aprobación. Porque el cliente que respondes a las 9 PM es el trabajo que tu competencia no gana.",
     primaryCta: "Agenda una llamada gratis",
+  },
+  smsDemo: {
+    eyebrow: "Demo SMS",
+    title: "Esto es lo que ven tus clientes.",
+    intro:
+      "Recordatorio de cita, reprogramación, nueva reserva — resuelto de punta a punta por SMS, en el idioma de tu cliente. Datos simulados; el mismo agente ya está desplegado para un salón del sur de Florida.",
+    phoneContact: "Bella Salon · SMS",
+    disclaimer: "Conversación simulada · flujo real del producto",
+    langNote:
+      "¿Tu clientela también escribe en inglés? El agente responde en ambos idiomas de forma nativa — sin configuración extra, sin capa de traducción.",
+    badges: ["Recordatorio con consentimiento", "Agenda real del negocio", "Registrado en audit chain"],
+    notes: [
+      "El recordatorio sale automático — antes se verifica consentimiento y horario permitido",
+      "Los horarios disponibles vienen de la agenda real del negocio, no de una respuesta enlatada",
+      "La reprogramación se ejecuta y queda registrada en el audit chain append-only",
+    ],
   },
   manifesto: {
     eyebrow: "Gobernanza",

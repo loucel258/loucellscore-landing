@@ -11,11 +11,27 @@ export const en: Dictionary = {
     contact: "Book a call",
   },
   hero: {
-    eyebrow: "Automation Studio · South Florida",
-    titleLines: ["AI Architecture", "Built to Scale", "Your Business."],
+    eyebrow: "AI Agents · South Florida",
+    titleLines: ["Answered. Booked. Logged.", "While you run your business."],
     subtitle:
-      "AI isn't only for giant corporations. We build simple systems that automate your most repetitive tasks. The goal is simple: stop your team from working like robots doing manual work, and free up that time to grow your business.",
+      "A governed AI agent answers, books, and follows up on the tools you already use — every action logged, the sensitive ones waiting for your approval. Because the lead you answer at 9 PM is the job your competitor doesn't get.",
     primaryCta: "Book a free 30-min call",
+  },
+  smsDemo: {
+    eyebrow: "SMS Demo",
+    title: "This is what your customers see.",
+    intro:
+      "Appointment reminder, reschedule, rebooking — handled end to end over SMS, in your customer's language. Simulated data; the same agent is deployed today for a South Florida salon.",
+    phoneContact: "Bella Salon · SMS",
+    disclaimer: "Simulated conversation · real product flow",
+    langNote:
+      "The conversation above is in Spanish on purpose — your agent handles English and Spanish natively, no setup, no translation layer.",
+    badges: ["Consent-gated reminder", "Real calendar availability", "Logged in audit chain"],
+    notes: [
+      "The reminder goes out automatically — consent and quiet hours are checked first",
+      "Open slots come from the business's real calendar, not a canned reply",
+      "The reschedule is executed and logged in the append-only audit chain",
+    ],
   },
   manifesto: {
     eyebrow: "Governance",
@@ -617,6 +633,16 @@ export type Dictionary = {
     titleLines: string[];
     subtitle: string;
     primaryCta: string;
+  };
+  smsDemo: {
+    eyebrow: string;
+    title: string;
+    intro: string;
+    phoneContact: string;
+    disclaimer: string;
+    langNote: string;
+    badges: string[];
+    notes: string[];
   };
   manifesto: { eyebrow: string; title: string; cards: string[] };
   offer: {
