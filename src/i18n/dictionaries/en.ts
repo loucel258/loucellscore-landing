@@ -228,8 +228,12 @@ export const en: Dictionary = {
     bullets: [
       { n: "01", text: "Identify manual bottlenecks and hidden labor leaks." },
       { n: "02", text: "Receive a tailored AI automation blueprint for your business." },
-      { n: "03", text: "A paid diagnostic with deliverables you keep. Clear ROI before you commit to a build." },
+      { n: "03", text: "Leave with clear next steps you can act on — with or without us." },
     ],
+    microline: "30 MIN · NO PITCH · NO COMMITMENT",
+    auditNote: "Rather start with a diagnosis than a conversation?",
+    auditLinkLabel: "Operations Gap Audit — 1 week, both deliverables yours to keep",
+    auditHref: "/en/services/operations-gap-audit",
   },
   footer: {
     tagline:
@@ -674,6 +678,10 @@ export type Dictionary = {
     subtitle: string;
     button: string;
     bullets: Array<{ n: string; text: string }>;
+    microline: string;
+    auditNote: string;
+    auditLinkLabel: string;
+    auditHref: string;
   };
   footer: { tagline: string; rights: string };
   templates: {

@@ -8,7 +8,7 @@ import { ArrowRight, Check, FileDown } from "lucide-react";
  *
  * Per workflow-architect GAP-A3 + GAP-RE1: 99% of landing visitors leave
  * without engaging. This is the lowest-friction capture: a single email
- * field that returns a Trust Stack one-pager and enrolls the visitor in
+ * field that returns the AI Readiness Checklist (per-locale PDF) and enrolls the visitor in
  * a 3-email nurture sequence (automated: /api/cron/nurture-sequence runs
  * daily and sends whichever email is due per subscriber).
  *
@@ -52,7 +52,12 @@ export function TrustStackPdfCta({
       });
       const data = await res.json();
       if (data.ok) {
-        setPdfUrl(data.pdfUrl ?? "/loucellscore-trust-stack-onepager.pdf");
+        setPdfUrl(
+          data.pdfUrl ??
+            (locale === "es"
+              ? "/loucellscore-ai-readiness-checklist-es.pdf"
+              : "/loucellscore-ai-readiness-checklist-en.pdf"),
+        );
         setState("success");
       } else {
         setErrorMsg(
@@ -75,31 +80,31 @@ export function TrustStackPdfCta({
   const labels =
     locale === "es"
       ? {
-          eyebrow: "Para el que quiere leer antes de hablar",
-          headline: "Recibe el Trust Stack one-pager",
+          eyebrow: "¿No sabes si tu negocio está listo para IA?",
+          headline: "Recibe el checklist de preparación para IA",
           description:
-            "Una página explicando cómo construimos agentes de IA gobernados: DLP, audit chain, RBAC, HITL. Sin contactos comerciales sin tu consentimiento.",
+            "Diez preguntas de sí o no, cinco minutos, sin tecnicismos — te dicen dónde se te escapa dinero y si un agente de IA se pagaría solo en tu operación. En español e inglés.",
           placeholder: "tu@email.com",
-          cta: "Enviarme el PDF",
+          cta: "Enviarme el checklist",
           submitting: "Enviando…",
           successHeadline: "Listo — revisa tu inbox",
           successDescription:
             "El PDF ya está disponible abajo. También recibirás dos emails más en los próximos 7 días con casos de uso prácticos. Puedes darte de baja en cualquier momento.",
-          downloadCta: "Descargar PDF",
+          downloadCta: "Descargar checklist",
           privacyNote: "Email solamente. Sin tracking pixels. Cero spam.",
         }
       : {
-          eyebrow: "For those who want to read before they talk",
-          headline: "Get the Trust Stack one-pager",
+          eyebrow: "Not sure your business is ready for AI?",
+          headline: "Get the AI Readiness Checklist",
           description:
-            "One page explaining how we build governed AI agents: DLP, audit chain, RBAC, HITL. No sales outreach without your consent.",
+            "Ten yes/no questions, five minutes, no jargon — they tell you where money is leaking and whether an AI agent would pay for itself in your operation. Available in English and Spanish.",
           placeholder: "you@email.com",
-          cta: "Send me the PDF",
+          cta: "Send me the checklist",
           submitting: "Sending…",
           successHeadline: "Done — check your inbox",
           successDescription:
             "The PDF is available below. You'll also receive two more emails over the next 7 days with practical use cases. You can unsubscribe anytime.",
-          downloadCta: "Download PDF",
+          downloadCta: "Download checklist",
           privacyNote: "Email only. No tracking pixels. Zero spam.",
         };
 

@@ -25,6 +25,9 @@ export type ServiceDetail = {
   timeline: { en: string; es: string };
   deliverables: { en: string[]; es: string[] };
   fitFor: { en: string[]; es: string[] };
+  /** Optional "what comes standard" block — capability statements only;
+   *  never name competitors or frame others as lesser. */
+  standard?: { en: string[]; es: string[] };
 };
 
 export const services: ServiceDetail[] = [
@@ -263,6 +266,26 @@ export const services: ServiceDetail[] = [
         "Contractors que pierden leads fuera de horario",
         "Negocios de servicios (dentistas, abogados, gyms)",
         "Restaurantes que necesitan reservas + take-out",
+      ],
+    },
+    standard: {
+      en: [
+        "One agent across web chat, SMS, and WhatsApp — one conversation, one history, one customer record.",
+        "Reads and writes across your calendar, your CRM, and your phone number at the same time — whatever mix you already run.",
+        "English and Spanish natively — it detects the customer's language and answers in it, even mid-conversation.",
+        "Sensitive actions wait for your one-tap approval: quotes, refunds, anything that commits your business.",
+        "Every message and every decision lands in an append-only audit log — exportable, reviewable, yours.",
+        "Runs on API keys in your name — revoke them and the agent stops instantly.",
+        "Pricing and policy locked in code — it can't improvise a discount or promise work you didn't approve.",
+      ],
+      es: [
+        "Un solo agente en chat web, SMS y WhatsApp — una conversación, un historial, una ficha por cliente.",
+        "Lee y escribe en tu calendario, tu CRM y tu número de teléfono a la vez — con la combinación que ya uses.",
+        "Inglés y español nativos — detecta el idioma del cliente y responde en él, incluso a mitad de conversación.",
+        "Las acciones delicadas esperan tu aprobación de un tap: cotizaciones, reembolsos, todo lo que compromete tu negocio.",
+        "Cada mensaje y cada decisión queda en un audit log append-only — exportable, revisable, tuyo.",
+        "Corre con API keys a tu nombre — revócalas y el agente se detiene al instante.",
+        "Precios y políticas bloqueados en código — no puede improvisar un descuento ni prometer trabajo que no aprobaste.",
       ],
     },
   },

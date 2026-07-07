@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, StaggerGroup, StaggerItem } from "@/components/motion/reveal";
 import { Magnetic } from "@/components/motion/magnetic";
@@ -111,8 +112,19 @@ export function CTA({ dict }: { dict: Dictionary }) {
                   className="block h-px w-10 bg-cyan"
                   style={{ boxShadow: "0 0 6px var(--accent-cyan)" }}
                 />
-                <span>30 MIN · NO PITCH · NO COMMITMENT</span>
+                <span>{dict.cta.microline}</span>
               </div>
+            </Reveal>
+            <Reveal delay={0.35}>
+              <p className="max-w-lg text-[13px] leading-relaxed text-text-tertiary">
+                {dict.cta.auditNote}{" "}
+                <Link
+                  href={dict.cta.auditHref}
+                  className="text-cyan underline decoration-cyan/40 underline-offset-4 transition-colors hover:decoration-cyan"
+                >
+                  {dict.cta.auditLinkLabel}
+                </Link>
+              </p>
             </Reveal>
           </div>
 

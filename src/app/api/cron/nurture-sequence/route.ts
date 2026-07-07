@@ -30,7 +30,9 @@ export const dynamic = "force-dynamic";
  * cron runs but no emails go out. Steven flips the key whenever ready.
  */
 
-const PDF_PATH = "/loucellscore-trust-stack-onepager.pdf";
+const TRUST_PDF_PATH = "/loucellscore-trust-stack-onepager.pdf";
+const CHECKLIST_PATH_EN = "/loucellscore-ai-readiness-checklist-en.pdf";
+const CHECKLIST_PATH_ES = "/loucellscore-ai-readiness-checklist-es.pdf";
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loucellscore.com";
 const CAL_URL = "https://cal.com/loucellscore/discovery";
 
@@ -158,8 +160,8 @@ async function handleCron(req: Request): Promise<Response> {
 async function sendStep1(sub: SubscriberRow): Promise<boolean> {
   const isEs = sub.locale === "es";
   const subject = isEs
-    ? "Tu Trust Stack one-pager — Loucells Core"
-    : "Your Trust Stack one-pager — Loucells Core";
+    ? "Tu checklist de preparación para IA — Loucells Core"
+    : "Your AI Readiness Checklist — Loucells Core";
   const html = isEs ? renderStep1Es() : renderStep1En();
   const result = await sendEmail({ to: sub.email, subject, html });
   return result.ok;
@@ -194,8 +196,9 @@ function shellHtml(body: string): string {
 function renderStep1En(): string {
   return shellHtml(`
     <p>Hi,</p>
-    <p>Here's the one-pager you asked for: <a href="${BASE_URL}${PDF_PATH}" style="color:#06b6d4;">Download the Trust Stack one-pager (PDF)</a></p>
-    <p>It walks through the 5 layers we build into every Loucells Core agent — DLP, audit chain, RBAC, HITL, hardened prompts.</p>
+    <p>Here's the checklist you asked for: <a href="${BASE_URL}${CHECKLIST_PATH_EN}" style="color:#06b6d4;">Download the AI Readiness Checklist (PDF)</a></p>
+    <p>Ten yes/no questions, five minutes, no jargon — count your "yes" answers and the scoring at the end tells you what they mean for your operation.</p>
+    <p>Want the technical version too? <a href="${BASE_URL}${TRUST_PDF_PATH}" style="color:#06b6d4;">The Trust Stack one-pager</a> covers the 5 governance layers we build into every agent — DLP, audit chain, RBAC, HITL, hardened prompts. Good one to forward to your IT person.</p>
     <p>You'll get two more emails over the next week — a practical Gap Audit example, and a low-commitment way to talk. After that, no further outreach unless you reach out first.</p>
     <p>Steven<br>Loucells Core</p>
   `);
@@ -204,8 +207,9 @@ function renderStep1En(): string {
 function renderStep1Es(): string {
   return shellHtml(`
     <p>Hola,</p>
-    <p>Aquí está el one-pager que pediste: <a href="${BASE_URL}${PDF_PATH}" style="color:#06b6d4;">Descargá el Trust Stack one-pager (PDF)</a></p>
-    <p>Recorre las 5 capas que construimos en cada agente Loucells Core — DLP, audit chain, RBAC, HITL, prompts blindados.</p>
+    <p>Aquí está el checklist que pediste: <a href="${BASE_URL}${CHECKLIST_PATH_ES}" style="color:#06b6d4;">Descarga el checklist de preparación para IA (PDF)</a></p>
+    <p>Diez preguntas de sí o no, cinco minutos, sin tecnicismos — cuenta tus "sí" y el puntaje al final te dice qué significan para tu operación.</p>
+    <p>¿Quieres también la versión técnica? <a href="${BASE_URL}${TRUST_PDF_PATH}" style="color:#06b6d4;">El Trust Stack one-pager</a> cubre las 5 capas de gobernanza que construimos en cada agente — DLP, audit chain, RBAC, HITL, prompts blindados. Ideal para reenviar a tu persona de IT.</p>
     <p>Te mando dos emails más en la próxima semana — un ejemplo práctico de Gap Audit y una forma de baja-comprometividad para hablar. Después de eso, sin outreach adicional a menos que tú nos contactes.</p>
     <p>Steven<br>Loucells Core</p>
   `);

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { isLocale, locales } from "@/i18n/config";
 import {
   getServiceBySlug,
@@ -154,6 +154,28 @@ export default async function ServicePage({
             ))}
           </ul>
         </section>
+
+        {/* What comes standard — capability statements, no competitor framing */}
+        {service.standard && (
+          <section className="flex flex-col gap-4">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {isES ? "Lo que viene de serie" : "What comes standard"}
+            </h2>
+            <p className="max-w-2xl text-muted-foreground">
+              {isES
+                ? "No como upgrade ni como add-on — como el piso de cada Front Desk que desplegamos."
+                : "Not as an upgrade, not as an add-on — as the floor of every Front Desk we deploy."}
+            </p>
+            <ul className="mt-2 grid gap-3 md:grid-cols-2">
+              {service.standard[locale].map((item, i) => (
+                <li key={i} className="flex items-start gap-3 rounded-lg border border-border bg-card p-4">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+                  <span className="text-[15px] leading-snug text-foreground/85">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Fit for */}
         <section className="flex flex-col gap-6">

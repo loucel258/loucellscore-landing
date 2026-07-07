@@ -230,8 +230,12 @@ export const es: Dictionary = {
     bullets: [
       { n: "01", text: "Identifica cuellos de botella manuales y fugas ocultas de trabajo." },
       { n: "02", text: "Recibe un plano de automatización con IA hecho a la medida de tu negocio." },
-      { n: "03", text: "Un diagnóstico pago con entregables que te quedas. ROI claro antes de comprometerte a un build." },
+      { n: "03", text: "Sales con próximos pasos claros que puedes ejecutar — con o sin nosotros." },
     ],
+    microline: "30 MIN · SIN PITCH · SIN COMPROMISO",
+    auditNote: "¿Prefieres empezar con un diagnóstico en vez de una llamada?",
+    auditLinkLabel: "Operations Gap Audit — 1 semana, los dos entregables son tuyos",
+    auditHref: "/es/services/operations-gap-audit",
   },
   footer: {
     tagline:
