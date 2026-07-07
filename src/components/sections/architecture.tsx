@@ -139,7 +139,7 @@ export function Architecture({
             </StaggerGroup>
 
             {/* Gap Audit entry path — paid diagnostic for prospects not yet
-                ready to commit to a full SMV build. The price is intentionally
+                ready to commit to a full AI department build. The price is intentionally
                 NOT shown — visitor asks the chat agent for ranges if curious. */}
             <Reveal delay={0.15}>
               <div className="relative flex flex-col gap-3 rounded-2xl border border-violet/30 bg-gradient-to-br from-violet/[0.08] to-transparent p-5 backdrop-blur-sm">
@@ -176,7 +176,7 @@ export function Architecture({
                       strokeWidth={1.5}
                     />
                     <span>
-                      {es ? "EXPLORAR MODELOS SMV" : "EXPLORE SMV MODELS"}
+                      {es ? "EXPLORAR DEPARTAMENTOS DE IA" : "EXPLORE AI DEPARTMENTS"}
                     </span>
                     <ArrowUpRight
                       className="size-3 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"

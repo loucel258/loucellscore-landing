@@ -80,7 +80,7 @@ export function Offer({ dict }: { dict: Dictionary }) {
               data={dict.offer.agents}
               illustration={<AIAgentsViz />}
               ctaIcon={<BrainCircuit className="size-4" strokeWidth={1.5} />}
-              ctaHref="./services/smv-models"
+              ctaHref="./services/ai-departments"
             />
           </StaggerItem>
           {/* Enterprise / Integration & Control tier hidden from default landing

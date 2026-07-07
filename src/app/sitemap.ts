@@ -6,7 +6,7 @@ import { services } from "@/lib/services-data";
 const STATIC_ROUTES = ["", "/privacy", "/terms"] as const;
 const SERVICE_UMBRELLA_ROUTES = [
   "/services/web-foundation",
-  "/services/smv-models",
+  "/services/ai-departments",
   "/services/integration-control",
 ] as const;
 
@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
-  // Umbrella service subpages (Web Foundation, SMV Models, Integration & Control)
+  // Umbrella service subpages (Web Foundation, AI Departments, Integration & Control)
   for (const route of SERVICE_UMBRELLA_ROUTES) {
     for (const locale of locales) {
       entries.push({

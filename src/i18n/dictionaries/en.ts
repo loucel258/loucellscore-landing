@@ -7,7 +7,7 @@ export const en: Dictionary = {
   nav: {
     offer: "Architecture",
     philosophy: "Governance",
-    agents: "SMV Models",
+    agents: "AI Departments",
     contact: "Book a call",
   },
   hero: {
@@ -78,7 +78,7 @@ export const en: Dictionary = {
     },
     agents: {
       label: "Operational Automation",
-      tagline: "An AI agent is an assistant. An SMV model is an entire department operating in milliseconds.",
+      tagline: "An AI agent is an assistant. An AI department is an entire function operating in milliseconds.",
       description:
         "Your Twilio. Your CRM. Your existing tools. The AI talks to them — with an audit trail.",
       ctaLabel: "Explore agents",
@@ -430,16 +430,16 @@ export const en: Dictionary = {
   },
   smvModels: {
     meta: {
-      title: "SMV Models — Loucells Core",
+      title: "AI Departments — Loucells Core",
       description:
         "Not a chatbot. An entire department operating in milliseconds. Specialized, governed AI agents — we run them, you hold the keys.",
     },
     backLabel: "Back to home",
     hero: {
-      eyebrow: "SMV Models",
+      eyebrow: "AI Departments",
       title: "Not a chatbot. An entire department, operating in milliseconds.",
       subtitle:
-        "Each SMV model is a specialized agent engineered for one job and kept on-script by hardened guardrails. Multi-channel, governed every single day.",
+        "Each AI department is a specialized agent engineered for one job and kept on-script by hardened guardrails. Multi-channel, governed every single day.",
       primaryCta: "Book a free 30-min call",
       secondaryCta: "See the models",
     },
@@ -513,7 +513,7 @@ export const en: Dictionary = {
       items: [
         {
           title: "Specialized, Not General",
-          desc: "Each SMV model is built for one job. No bloated assistant trying to do everything badly. The AI Front Desk answers leads. It doesn't try to quote or reply to reviews. That's why it doesn't fail.",
+          desc: "Each AI department is built for one job. No bloated assistant trying to do everything badly. The AI Front Desk answers leads. It doesn't try to quote or reply to reviews. That's why it doesn't fail.",
         },
         {
           title: "Governed, Not Hallucinating",

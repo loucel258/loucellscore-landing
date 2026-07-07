@@ -36,7 +36,7 @@ const SOUTH_FLORIDA_AREA = [
 
 const SERVICE_CATALOG = [
   { name: "Web Foundation", slug: "web-foundation" },
-  { name: "SMV Models", slug: "smv-models" },
+  { name: "AI Departments", slug: "ai-departments" },
   { name: "Integration & Control", slug: "integration-control" },
 ] as const;
 
@@ -102,8 +102,8 @@ export function StructuredData({ locale }: { locale: Locale }) {
     image: `${siteConfig.url}${siteConfig.ogImage}`,
     priceRange: "$$$",
     description: isES
-      ? "Agencia de automatización con IA para negocios medianos en el sur de Florida. Agentes especializados (SMV), fundamentos web bilingües y gobernanza de IA nivel empresarial."
-      : "AI automation agency for mid-sized businesses in South Florida. Specialized SMV agents, bilingual web foundations, and enterprise-grade AI governance.",
+      ? "Agencia de automatización con IA para negocios medianos en el sur de Florida. Departamentos de IA especializados, fundamentos web bilingües y gobernanza de IA nivel empresarial."
+      : "AI automation agency for mid-sized businesses in South Florida. Specialized AI departments, bilingual web foundations, and enterprise-grade AI governance.",
     areaServed: SOUTH_FLORIDA_AREA,
     serviceArea: {
       "@type": "GeoCircle",
@@ -163,7 +163,7 @@ export function ServiceSchema({
   serviceType,
 }: {
   locale: Locale;
-  slug: "web-foundation" | "smv-models" | "integration-control";
+  slug: "web-foundation" | "ai-departments" | "integration-control";
   name: string;
   description: string;
   serviceType: string;

@@ -182,7 +182,7 @@ export function NewEngagementForm() {
             className="w-full rounded-md border border-white/65 bg-white/55 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-60"
           >
             <option value="gap_audit">Gap Audit ($500)</option>
-            <option value="smv_build">SMV Build</option>
+            <option value="smv_build">AI Department Build</option>
             <option value="integration_control">Integration & Control</option>
           </select>
         </Field>

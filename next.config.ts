@@ -13,6 +13,17 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        // 2026-07-07 rename: SMV Models -> AI Departments. Old URL is
+        // indexed and may live in shared links; keep this permanently.
+        source: "/:locale/services/smv-models",
+        destination: "/:locale/services/ai-departments",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

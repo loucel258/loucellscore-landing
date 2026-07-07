@@ -34,7 +34,7 @@ export default async function TermsPage({
           <h2>1. Servicios</h2>
           <p>
             Loucells Core ofrece diseño web (Web Foundation), agentes de IA
-            especializados (Modelos SMV) y arquitectura/gobernanza de IA
+            especializados (Departamentos de IA) y arquitectura/gobernanza de IA
             enterprise (Integration &amp; Control). El alcance específico de
             cada proyecto queda definido en la propuesta firmada (SOW) entre
             cliente y Loucells Core.
@@ -127,7 +127,7 @@ export default async function TermsPage({
           <h2>1. Services</h2>
           <p>
             Loucells Core offers web design (Web Foundation), specialized AI
-            agents (SMV Models), and enterprise AI architecture and
+            agents (AI Departments), and enterprise AI architecture and
             governance (Integration &amp; Control). The specific scope of
             each project is defined in the signed proposal (SOW) between
             client and Loucells Core.

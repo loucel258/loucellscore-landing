@@ -9,7 +9,7 @@ export const es: Dictionary = {
   nav: {
     offer: "Arquitectura",
     philosophy: "Gobernanza",
-    agents: "Modelos SMV",
+    agents: "Departamentos de IA",
     contact: "Agenda una llamada",
   },
   hero: {
@@ -80,7 +80,7 @@ export const es: Dictionary = {
     },
     agents: {
       label: "Automatización Operativa",
-      tagline: "Un agente de AI es un asistente. Un modelo SMV es un departamento entero operando en milisegundos.",
+      tagline: "Un agente de IA es un asistente. Un departamento de IA es una función completa operando en milisegundos.",
       description:
         "Tu Twilio. Tu CRM. Tus herramientas existentes. La IA les habla — con audit trail.",
       ctaLabel: "Explorar agentes",
@@ -435,16 +435,16 @@ export const es: Dictionary = {
   },
   smvModels: {
     meta: {
-      title: "Modelos SMV — Loucells Core",
+      title: "Departamentos de IA — Loucells Core",
       description:
         "No es un chatbot. Un departamento entero operando en milisegundos. Agentes de IA especializados y gobernados — nosotros los operamos, tú tienes las llaves.",
     },
     backLabel: "Volver al inicio",
     hero: {
-      eyebrow: "Modelos SMV",
+      eyebrow: "Departamentos de IA",
       title: "No es un chatbot. Un departamento entero, operando en milisegundos.",
       subtitle:
-        "Cada modelo SMV es un agente especializado diseñado para un solo trabajo y blindado para no salirse del guion. Multicanal, blindado y gobernado todos los días.",
+        "Cada departamento de IA es un agente especializado diseñado para un solo trabajo y blindado para no salirse del guion. Multicanal, blindado y gobernado todos los días.",
       primaryCta: "Agenda una llamada gratis",
       secondaryCta: "Ver los modelos",
     },
@@ -518,7 +518,7 @@ export const es: Dictionary = {
       items: [
         {
           title: "Especializados, No Generales",
-          desc: "Cada modelo SMV está construido para un solo trabajo. No un asistente inflado que intenta hacerlo todo y lo hace mal. El AI Front Desk contesta leads. No intenta cotizar ni contestar reseñas. Por eso no falla.",
+          desc: "Cada departamento de IA está construido para un solo trabajo. No un asistente inflado que intenta hacerlo todo y lo hace mal. El AI Front Desk contesta leads. No intenta cotizar ni contestar reseñas. Por eso no falla.",
         },
         {
           title: "Gobernados, Sin Alucinaciones",

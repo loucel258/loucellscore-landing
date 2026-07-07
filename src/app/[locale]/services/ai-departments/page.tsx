@@ -33,9 +33,9 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `/${locale}/services/smv-models`,
+      canonical: `/${locale}/services/ai-departments`,
       languages: Object.fromEntries(
-        locales.map((l) => [l, `/${l}/services/smv-models`]),
+        locales.map((l) => [l, `/${l}/services/ai-departments`]),
       ),
     },
     openGraph: { title, description },
@@ -58,7 +58,7 @@ export default async function SmvModelsPage({
       <ScrollProgress />
       <ServiceSchema
         locale={locale}
-        slug="smv-models"
+        slug="ai-departments"
         name={data.hero.title}
         description={data.hero.subtitle}
         serviceType="AI Agent Implementation"
@@ -67,7 +67,7 @@ export default async function SmvModelsPage({
         locale={locale}
         trail={[
           { name: "Home", path: "" },
-          { name: data.hero.eyebrow, path: "/services/smv-models" },
+          { name: data.hero.eyebrow, path: "/services/ai-departments" },
         ]}
       />
       <Nav locale={locale} dict={dict} />

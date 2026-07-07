@@ -419,7 +419,7 @@ export const services: ServiceDetail[] = [
         "Conversion drop-off map (where prospects stop)",
         "3-5 page Gap Map with prioritized agent recommendations",
         "Trust Stack Risk Snapshot (security findings, owner + advisor versions)",
-        "50% credit toward your SMV build if signed within 30 days",
+        "50% credit toward your AI department build if signed within 30 days",
       ],
       es: [
         "Llamada de discovery 30 min (gratis) + deep-dive 60 min (pagado)",
@@ -428,17 +428,17 @@ export const services: ServiceDetail[] = [
         "Mapa de drop-off de conversión (dónde se caen los prospectos)",
         "Gap Map 3-5 páginas con recomendaciones de agentes priorizadas",
         "Trust Stack Risk Snapshot (hallazgos de seguridad, versión dueño + asesor)",
-        "50% del fee se acredita al build SMV si se firma dentro de 30 días",
+        "50% del fee se acredita al build de tu departamento de IA si se firma dentro de 30 días",
       ],
     },
     fitFor: {
       en: [
-        "Prospects not ready to commit to a full SMV build yet",
+        "Prospects not ready to commit to a full AI department build yet",
         "Businesses unsure which agent fits their bottleneck",
         "Founders who want a paid, deliverable diagnostic before signing",
       ],
       es: [
-        "Prospectos que no están listos para comprometerse a un SMV completo",
+        "Prospectos que no están listos para comprometerse a un departamento de IA completo",
         "Negocios que no están seguros qué agente cierra su cuello de botella",
         "Founders que quieren un diagnóstico pago y entregable antes de firmar",
       ],
