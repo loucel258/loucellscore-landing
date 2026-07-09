@@ -1,0 +1,25 @@
+name: business-pulse
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 01:00 UTC = 21:00 ET
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping business-pulse endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repo secret is not set"; exit 1
+          fi
+          code=$(curl -sS -L -o /tmp/resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://www.loucellscore.com/api/cron/business-pulse)
+          echo "HTTP $code"; echo "Response: $(cat /tmp/resp.json)"
+          if [ "$code" != "200" ]; then
+            echo "::error::returned $code (401 = secret mismatch)"; exit 1
+          fi
