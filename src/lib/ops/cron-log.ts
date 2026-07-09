@@ -46,6 +46,7 @@ export const KNOWN_CRONS: Array<{ job: string; label: string; schedule: string }
   { job: "nurture-sequence", label: "Nurture sequence", schedule: "0 14 * * *" },
   { job: "appointment-reminders", label: "Appointment reminders", schedule: "0 15 * * *" },
   { job: "review-requests", label: "Review requests", schedule: "0 16 * * *" },
+  { job: "business-pulse", label: "Business Pulse", schedule: "0 1 * * *" },
 ];
 
 /** Latest run per job, for the Automation health panel. */
