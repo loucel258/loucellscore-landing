@@ -44,7 +44,7 @@ function fallbackReply(locale: "es" | "en"): string {
     : "Thanks for your message. A team member will get back to you shortly.";
 }
 
-function buildSystem(input: OrchestratorInput): string {
+export function buildSystem(input: OrchestratorInput): string {
   const services =
     input.services.length > 0
       ? input.services
