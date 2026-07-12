@@ -88,6 +88,9 @@ export async function upsertMirrorAppointment(
   }
 
   const status = MIRROR_STATUS_MAP[data.status] ?? "scheduled";
+  // booked_by is deliberately absent: fresh mirror rows take the DB default
+  // ('external') and conflict updates must never clobber an attribution set
+  // elsewhere. Adding it to this payload would corrupt ROI Tier 1 counts.
   const { error: apptErr } = await sb.from("appointments").upsert(
     {
       workspace_id: workspaceId,

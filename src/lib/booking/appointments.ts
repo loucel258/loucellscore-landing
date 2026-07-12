@@ -54,6 +54,7 @@ export async function createAppointment(
       start_at: args.startIso,
       end_at: endIso,
       status: "scheduled",
+      booked_by: "agent", // Tier 1 attribution — this path only runs from the agent's booking tool
     })
     .select("id")
     .maybeSingle();
