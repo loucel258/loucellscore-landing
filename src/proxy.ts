@@ -12,7 +12,7 @@ function detectLocale(request: NextRequest): string {
 }
 
 // Paths that bypass locale routing entirely (internal sales demos, etc.)
-const LOCALE_BYPASS_PREFIXES = ["/demo", "/admin", "/portal"];
+const LOCALE_BYPASS_PREFIXES = ["/demo", "/admin", "/portal", "/sandbox"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
