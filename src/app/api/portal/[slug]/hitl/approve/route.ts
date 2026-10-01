@@ -54,7 +54,7 @@ export async function POST(
   // an arbitrary approval id from another client.
   const { data: access } = await sb
     .from("client_portal_access")
-    .select("engagement_id")
+    .select("engagement_id, display_name")
     .eq("client_slug", slug)
     .maybeSingle();
   if (!access) {
@@ -81,6 +81,7 @@ export async function POST(
     decider: `portal:${slug}`,
     editedText: body.editedText,
     clientSlug: slug,
+    clientDisplayName: (access as { display_name: string | null }).display_name,
   });
 
   if (!result.ok) {

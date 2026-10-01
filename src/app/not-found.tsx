@@ -1,41 +1,44 @@
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { getHomeCopy } from "@/components/home/copy";
+import { instrumentSerif } from "@/components/home/fonts";
 
 export default function NotFound() {
+  const en = getHomeCopy("en").site;
+  const es = getHomeCopy("es").site;
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div className="flex flex-col items-center gap-6">
-        <span className="font-mono text-xs uppercase tracking-[0.25em] text-accent">
-          // 404
-        </span>
-        <h1 className="text-balance text-5xl font-semibold leading-tight tracking-tight md:text-7xl">
-          Page not found
-        </h1>
-        <p className="max-w-md text-balance text-lg leading-relaxed text-muted-foreground">
-          The page you&apos;re looking for doesn&apos;t exist, or has been
-          moved.
-          <br />
-          La página que buscas no existe o fue movida.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/en"
-            className={cn(buttonVariants(), "h-11 px-5 text-base")}
-          >
-            Back to home
-          </Link>
-          <Link
-            href="/es"
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "h-11 px-5 text-base",
-            )}
-          >
-            Volver al inicio
-          </Link>
-        </div>
+    <div className={`lc-home ${instrumentSerif.variable}`}>
+      {/* .lc-home paints paper and isn't in a cascade layer, so the night
+          ground goes on an inner element where the utility can win. */}
+      <div className="flex min-h-screen flex-col bg-night text-bone">
+        <main className="lc-wrap flex flex-1 flex-col justify-center py-24">
+          <p className="lc-mono text-[13px] text-dawn">404 · 9:47 PM</p>
+          <h1 className="lc-display mt-6 max-w-[14ch] text-[clamp(2.8rem,7vw,5.6rem)]">
+            {en.notFoundTitle}
+          </h1>
+          <p className="lc-lead mt-6 max-w-[34rem] text-bone-2">
+            {en.notFoundBody}
+            <br />
+            <span lang="es">
+              {es.notFoundTitle} {es.notFoundBody}
+            </span>
+          </p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link
+              href="/en"
+              className="inline-flex h-12 items-center rounded-full bg-dawn px-6 text-[15px] font-medium text-ink"
+            >
+              {en.notFoundCta}
+            </Link>
+            <Link
+              href="/es"
+              lang="es"
+              className="inline-flex h-12 items-center rounded-full border border-white/25 px-6 text-[15px] font-medium text-bone"
+            >
+              {es.notFoundCta}
+            </Link>
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
   );
 }

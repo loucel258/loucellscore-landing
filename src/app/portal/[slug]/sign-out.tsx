@@ -4,9 +4,12 @@ import { LogOut } from "lucide-react";
 
 export function PortalSignOutButton({
   slug,
+  label,
   variant = "default",
 }: {
   slug: string;
+  /** Translated "Sign out" (strings.ts is server-only). */
+  label: string;
   variant?: "default" | "sidebar";
 }) {
   async function signOut() {
@@ -18,10 +21,10 @@ export function PortalSignOutButton({
       <button
         type="button"
         onClick={signOut}
-        className="inline-flex items-center gap-1 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1 text-[10px] font-medium text-neutral-200 transition-colors hover:bg-neutral-800"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1 text-[11.5px] text-bone-2 transition-colors hover:border-white/30 hover:text-bone"
       >
         <LogOut className="size-3" />
-        Sign out
+        {label}
       </button>
     );
   }
@@ -29,10 +32,10 @@ export function PortalSignOutButton({
     <button
       type="button"
       onClick={signOut}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-white/55"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-white"
     >
       <LogOut className="size-3.5" />
-      Sign out
+      {label}
     </button>
   );
 }

@@ -10,6 +10,7 @@ export function NotesEditor({
   placeholder,
   saveLabel,
   savedLabel,
+  errorLabel,
 }: {
   slug: string;
   email: string;
@@ -17,10 +18,11 @@ export function NotesEditor({
   placeholder: string;
   saveLabel: string;
   savedLabel: string;
+  /** Plain "couldn't save" sentence; raw error codes are never shown. */
+  errorLabel: string;
 }) {
   const [text, setText] = useState(initialNote ?? "");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [errMsg, setErrMsg] = useState<string | null>(null);
   const dirty = text !== (initialNote ?? "");
 
   // Reset 'saved' after 2s
@@ -33,7 +35,6 @@ export function NotesEditor({
 
   async function save() {
     setStatus("saving");
-    setErrMsg(null);
     try {
       const res = await fetch(
         `/api/portal/${slug}/customer/${encodeURIComponent(email)}/note`,
@@ -43,16 +44,10 @@ export function NotesEditor({
           body: JSON.stringify({ note: text }),
         },
       );
-      const data = await res.json();
-      if (data.ok) {
-        setStatus("saved");
-      } else {
-        setStatus("error");
-        setErrMsg(data.error ?? "unknown");
-      }
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean };
+      setStatus(data.ok ? "saved" : "error");
     } catch {
       setStatus("error");
-      setErrMsg("network");
     }
   }
 
@@ -63,7 +58,7 @@ export function NotesEditor({
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
         rows={5}
-        className="block w-full rounded-lg border border-neutral-300 bg-white/55 px-3 py-2 text-sm leading-relaxed text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+        className="block w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm leading-relaxed text-neutral-800 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
       />
       <div className="mt-3 flex items-center gap-3">
         <button
@@ -77,7 +72,7 @@ export function NotesEditor({
           {status === "saved" ? savedLabel : saveLabel}
         </button>
         {status === "error" && (
-          <p className="text-xs text-rose-700">Couldn&apos;t save ({errMsg}).</p>
+          <p role="alert" className="text-xs text-rose-700">{errorLabel}</p>
         )}
       </div>
     </div>

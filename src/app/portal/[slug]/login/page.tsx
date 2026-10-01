@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { isPortalAuthed } from "@/lib/portal/auth";
 import { getServiceClient } from "@/lib/audit/client";
+import { resolvePortalLang } from "@/lib/portal/lang";
+import { t } from "@/lib/portal/strings";
 import { PortalLoginForm } from "./form";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +33,9 @@ export default async function PortalLoginPage({
     }
   }
 
+  // Language works pre-auth: it only reads the slug's display preference.
+  const lang = await resolvePortalLang(slug);
+
   return (
     <div className="mx-auto mt-12 max-w-md">
       <div className="text-center">
@@ -38,24 +43,35 @@ export default async function PortalLoginPage({
           <ShieldCheck className="size-7" />
         </div>
         <h1 className="mt-5 text-2xl font-bold tracking-tight text-white">
-          Welcome back
+          {t(lang, "login.title")}
         </h1>
-        <p className="mt-2 text-sm text-slate-200">
-          Enter the passcode Loucells Core shared with you to access your portal.
-        </p>
+        <p className="mt-2 text-sm text-slate-200">{t(lang, "login.desc")}</p>
       </div>
 
-      <PortalLoginForm slug={slug} />
+      <PortalLoginForm
+        slug={slug}
+        labels={{
+          passcode: t(lang, "login.passcode"),
+          placeholder: t(lang, "login.placeholder"),
+          submit: t(lang, "login.submit"),
+          submitting: t(lang, "login.submitting"),
+          errRate: t(lang, "login.err_rate"),
+          errBad: t(lang, "login.err_bad"),
+          errGeneric: t(lang, "login.err_generic"),
+          errNetwork: t(lang, "login.err_network"),
+          footnote: t(lang, "login.footnote"),
+        }}
+      />
 
-      <div className="mt-6 rounded-xl border border-white/60 bg-white/40 p-4 text-center">
+      <div className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-center">
         <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-600">
-          What you&apos;ll see inside
+          {t(lang, "login.inside")}
         </p>
         <ul className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-neutral-700">
-          <li className="rounded-lg bg-white/55 px-2 py-1.5">Your conversations</li>
-          <li className="rounded-lg bg-white/55 px-2 py-1.5">Approval queue</li>
-          <li className="rounded-lg bg-white/55 px-2 py-1.5">Cost transparency</li>
-          <li className="rounded-lg bg-white/55 px-2 py-1.5">Audit chain</li>
+          <li className="rounded-lg bg-white px-2 py-1.5">{t(lang, "login.inside_conversations")}</li>
+          <li className="rounded-lg bg-white px-2 py-1.5">{t(lang, "login.inside_approvals")}</li>
+          <li className="rounded-lg bg-white px-2 py-1.5">{t(lang, "login.inside_customers")}</li>
+          <li className="rounded-lg bg-white px-2 py-1.5">{t(lang, "login.inside_log")}</li>
         </ul>
       </div>
     </div>

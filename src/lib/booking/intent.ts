@@ -41,7 +41,17 @@ const INTENTS: Intent[] = [
   "other",
 ];
 
-const SYSTEM = `You classify a single inbound SMS sent to a nail salon's front-desk assistant.
+/**
+ * Classifier system prompt. The business kind ("a nail salon's front-desk
+ * assistant") and vocabulary hints come from the agent's vertical profile
+ * (lib/agent-runtime/verticals); nothing vertical-specific lives here.
+ */
+export function intentSystemPrompt(
+  subject = "a local business's front-desk assistant",
+  hints: readonly string[] = [],
+): string {
+  const extra = hints.map((h) => `\n- ${h}`).join("");
+  return `You classify a single inbound SMS sent to ${subject}.
 Return exactly one intent from the allowed set and a confidence.
 Rules:
 - Messages may be in English or Spanish; classify either.
@@ -49,18 +59,25 @@ Rules:
 - If the message is ambiguous, off-topic, a complaint, or anything you are not
   confident about, use intent "other" with low confidence so a human handles it.
 - "confirm" is only for confirming an existing/reminded appointment (e.g. "yes",
-  "confirmo", "ok see you then"), not for making a new booking.`;
+  "confirmo", "ok see you then"), not for making a new booking.${extra}`;
+}
 
 export async function classifyIntent(
   message: string,
-  context?: { hasUpcomingAppointment?: boolean },
+  context?: {
+    hasUpcomingAppointment?: boolean;
+    /** Who the message was sent to (vertical profile intentSubject). */
+    subject?: string;
+    /** Vertical vocabulary hints (vertical profile intentHints). */
+    hints?: readonly string[];
+  },
 ): Promise<IntentResult | null> {
   const userPrompt = context?.hasUpcomingAppointment
     ? `Customer has an upcoming appointment.\nMessage: """${message}"""`
     : `Message: """${message}"""`;
 
   return classifyWithTool<IntentResult>({
-    systemPrompt: SYSTEM,
+    systemPrompt: intentSystemPrompt(context?.subject, context?.hints),
     userPrompt,
     toolName: "classify_intent",
     toolDescription: "Label the customer's message with a single intent, confidence, and any stated slot hints.",

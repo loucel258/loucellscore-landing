@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/audit/client";
 import { sendInternalAlert, sendEmail } from "@/lib/notify/resend";
 import { writeAuditEntry } from "@/lib/audit/writer";
 import { sanitize } from "@/lib/dlp/sanitizer";
+import { escapeHtml, subjectSafe, textToEmailHtml } from "./html";
 
 /**
  * Shared logic for portal-side HITL approve/reject. Both endpoints call
@@ -29,6 +30,9 @@ export type ApproveOptions = {
   decider: string;            // 'portal:<slug>' or 'admin:steven'
   editedText?: string;
   clientSlug: string;
+  /** Customer-facing business name (client_portal_access.display_name).
+   *  Falls back to the slug only when missing. */
+  clientDisplayName?: string | null;
 };
 
 export type RejectOptions = {
@@ -115,15 +119,18 @@ export async function approveAction(opts: ApproveOptions): Promise<
 
   let executedRealtime = false;
   if (isReal && approval.recipient) {
-    // Real handler: both send_message and send_quote are email-deliverable
+    // Real handler: both send_message and send_quote are email-deliverable.
+    // finalText is LLM/visitor-influenced: escaped before any markup.
+    const sender = subjectSafe(opts.clientDisplayName?.trim() || opts.clientSlug);
     const subject =
       approval.action_type === "send_quote"
-        ? `Your quote from ${opts.clientSlug}`
-        : `Message from ${opts.clientSlug}`;
+        ? `Your quote from ${sender}`
+        : `Message from ${sender}`;
     const sent = await sendEmail({
       to: approval.recipient,
       subject,
-      html: `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;">${finalText.replace(/\n/g, "<br>")}</div>`,
+      html: textToEmailHtml(finalText),
+      text: finalText,
     });
     if (sent.ok) {
       executedRealtime = true;
@@ -153,7 +160,7 @@ export async function approveAction(opts: ApproveOptions): Promise<
       bodyHtml: `
         <p>Client portal user <strong>${opts.decider}</strong> just approved a <strong>${approval.action_type}</strong> action that requires manual execution.</p>
         ${refundPolicyLine}
-        <p><strong>Recipient:</strong> ${approval.recipient ?? "—"}</p>
+        <p><strong>Recipient:</strong> ${escapeHtml(approval.recipient ?? "—")}</p>
         <p><strong>Risk score:</strong> ${approval.risk_score ?? "—"}</p>
         <p><strong>Text to send:</strong></p>
         <pre style="background:#f5f5f5;padding:12px;border-radius:6px;white-space:pre-wrap;font-family:inherit;">${escapeHtml(finalText)}</pre>
@@ -238,13 +245,4 @@ export async function rejectAction(opts: RejectOptions): Promise<
   });
 
   return { ok: true };
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }

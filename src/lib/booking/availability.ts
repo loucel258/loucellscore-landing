@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_BUSINESS_HOURS, type BusinessHours } from "@/lib/agent-runtime/config";
 
 /**
  * Deterministic availability: open slots for a service within business hours,
@@ -10,17 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type Slot = { startIso: string; endIso: string };
 
 /** weekday (0=Sun..6=Sat) -> [openHour, closeHour] local, or null = closed. */
-export type BusinessHours = Record<number, [number, number] | null>;
-
-const DEFAULT_HOURS: BusinessHours = {
-  0: null, // Sun closed
-  1: [9, 18],
-  2: [9, 18],
-  3: [9, 18],
-  4: [9, 18],
-  5: [9, 19],
-  6: [9, 17], // Sat
-};
+export type { BusinessHours };
 
 /** Wall-clock time in `tz` -> the UTC instant. Corrects by the tz offset at
  *  that instant (DST-aware). */
@@ -97,7 +88,9 @@ export async function checkAvailability(
     new Date(a.end_at).getTime(),
   ]) as [number, number][];
 
-  const hours = args.businessHours ?? DEFAULT_HOURS;
+  // Agent config hours (integrations.booking.business_hours); the default
+  // only applies when the agent has none configured.
+  const hours = args.businessHours ?? DEFAULT_BUSINESS_HOURS;
   const step = args.slotStepMin ?? 30;
   const maxSlots = args.maxSlots ?? 30;
   const now = Date.now();

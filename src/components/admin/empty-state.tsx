@@ -34,7 +34,7 @@ export function EmptyState({
       {cta && (
         <Link
           href={cta.href}
-          className="inline-flex items-center gap-1.5 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-cyan-500"
+          className="inline-flex items-center gap-1.5 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-cyan-700"
         >
           {cta.label} →
         </Link>

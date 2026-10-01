@@ -6,9 +6,9 @@ import { Bell, ShieldCheck, Wallet, Check, AlertTriangle, KeyRound, Send, Clock 
 import type { AdminSettings } from "@/lib/admin/settings";
 
 const card =
-  "rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5";
+  "rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5";
 const input =
-  "w-full rounded-lg border border-neutral-300 bg-white/70 px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none";
 const label = "block text-xs font-medium text-neutral-600 mb-1";
 
 function Toggle({
@@ -26,7 +26,7 @@ function Toggle({
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className="flex w-full items-start justify-between gap-4 rounded-lg border border-white/60 bg-white/40 px-3 py-2.5 text-left transition-colors hover:bg-white/60"
+      className="flex w-full items-start justify-between gap-4 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-left transition-colors hover:bg-white"
     >
       <span className="min-w-0">
         <span className="block text-sm font-medium text-neutral-800">{title}</span>
@@ -77,14 +77,14 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
       const res = await fetch("/api/admin/settings/test-alert", { method: "POST" });
       const d = await res.json();
       if (d.ok) {
-        setTestMsg({ ok: true, text: "Test alert sent — check the inbox." });
+        setTestMsg({ ok: true, text: "Test alert sent. Check the inbox." });
       } else {
         const why =
           d.reason === "no_api_key"
             ? "RESEND_API_KEY not set in Vercel."
             : d.reason === "alerts_disabled"
               ? "Master switch is off (save it on first)."
-              : "Send failed — check the inbox address.";
+              : "Send failed. Check the inbox address.";
         setTestMsg({ ok: false, text: why });
       }
     } catch {
@@ -189,12 +189,12 @@ export function SettingsForm({ initial }: { initial: AdminSettings }) {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/60 pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-4">
           <button
             type="button"
             onClick={sendTestAlert}
             disabled={testing}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white/70 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white/85 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-white disabled:opacity-50"
           >
             <Send className="size-3.5" />
             {testing ? "Sending…" : "Send test alert"}

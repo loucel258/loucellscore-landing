@@ -161,6 +161,33 @@ export function validateTwilioSignature(args: {
   return crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * The public URL(s) Twilio may have signed for an inbound webhook at `path`.
+ *
+ * Preferred: the configured public origin (PUBLIC_BASE_URL, else
+ * NEXT_PUBLIC_SITE_URL), which doesn't depend on proxy headers. Fallback:
+ * the previous behavior, https://<x-forwarded-host | host><path>, so a
+ * configured origin that differs from the URL Twilio actually posts to
+ * (www vs apex, preview domain) never breaks a working webhook. A request
+ * is valid if its signature matches ANY candidate; each candidate still
+ * requires the tenant's auth token, so this is no weaker than before.
+ */
+export function twilioWebhookUrls(req: Request, path: string): string[] {
+  const urls: string[] = [];
+  const configured = process.env.PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+  if (configured) {
+    try {
+      const u = new URL(configured);
+      if (u.protocol === "https:") urls.push(`${u.origin}${path}`);
+    } catch {
+      // Malformed env value: ignore, fall back to the request host.
+    }
+  }
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+  if (host) urls.push(`https://${host}${path}`);
+  return Array.from(new Set(urls));
+}
+
 /** Best-effort E.164 normalizer for US numbers parsed from free text. */
 export function toE164US(raw: string): string | null {
   const digits = raw.replace(/\D/g, "");

@@ -1,105 +1,107 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { Users, ExternalLink } from "lucide-react";
-import { isPortalAuthed } from "@/lib/portal/auth";
+import { Users, ChevronRight, MessageSquare, Smartphone } from "lucide-react";
 import { getServiceClient } from "@/lib/audit/client";
 import { ServiceUnavailable } from "@/components/workspace/service-unavailable";
-import { resolvePortalLang } from "@/lib/portal/lang";
-import { t } from "@/lib/portal/strings";
+import { requirePortalContext } from "@/lib/portal/context";
+import { t, tn } from "@/lib/portal/strings";
+import { isMissingTable } from "@/lib/portal/db-errors";
+import { inChunks, LIVE_APPOINTMENT_STATUSES } from "@/lib/portal/inbox-data";
+import { mergePeople, type ContactActivity, type ContactRow, type LeadRow } from "@/lib/portal/people";
+import { formatPhone } from "@/lib/portal/threads";
+import { daysAgoIso, formatDate } from "@/lib/portal/time";
 import { Panel } from "@/components/workspace/panel";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
-import { formatShortDate, daysAgo } from "@/lib/admin/format";
+import { ExportMenu } from "../export-menu";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type LeadRow = {
-  id: string;
-  email: string;
-  name: string;
-  booking_status: string;
-  booking_slot_iso: string | null;
-  confirmed_at: string | null;
-  created_at: string;
-  session_id: string;
-};
+const WINDOW_DAYS = 90;
 
-export default async function CustomersPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function CustomersPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  if (!(await isPortalAuthed(slug))) redirect(`/portal/${slug}/login`);
-
+  const ctx = await requirePortalContext(slug);
   const sb = getServiceClient();
   if (!sb) return <ServiceUnavailable />;
-  const lang = await resolvePortalLang(slug);
+  const { lang, tz, workspaceIds: ws } = ctx;
+  const since = daysAgoIso(WINDOW_DAYS);
 
-  const { data: access } = await sb
-    .from("client_portal_access")
-    .select("engagement_id")
-    .eq("client_slug", slug)
-    .maybeSingle();
-  if (!access) notFound();
+  // Web: leads of THIS engagement only. Legacy leads with engagement_id=null
+  // belong to Loucells Core's own landing chat and never show here.
+  // SMS: contacts in the engagement's agent workspaces with a message in
+  // the window (people who actually wrote, not every mirrored record).
+  const [leadsRes, smsRes] = await Promise.all([
+    sb
+      .from("leads")
+      .select("email, name, session_id, booking_status, created_at")
+      .eq("engagement_id", ctx.engagementId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(500),
+    ws.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : sb
+          .from("messages_log")
+          .select("contact_id, created_at")
+          .in("workspace_id", ws)
+          .not("contact_id", "is", null)
+          .gte("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(3000),
+  ]);
+  const leads = (leadsRes.data as LeadRow[] | null) ?? [];
+  const smsRows =
+    smsRes.error && !isMissingTable(smsRes.error)
+      ? []
+      : ((smsRes.data as Array<{ contact_id: string; created_at: string }> | null) ?? []);
 
-  const engagementId = (access as { engagement_id: string }).engagement_id;
+  const activity = new Map<string, ContactActivity>();
+  for (const m of smsRows) {
+    const a = activity.get(m.contact_id) ?? {};
+    if (!a.lastAt || m.created_at > a.lastAt) a.lastAt = m.created_at;
+    if (!a.firstAt || m.created_at < a.firstAt) a.firstAt = m.created_at;
+    activity.set(m.contact_id, a);
+  }
+  const contactIds = [...activity.keys()];
 
-  // Scope leads to THIS engagement only. Migration 036 added the
-  // engagement_id column; legacy leads from before the multi-tenant
-  // chat route have engagement_id=null and are intentionally invisible
-  // to the portal (they belong to Loucells Core's own landing chat).
-  const since = new Date(Date.now() - 90 * 86400_000).toISOString();
-  const { data: leadsData } = await sb
-    .from("leads")
-    .select("id, email, name, booking_status, booking_slot_iso, confirmed_at, created_at, session_id")
-    .eq("engagement_id", engagementId)
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
-    .limit(500);
-  const leads = (leadsData as LeadRow[]) ?? [];
-
-  // Group by email
-  const byEmail = new Map<string, {
-    email: string;
-    name: string;
-    firstSeen: string;
-    lastSeen: string;
-    sessions: Set<string>;
-    bookings: number;
-  }>();
-  for (const l of leads) {
-    const email = l.email.toLowerCase();
-    const existing = byEmail.get(email);
-    if (!existing) {
-      byEmail.set(email, {
-        email,
-        name: l.name,
-        firstSeen: l.created_at,
-        lastSeen: l.created_at,
-        sessions: new Set([l.session_id]),
-        bookings: l.booking_status === "confirmed" ? 1 : 0,
-      });
-    } else {
-      if (l.created_at < existing.firstSeen) existing.firstSeen = l.created_at;
-      if (l.created_at > existing.lastSeen) existing.lastSeen = l.created_at;
-      existing.sessions.add(l.session_id);
-      if (l.booking_status === "confirmed") existing.bookings += 1;
-    }
+  const [contacts, appts] = await Promise.all([
+    inChunks(contactIds, 100, async (chunk) => {
+      const { data } = await sb
+        .from("contacts")
+        .select("id, phone, name, created_at, metadata")
+        .in("workspace_id", ws)
+        .in("id", chunk);
+      return (data as ContactRow[] | null) ?? [];
+    }),
+    inChunks(contactIds, 100, async (chunk) => {
+      const { data } = await sb
+        .from("appointments")
+        .select("contact_id")
+        .in("workspace_id", ws)
+        .in("contact_id", chunk)
+        .in("status", LIVE_APPOINTMENT_STATUSES);
+      return ((data as Array<{ contact_id: string }> | null) ?? []).map((r) => r.contact_id);
+    }),
+  ]);
+  for (const cid of appts) {
+    const a = activity.get(cid) ?? {};
+    a.bookings = (a.bookings ?? 0) + 1;
+    activity.set(cid, a);
   }
 
-  const customers = [...byEmail.values()].sort(
-    (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime(),
-  );
+  const people = mergePeople(leads, contacts, activity);
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900">{t(lang, "customers.title")}</h1>
-        <p className="mt-1 text-sm text-neutral-600">{t(lang, "customers.desc")}</p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-neutral-900">{t(lang, "customers.title")}</h1>
+          <p className="mt-1 text-sm text-neutral-600">{t(lang, "customers.desc")}</p>
+        </div>
+        <ExportMenu slug={slug} type="bookings" lang={lang} />
       </header>
 
-      {customers.length === 0 ? (
+      {people.length === 0 ? (
         <Panel>
           <EmptyPanel
             icon={<Users className="size-5" />}
@@ -110,69 +112,57 @@ export default async function CustomersPage({
       ) : (
         <Panel
           title={t(lang, "customers.title")}
-          eyebrow={t(lang, "customers.count", { n: customers.length })}
+          eyebrow={tn(lang, "customers.count", people.length)}
           icon={<Users className="size-4" />}
+          bodyClassName="p-0"
         >
-          <div className="-mx-2 overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-neutral-200 text-left text-[10px] uppercase tracking-wider text-neutral-600">
-                  <th className="px-3 py-2 font-semibold">{t(lang, "customers.col_name")}</th>
-                  <th className="px-3 py-2 font-semibold">Email</th>
-                  <th className="px-3 py-2 font-semibold tabular-nums">{t(lang, "customers.col_sessions")}</th>
-                  <th className="px-3 py-2 font-semibold tabular-nums">{t(lang, "customers.col_bookings")}</th>
-                  <th className="px-3 py-2 font-semibold">{t(lang, "customers.col_first")}</th>
-                  <th className="px-3 py-2 font-semibold">{t(lang, "customers.col_last")}</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-100">
-                {customers.map((c) => (
-                  <tr key={c.email} className="hover:bg-white/55">
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-violet-500 text-[10px] font-semibold text-white">
-                          {initials(c.name)}
+          <ul className="divide-y divide-neutral-100">
+            {people.map((p) => {
+              const name = p.name ?? (p.phone ? formatPhone(p.phone) : p.email) ?? t(lang, "customers.no_name");
+              const contactLine = [p.email, p.phone && p.name ? formatPhone(p.phone) : null].filter(Boolean).join(" · ");
+              return (
+                <li key={p.key}>
+                  <Link
+                    href={`/portal/${slug}/customers/${encodeURIComponent(p.key)}`}
+                    className="flex min-h-[60px] items-center gap-3 px-5 py-3 transition-colors hover:bg-neutral-50"
+                  >
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[12px] font-semibold text-neutral-700" aria-hidden>
+                      {initials(p.name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <p className="truncate text-sm font-semibold text-neutral-900">{name}</p>
+                        <span className="inline-flex items-center gap-1 text-neutral-500">
+                          {p.channels.includes("web") && <MessageSquare className="size-3" aria-label={t(lang, "badge.web")} />}
+                          {p.channels.includes("sms") && <Smartphone className="size-3" aria-label={t(lang, "badge.sms")} />}
                         </span>
-                        <span className="font-medium text-neutral-900">{c.name}</span>
                       </div>
-                    </td>
-                    <td className="px-3 py-2 text-neutral-600">{c.email}</td>
-                    <td className="px-3 py-2 tabular-nums">{c.sessions.size}</td>
-                    <td className="px-3 py-2 tabular-nums">
-                      <span className={c.bookings > 0 ? "text-emerald-700" : "text-neutral-400"}>
-                        {c.bookings}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-[10px] text-neutral-500">
-                      {formatShortDate(c.firstSeen)}
-                    </td>
-                    <td className="px-3 py-2 text-[10px] text-neutral-500">
-                      {formatShortDate(c.lastSeen)} ({daysAgo(c.lastSeen)}d)
-                    </td>
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/portal/${slug}/customers/${encodeURIComponent(c.email)}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-cyan-700 hover:underline"
-                      >
-                        Open <ExternalLink className="size-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {contactLine && <p className="truncate text-xs text-neutral-600">{contactLine}</p>}
+                      <p className="mt-0.5 text-[11px] text-neutral-500">
+                        {tn(lang, "customers.conversations", p.conversations)}
+                        {p.bookings > 0 && <> · <span className="text-emerald-700">{tn(lang, "customers.bookings", p.bookings)}</span></>}
+                        {" · "}
+                        {t(lang, "customers.last_contact", { date: formatDate(p.lastSeen, lang, tz) })}
+                      </p>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-neutral-400" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </Panel>
       )}
     </div>
   );
 }
 
-function initials(name: string): string {
-  return name
+function initials(name: string | null): string {
+  const letters = (name ?? "")
     .split(/\s+/)
+    .filter((w) => /^\p{L}/u.test(w))
     .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
+    .map((w) => w[0]!.toUpperCase())
     .join("");
+  return letters || "#";
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { modelFor } from "./models";
 
 /**
  * Thin wrapper around the Anthropic SDK with the defaults the Trust Stack
@@ -31,7 +32,7 @@ export function getClaudeClient(): ClaudeClient | null {
 }
 
 export function getClaudeModel(): string {
-  return process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
+  return modelFor("classifier");
 }
 
 /**

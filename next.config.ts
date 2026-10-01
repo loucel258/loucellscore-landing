@@ -37,6 +37,15 @@ const nextConfig: NextConfig = {
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
+        // Home hero media (Seedance frames, entry clips, stills). Not
+        // immutable: filenames are stable, so re-exports must be able to
+        // replace them.
+        source: "/home/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
+        ],
+      },
+      {
         // Long cache for video frames (immutable)
         source: "/scroll-frames/:path*",
         headers: [

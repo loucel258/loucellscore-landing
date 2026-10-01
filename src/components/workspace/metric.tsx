@@ -86,8 +86,7 @@ export function Metric({
   );
 }
 
-export function MetricRow({ children }: { children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div>
-  );
+export function MetricRow({ children, cols = 4 }: { children: ReactNode; cols?: 3 | 4 }) {
+  const colCls = cols === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4";
+  return <div className={`grid grid-cols-1 gap-4 ${colCls}`}>{children}</div>;
 }

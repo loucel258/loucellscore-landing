@@ -1,6 +1,17 @@
+/**
+ * SUPERSEDED (2026-10-01): legacy Loucells site chat, kept only for reference.
+ * Nothing calls it: the marketing site embeds public/agent.js with slug
+ * loucels-landing (src/app/[locale]/layout.tsx), which posts to
+ * /api/agent/[slug]/chat and runs the shared pipeline in
+ * src/lib/agent-runtime. The only caller left is
+ * src/components/chat/chat-widget.tsx, which nothing imports. Do not add
+ * features here; retire it together with that component.
+ * (/api/chat/audit-trail is separate and still used by the demos.)
+ */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getClaudeClient } from "@/lib/ai/claude-client";
+import { modelFor } from "@/lib/ai/models";
 import { sanitize } from "@/lib/dlp/sanitizer";
 import { sanitizeWithLLM } from "@/lib/dlp/sanitizer-llm";
 import { rateLimit } from "@/lib/rate-limit/limiter";
@@ -40,7 +51,7 @@ export const dynamic = "force-dynamic";
 // Hard caps — first line of defense against abuse / cost runaway.
 const MAX_USER_MESSAGE_CHARS = 2000;
 const MAX_HISTORY_MESSAGES = 30;
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
+const MODEL = modelFor("chat");
 const MAX_TOKENS = 1024;
 
 // Rate limit: 30 messages / hour per IP (burst of 8). Process-local — see
@@ -276,7 +287,9 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
     sessionId,
     locale: parsed.locale,
     messageCount: parsed.messages.length,
-    lastMessagePreview: lastUserMessage.content.slice(0, 80),
+    // Length only: message text can carry names, emails, phones. The
+    // audit chain keeps a hash; the transcript store keeps it encrypted.
+    lastMessageChars: lastUserMessage.content.length,
   });
   // Permanent audit row: ALLOW / chat / user_message (hash of sanitized text)
   await auditUserMessage(auditBase, {
@@ -341,6 +354,7 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
           email: escalation.email,
         },
         parsed.locale,
+        { house: true }, // legacy route = Loucells Core's own site chat
       );
 
       // Persist as a lead if contact info present (so Steven sees it in the
@@ -379,7 +393,8 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
         ip,
         sessionId,
         bookingOffered: false,
-        replyPreview: `[escalated: ${escalation.reason}]`,
+        replyChars: acknowledgement.length,
+        escalationReason: escalation.reason,
       });
 
       await persistTurn({
@@ -404,7 +419,7 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
         ip,
         sessionId,
         bookingOffered: false,
-        replyPreview: reply.slice(0, 120),
+        replyChars: reply.length,
       });
       await auditAssistantReply(auditBase, {
         replyContent: reply,
@@ -465,7 +480,12 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
       });
     }
 
-    const { bookingLink, prefilledFor } = handleRequestBooking(booking);
+    // Legacy route = Loucells Core's own landing chat, so its own Cal.com
+    // page is the right link here (explicit, not a global default).
+    const { bookingLink, prefilledFor } = handleRequestBooking(booking, {
+      url: siteConfig.calUrl,
+      prefill: true,
+    });
 
     // Persist the lead the moment the booking is offered. PII (name+email)
     // lives in `leads` table — the only place in our schema where visitor
@@ -519,9 +539,10 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
       kind: "booking_offered",
       ip,
       sessionId,
-      name: booking.name,
-      email: booking.email,
-      reason: booking.reason,
+      // No name/email/reason in console logs. The lead row is the system
+      // of record for the visitor's details.
+      reasonChars: booking.reason.length,
+      hasPreferredWindow: Boolean(booking.preferredWindow),
     });
     // Two audit rows for a booking-bearing reply:
     //   1) the reply itself (assistant_reply, ALLOW, with token usage)
@@ -549,7 +570,9 @@ export async function POST(req: Request): Promise<NextResponse<ChatResponse>> {
   } catch (err) {
     // Full message goes to logs; audit chain only sees the SDK error class
     // name so we never leak Anthropic internals into the immutable trail.
-    const errorMessage = err instanceof Error ? err.message : String(err);
+    // SDK error messages don't echo the prompt, but cap them anyway so a
+    // surprise payload can't dump conversation text into runtime logs.
+    const errorMessage = (err instanceof Error ? err.message : String(err)).slice(0, 200);
     const auditCode = err instanceof Error ? (err.name || "error") : "non_error_throw";
     logChatEvent({
       kind: "chat_failed",

@@ -1,6 +1,10 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import crypto from "node:crypto";
+import { getServiceClient } from "@/lib/audit/client";
+import { isMissingColumn } from "./db-errors";
+import { accessAllowsSession } from "./session-rules";
 
 /**
  * Client Portal auth — per-client passcode + signed session cookie.
@@ -15,6 +19,10 @@ import crypto from "node:crypto";
  *   - Key derived from PORTAL_SESSION_SECRET + slug so a leaked cookie
  *     for client A cannot impersonate client B
  *   - 7-day TTL (vs 8h for admin) since clients log in less often
+ *   - Every check also reads the access row: an inactive or revoked portal
+ *     ends all sessions, and tokens issued before
+ *     `sessions_valid_after` (migration 063, set on passcode rotation) are
+ *     rejected. See ./session-rules.ts.
  */
 
 const SESSION_TTL_SEC = 60 * 60 * 24 * 7;
@@ -73,25 +81,78 @@ export function mintPortalSession(slug: string): string | null {
   return `${payload}.${sig}`;
 }
 
-function verifyPortalSession(slug: string, token: string): boolean {
+/** The token's issue time (seconds) when the signature and TTL check out. */
+function verifyPortalToken(slug: string, token: string): number | null {
   const key = sessionKey(slug);
-  if (!key) return false;
+  if (!key) return null;
   const parts = token.split(".");
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return null;
   const [iatStr, nonce, sig] = parts as [string, string, string];
   const expected = sign(`${iatStr}.${nonce}`, key);
-  if (!constantTimeEqual(sig, expected)) return false;
+  if (!constantTimeEqual(sig, expected)) return null;
   const iat = Number.parseInt(iatStr, 10);
-  if (!Number.isFinite(iat)) return false;
+  if (!Number.isFinite(iat)) return null;
   const age = Math.floor(Date.now() / 1000) - iat;
-  return age >= 0 && age <= SESSION_TTL_SEC;
+  return age >= 0 && age <= SESSION_TTL_SEC ? iat : null;
 }
 
+/** The access-row fields every portal page needs, read once per request. */
+export type PortalAccessRow = {
+  id: string;
+  engagement_id: string;
+  display_name: string;
+  active: boolean | null;
+  revoked_at: string | null;
+  preferred_language: string | null;
+  created_at: string;
+  sessions_valid_after?: string | null;
+};
+
+const ACCESS_COLS = "id, engagement_id, display_name, active, revoked_at, preferred_language, created_at";
+
+/**
+ * Access row by slug. Selects sessions_valid_after when the column exists
+ * (migration 063); without it the cutoff is skipped but active/revoked are
+ * still enforced. Cached per request (React cache), so the layout, the page
+ * and the auth check share one query.
+ */
+export const loadPortalAccess = cache(async (slug: string): Promise<PortalAccessRow | null> => {
+  const sb = getServiceClient();
+  if (!sb) return null;
+  const withCutoff = await sb
+    .from("client_portal_access")
+    .select(`${ACCESS_COLS}, sessions_valid_after`)
+    .eq("client_slug", slug)
+    .maybeSingle();
+  if (!withCutoff.error) return (withCutoff.data as PortalAccessRow | null) ?? null;
+  if (!isMissingColumn(withCutoff.error)) return null;
+  const legacy = await sb
+    .from("client_portal_access")
+    .select(ACCESS_COLS)
+    .eq("client_slug", slug)
+    .maybeSingle();
+  return legacy.error ? null : ((legacy.data as PortalAccessRow | null) ?? null);
+});
+
+/**
+ * The verified session for a slug, or null. Signature + TTL first (no DB
+ * round-trip for a missing or forged cookie), then the access row rules.
+ */
+export const getPortalSession = cache(
+  async (slug: string): Promise<{ access: PortalAccessRow; iat: number } | null> => {
+    const jar = await cookies();
+    const value = jar.get(cookieName(slug))?.value;
+    if (!value) return null;
+    const iat = verifyPortalToken(slug, value);
+    if (iat === null) return null;
+    const access = await loadPortalAccess(slug);
+    if (!access || !accessAllowsSession(access, iat)) return null;
+    return { access, iat };
+  },
+);
+
 export async function isPortalAuthed(slug: string): Promise<boolean> {
-  const jar = await cookies();
-  const value = jar.get(cookieName(slug))?.value;
-  if (!value) return false;
-  return verifyPortalSession(slug, value);
+  return (await getPortalSession(slug)) !== null;
 }
 
 export function portalCookieOptions() {

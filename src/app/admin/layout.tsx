@@ -1,18 +1,13 @@
-import {
-  LayoutDashboard,
-  Users,
-  TrendingUp,
-  Activity,
-  Bot,
-  PlusCircle,
-  Settings,
-  LogOut,
-  HelpCircle,
-} from "lucide-react";
+import Link from "next/link";
+import { Sun, Users, TrendingUp, PlusCircle, Plus, Settings, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/shell/sidebar";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { getPathname } from "@/lib/shell/pathname";
+import { instrumentSerif } from "@/components/home/fonts";
+import { isAdminAuthed } from "@/lib/admin/auth";
+import { countDraftReports } from "@/lib/admin/reports";
+import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
 import { AdminSignOutButton } from "./sign-out";
 
 export const metadata = {
@@ -28,34 +23,30 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return <BareShell>{children}</BareShell>;
   }
 
+  // Six places: what needs you today, the client list (one page per
+  // client), adding a client, weekly client reports, money, and settings.
+  // "New client" is a call-to-action button; the phone top bar also gets
+  // a "+" shortcut. Reports shows how many drafts wait for review.
+  const draftReports = await reportsBadge();
   const sections = [
     {
-      label: "Operations",
       items: [
-        { href: "/admin/dashboard",   label: "Dashboard",   icon: <LayoutDashboard className="size-4" />, match: "/admin/dashboard", prefix: true },
-        { href: "/admin/crm",         label: "CRM",         icon: <Users className="size-4" />,       match: "/admin/crm",         prefix: true },
-        { href: "/admin/agents",      label: "Agents",      icon: <Bot className="size-4" />,         match: "/admin/agents",      prefix: true },
-        { href: "/admin/revenue",     label: "Revenue",     icon: <TrendingUp className="size-4" />,  match: "/admin/revenue",     prefix: true },
-        { href: "/admin/chat-pulse",  label: "Chat pulse",  icon: <Activity className="size-4" />,    match: "/admin/chat-pulse",  prefix: true },
+        { href: "/admin/dashboard", label: "Today", icon: <Sun className="size-4" />, match: "/admin/dashboard", prefix: true },
+        { href: "/admin/clients", label: "Clients", icon: <Users className="size-4" />, match: "/admin/clients", prefix: true, exclude: ["/admin/clients/new"] },
+        { href: "/admin/clients/new", label: "New client", icon: <PlusCircle className="size-4" />, match: "/admin/clients/new", variant: "button" as const },
       ],
     },
     {
-      label: "Actions",
       items: [
-        { href: "/admin/new-engagement", label: "New engagement", icon: <PlusCircle className="size-4" />, match: "/admin/new-engagement" },
-      ],
-    },
-    {
-      label: "Account",
-      items: [
+        { href: "/admin/reports", label: "Reports", icon: <FileText className="size-4" />, match: "/admin/reports", prefix: true, badge: draftReports || null },
+        { href: "/admin/revenue", label: "Revenue", icon: <TrendingUp className="size-4" />, match: "/admin/revenue", prefix: true },
         { href: "/admin/settings", label: "Settings", icon: <Settings className="size-4" />, match: "/admin/settings", prefix: true },
-        { href: "https://github.com/loucel258/loucellscore-landing/issues", label: "Help & feedback", icon: <HelpCircle className="size-4" />, match: "_never_" },
       ],
     },
   ];
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-b from-[#1f3d77] via-[#3a5ea0] to-[#c2d6f1] text-slate-900">
+    <div className={`lc-app ${instrumentSerif.variable} flex min-h-screen`}>
       <Sidebar
         brand={{
           workspaceName: "Loucells Core HQ",
@@ -66,12 +57,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         pathname={pathname}
         footer={
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[10px] text-slate-400">8-hour session</p>
+            <p className="text-[11px] text-bone-3">8-hour session</p>
             <AdminSignOutButton />
           </div>
         }
       />
-      <div className="flex min-w-0 flex-1 flex-col p-3 lg:p-4">
+      <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav
           brand={{
             workspaceName: "Loucells Core HQ",
@@ -81,24 +72,42 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           sections={sections}
           footer={
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-400">8-hour session</p>
+              <p className="text-[11px] text-bone-3">8-hour session</p>
               <AdminSignOutButton />
             </div>
+          }
+          actions={
+            <Link
+              href="/admin/clients/new"
+              aria-label="New client"
+              className="inline-flex size-11 items-center justify-center rounded-xl text-bone-2 transition-colors hover:bg-white/[0.06] hover:text-bone"
+            >
+              <Plus className="size-5" />
+            </Link>
           }
           openLabel="Open menu"
           closeLabel="Close menu"
         />
-        <main className="mt-3 flex-1 rounded-3xl border border-white/60 bg-white/45 shadow-[0_24px_70px_-28px_rgba(10,30,70,0.55)] lg:mt-0">
-          {children}
-        </main>
+        <main className="flex-1">{children}</main>
       </div>
     </div>
   );
 }
 
+/** Draft reports waiting for review; 0 when signed out or the table isn't there yet. */
+async function reportsBadge(): Promise<number> {
+  try {
+    if (!(await isAdminAuthed())) return 0;
+    const sb = await getDashboardReadClient();
+    return sb ? ((await countDraftReports(sb)) ?? 0) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function BareShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1f3d77] via-[#3a5ea0] to-[#c2d6f1] text-slate-900">
+    <div className={`lc-app ${instrumentSerif.variable} min-h-screen bg-night`}>
       {children}
     </div>
   );

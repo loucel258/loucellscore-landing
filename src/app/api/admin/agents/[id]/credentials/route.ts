@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getServiceClient } from "@/lib/audit/client";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { writeCredential, type Provider } from "@/lib/credentials/vault";
+import { writeAdminAudit } from "@/lib/admin/audit";
+import { isHttpsUrl } from "@/lib/admin/validators";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +14,9 @@ export const dynamic = "force-dynamic";
  * keys (Twilio, Google Business, etc.) in the encrypted vault, scoped to the
  * agent's workspace. Secrets are WRITE-ONLY through this endpoint — GET only
  * returns WHICH providers are configured, never the values.
+ *
+ * Every write is audited like vault reads are: provider and which fields
+ * were set, never the values.
  */
 
 const PROVIDERS = [
@@ -27,13 +32,20 @@ const PROVIDERS = [
   "external_booking",
 ] as const;
 
-const InputSchema = z.object({
-  provider: z.enum(PROVIDERS),
-  account_identifier: z.string().max(300).nullable().optional(),
-  access_token: z.string().max(4000).nullable().optional(),
-  refresh_token: z.string().max(4000).nullable().optional(),
-  webhook_secret: z.string().max(500).nullable().optional(),
-});
+const InputSchema = z
+  .object({
+    provider: z.enum(PROVIDERS),
+    account_identifier: z.string().max(300).nullable().optional(),
+    access_token: z.string().max(4000).nullable().optional(),
+    refresh_token: z.string().max(4000).nullable().optional(),
+    webhook_secret: z.string().max(500).nullable().optional(),
+  })
+  .refine(
+    // external_booking stores the client's app base URL here, and we send
+    // signed booking calls to it. Plain http would leak the HMAC traffic.
+    (v) => v.provider !== "external_booking" || (!!v.account_identifier && isHttpsUrl(v.account_identifier)),
+    { message: "The app URL must be a full https:// address", path: ["account_identifier"] },
+  );
 
 async function resolveWorkspace(
   id: string,
@@ -104,5 +116,15 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: "vault_write_failed", detail: result.error }, { status: 500 });
   }
+
+  const fieldsSet = (
+    ["account_identifier", "access_token", "refresh_token", "webhook_secret"] as const
+  ).filter((f) => input[f] != null && input[f] !== "");
+  await writeAdminAudit({
+    workspaceId: ws,
+    source: "vault",
+    reason: `vault_write provider=${input.provider} fields=${fieldsSet.join("+") || "none"}`,
+  });
+
   return NextResponse.json({ ok: true, provider: input.provider });
 }

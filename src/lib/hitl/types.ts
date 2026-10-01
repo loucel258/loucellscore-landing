@@ -48,6 +48,10 @@ export type NewProposal = {
   proposed_text: string;
   risk_score?: number;
   risk_flags?: string[];
+  /** Conversation that produced it (migration 062): web session id ... */
+  session_id?: string;
+  /** ... or SMS contact id. */
+  contact_id?: string;
 };
 
 export type DecisionInput = {

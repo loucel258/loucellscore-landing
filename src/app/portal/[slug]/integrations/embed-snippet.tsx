@@ -27,7 +27,7 @@ export function EmbedSnippet({ snippet, allowedOrigins, status, lang }: Props) {
   }
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-6">
+    <article className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-6">
       <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-cyan-100/40 blur-3xl" aria-hidden />
       <div className="relative">
         <header className="flex flex-wrap items-start justify-between gap-3">
@@ -64,7 +64,7 @@ export function EmbedSnippet({ snippet, allowedOrigins, status, lang }: Props) {
           <button
             type="button"
             onClick={copy}
-            className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur transition hover:bg-white/20"
+            className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur transition hover:bg-neutral-50/60"
             aria-label={lang === "es" ? "Copiar snippet" : "Copy snippet"}
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}

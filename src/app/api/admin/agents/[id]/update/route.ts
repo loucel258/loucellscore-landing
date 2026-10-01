@@ -4,6 +4,10 @@ import { getServiceClient } from "@/lib/audit/client";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { canonicalizeOrigin, invalidateAgentCache } from "@/lib/agents/resolver";
 import { writeAuditEntry } from "@/lib/audit/writer";
+import { isE164, isSupportedTimeZone } from "@/lib/admin/validators";
+import { safeHttpsUrl } from "@/lib/agents/booking-config";
+import { toAgentConfig } from "@/lib/agent-runtime/config";
+import { checkReadiness } from "@/lib/agent-runtime/readiness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +22,9 @@ export const dynamic = "force-dynamic";
  *   - tool names whitelisted
  *   - go-live gate: an agent cannot be set 'live' without slug,
  *     at least one allowed origin, and a persona
+ *   - slug lock: the slug is the client's embed identifier, so it can
+ *     only change while the agent is still 'designing' (or has none yet)
+ *   - reminders can't be enabled without Twilio keys in the vault
  *   - resolver cache invalidation so changes apply immediately
  *   - an audit entry per config change (governance-first, also for us)
  */
@@ -45,13 +52,21 @@ const InputSchema = z.object({
   monthlyTokenBudget: z.number().int().min(0).max(1_000_000_000).optional(),
   maxTokensPerMessage: z.number().int().min(256).max(8192).optional(),
   notes: z.string().max(4000).nullable().optional(),
+  // Billing (client_agents, migrations 024 + 034)
+  monthlyRetainerCents: z.number().int().min(0).max(100_000_000).optional(),
+  retainerActive: z.boolean().optional(),
+  minutesSavedPerConversation: z.number().int().min(0).max(240).optional(),
   integrations: z
     .object({
       calendar: z
         .object({
           provider: z.literal("google").optional(),
           calendar_id: z.string().max(300).optional(),
-          timezone: z.string().max(60).optional(),
+          timezone: z
+            .string()
+            .max(60)
+            .refine(isSupportedTimeZone, "Unknown time zone. Use an IANA name like America/New_York")
+            .optional(),
         })
         .optional(),
       reminders: z
@@ -59,10 +74,26 @@ const InputSchema = z.object({
           enabled: z.boolean().optional(),
           lead_hours: z.number().int().min(1).max(168).optional(),
           channel: z.enum(["sms", "whatsapp"]).optional(),
-          from_number: z.string().max(20).optional(),
+          // "" = not set yet; anything else must be a real E.164 number.
+          from_number: z
+            .string()
+            .max(20)
+            .refine((v) => v === "" || isE164(v), "Phone numbers must be E.164, like +15615551234")
+            .optional(),
         })
         .optional(),
       locale: z.enum(["es", "en"]).optional(),
+      // What request_booking shares. "" clears it; anything else must be a
+      // plain https URL (same rule the runtime applies before using it).
+      booking: z
+        .object({
+          link_url: z
+            .string()
+            .max(500)
+            .refine((v) => v === "" || safeHttpsUrl(v) !== null, "Booking link must be an https URL")
+            .optional(),
+        })
+        .optional(),
     })
     .optional(),
 });
@@ -79,6 +110,14 @@ type AgentRow = {
   live_started_at: string | null;
   archived_at: string | null;
   integrations: Record<string, unknown> | null;
+  monthly_retainer_cents: number | null;
+  retainer_active: boolean | null;
+  minutes_saved_per_conversation: number | null;
+  engagement_id: string;
+  name: string;
+  agent_type: string | null;
+  channels: string[] | null;
+  tools_enabled: string[] | null;
 };
 
 export async function POST(
@@ -105,7 +144,7 @@ export async function POST(
 
   const { data: existing } = await sb
     .from("client_agents")
-    .select("id, slug, workspace_id, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at, integrations")
+    .select("id, slug, workspace_id, engagement_id, name, agent_type, channels, tools_enabled, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at, integrations, monthly_retainer_cents, retainer_active, minutes_saved_per_conversation")
     .eq("id", id)
     .maybeSingle();
   if (!existing) {
@@ -120,7 +159,16 @@ export async function POST(
     update.name = input.name;
     changed.push("name");
   }
-  if (input.slug !== undefined) {
+  if (input.slug !== undefined && input.slug !== agent.slug) {
+    // The slug is baked into the client's embed snippet (data-agent=...).
+    // Changing it on a deployed agent silently breaks their widget, so it
+    // is only editable while designing, or to assign the first slug.
+    if (agent.status !== "designing" && agent.slug !== null) {
+      return NextResponse.json(
+        { ok: false, error: "slug_locked", detail: "The slug can only change while the agent is designing." },
+        { status: 422 },
+      );
+    }
     update.slug = input.slug;
     changed.push("slug");
   }
@@ -153,6 +201,37 @@ export async function POST(
     changed.push("notes");
   }
 
+  // Billing. Only real changes are written, so the retainer timestamps and
+  // the audit reason reflect what actually moved (amounts stay out of the
+  // reason because clients can read their workspace history).
+  if (
+    input.monthlyRetainerCents !== undefined &&
+    input.monthlyRetainerCents !== (agent.monthly_retainer_cents ?? 0)
+  ) {
+    update.monthly_retainer_cents = input.monthlyRetainerCents;
+    changed.push("monthly_retainer_cents");
+  }
+  if (input.retainerActive !== undefined && input.retainerActive !== (agent.retainer_active ?? false)) {
+    const nowIso = new Date().toISOString();
+    update.retainer_active = input.retainerActive;
+    if (input.retainerActive) {
+      // Re-activation starts a fresh period; a stale cancelled_at would make
+      // the revenue page treat the retainer as cancelled.
+      update.retainer_activated_at = nowIso;
+      update.retainer_cancelled_at = null;
+    } else {
+      update.retainer_cancelled_at = nowIso;
+    }
+    changed.push(`retainer_active:${agent.retainer_active ?? false}->${input.retainerActive}`);
+  }
+  if (
+    input.minutesSavedPerConversation !== undefined &&
+    input.minutesSavedPerConversation !== agent.minutes_saved_per_conversation
+  ) {
+    update.minutes_saved_per_conversation = input.minutesSavedPerConversation;
+    changed.push("minutes_saved_per_conversation");
+  }
+
   // Integrations config (calendar + reminders). Deep-merge into the existing
   // jsonb so we never clobber sibling keys (e.g. a future "crm" block).
   if (input.integrations !== undefined) {
@@ -167,6 +246,41 @@ export async function POST(
     if (input.integrations.locale !== undefined) {
       next.locale = input.integrations.locale;
     }
+    if (input.integrations.booking?.link_url !== undefined) {
+      const booking: Record<string, unknown> = { ...(cur.booking ?? {}) };
+      const url = input.integrations.booking.link_url;
+      if (url === "") delete booking.link_url;
+      else booking.link_url = safeHttpsUrl(url);
+      next.booking = booking;
+    }
+
+    // Enabling reminders without Twilio keys (or a sender number) would
+    // fail at send time, every time, with no one noticing.
+    if (input.integrations.reminders?.enabled === true) {
+      const reminders = (next.reminders ?? {}) as { from_number?: unknown };
+      if (typeof reminders.from_number !== "string" || reminders.from_number === "") {
+        return NextResponse.json(
+          { ok: false, error: "reminders_need_from_number", detail: "Set the Twilio from number before enabling reminders." },
+          { status: 422 },
+        );
+      }
+      // Presence only: the vault row must hold both the SID and the token.
+      const { data: twilio, error: twilioError } = await sb
+        .from("vault_credentials")
+        .select("id")
+        .eq("workspace_id", agent.workspace_id)
+        .eq("provider", "twilio")
+        .not("account_identifier", "is", null)
+        .not("access_token_enc", "is", null)
+        .maybeSingle();
+      if (twilioError || !twilio) {
+        return NextResponse.json(
+          { ok: false, error: "twilio_not_configured", detail: "Save the Twilio keys before enabling reminders." },
+          { status: 422 },
+        );
+      }
+    }
+
     update.integrations = next;
     changed.push("integrations");
   }
@@ -205,6 +319,58 @@ export async function POST(
           { status: 422 },
         );
       }
+
+      // Channel-aware readiness (same rules the runtime relies on). A missing
+      // booking link isn't a blocker: the tool just isn't offered, and the
+      // panel already warns about it.
+      const channels = (agent.channels ?? []).flatMap((c) =>
+        c === "chat_widget" ? (["web"] as const) : c === "sms" ? (["sms"] as const) : [],
+      );
+      const cfg = toAgentConfig({
+        id: agent.id,
+        slug: slugAfter,
+        workspaceId: agent.workspace_id,
+        engagementId: agent.engagement_id,
+        name: agent.name,
+        agentType: agent.agent_type,
+        status: "live",
+        systemPrompt: personaAfter,
+        allowedOrigins: originsAfter,
+        toolsEnabled: (update.tools_enabled ?? agent.tools_enabled ?? []) as string[],
+        greetingMessage: null,
+        maxTokens: 1024,
+        language: "en",
+        monthlyTokenBudget: 0,
+        vertical: null,
+        integrations: update.integrations ?? agent.integrations,
+      });
+      if (cfg && channels.length > 0) {
+        let twilioCredential = false;
+        if (channels.includes("sms")) {
+          const { data: twilio } = await sb
+            .from("vault_credentials")
+            .select("id")
+            .eq("workspace_id", agent.workspace_id)
+            .eq("provider", "twilio")
+            .not("account_identifier", "is", null)
+            .not("access_token_enc", "is", null)
+            .maybeSingle();
+          twilioCredential = !!twilio;
+        }
+        const blockers = checkReadiness(cfg, { channels, twilioCredential }).missing.filter(
+          (m) => m.key !== "booking_link",
+        );
+        if (blockers.length > 0) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "go_live_blocked",
+              detail: blockers.map((m) => `${m.channel}: ${m.message}`).join(" "),
+            },
+            { status: 422 },
+          );
+        }
+      }
     }
     update.status = input.status;
     changed.push(`status:${agent.status}->${input.status}`);
@@ -229,10 +395,14 @@ export async function POST(
 
   const { error } = await sb.from("client_agents").update(update).eq("id", id);
   if (error) {
-    return NextResponse.json(
-      { ok: false, error: "update_failed", detail: error.message },
-      { status: 500 },
-    );
+    if ((error as { code?: string }).code === "23505") {
+      return NextResponse.json(
+        { ok: false, error: "slug_taken", detail: "Another agent already uses that slug." },
+        { status: 409 },
+      );
+    }
+    console.warn("[admin/agents/update] update failed:", error.message);
+    return NextResponse.json({ ok: false, error: "update_failed" }, { status: 500 });
   }
 
   // Invalidate both old and new slug so the public route picks the new

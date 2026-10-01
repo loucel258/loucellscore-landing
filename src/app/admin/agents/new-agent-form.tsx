@@ -49,7 +49,7 @@ export function NewAgentForm({ engagements }: { engagements: EngagementOption[] 
       if (body.ok) {
         router.push(`/admin/agent/${body.id}`);
       } else {
-        setError(`${body.error}${body.detail ? ` — ${body.detail}` : ""}`);
+        setError(`${body.error}${body.detail ? `: ${body.detail}` : ""}`);
         setBusy(false);
       }
     } catch {

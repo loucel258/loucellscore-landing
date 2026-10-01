@@ -1,6 +1,7 @@
 import "server-only";
 import { getServiceClient } from "@/lib/audit/client";
-import { encryptMessage, encryptionAvailable } from "./encrypt";
+import { decryptMessage, encryptMessage, encryptionAvailable } from "./encrypt";
+import { previewText } from "./message-text";
 
 /**
  * Persist a single chat turn (user msg + agent reply) to
@@ -33,6 +34,10 @@ export async function persistTurn(args: {
     if (!meta) return; // not a client agent (e.g. loucels landing chat)
 
     const expires = new Date(Date.now() + meta.retentionDays * 86400_000).toISOString();
+    // Explicit timestamps 1 ms apart: inserted in one statement, both rows
+    // would share now() and read back in either order.
+    const userAt = new Date();
+    const assistantAt = new Date(userAt.getTime() + 1);
 
     const rows = [
       {
@@ -43,6 +48,7 @@ export async function persistTurn(args: {
         cipher_b64: encryptMessage(meta.engagementId, args.userText),
         tool_summary: null,
         expires_at: expires,
+        inserted_at: userAt.toISOString(),
       },
       {
         engagement_id: meta.engagementId,
@@ -52,6 +58,7 @@ export async function persistTurn(args: {
         cipher_b64: encryptMessage(meta.engagementId, args.assistantText),
         tool_summary: args.toolSummary ?? null,
         expires_at: expires,
+        inserted_at: assistantAt.toISOString(),
       },
     ];
 
@@ -90,4 +97,32 @@ async function resolveEngagementForWorkspace(workspaceId: string): Promise<Engag
 
   cache.set(workspaceId, { meta, cachedAt: Date.now() });
   return meta;
+}
+
+/**
+ * One-line, markdown-free preview of a stored message for the portal's
+ * live-activity feed. Tool summaries win over the message body.
+ *
+ * Tool summaries are internal English strings ("Proposed send_message for
+ * owner approval"). Pass `labelToolSummary` (labels.toolSummaryLabel) to
+ * show a translated label instead; a summary it doesn't know (null) falls
+ * back to the message body rather than leaking the raw string.
+ */
+export function messagePreview(
+  engagementId: string,
+  row: { tool_summary: string | null; cipher_b64: string },
+  max = 90,
+  labelToolSummary?: (summary: string) => string | null,
+): string {
+  if (row.tool_summary) {
+    if (!labelToolSummary) return previewText(row.tool_summary, max);
+    const label = labelToolSummary(row.tool_summary);
+    if (label) return previewText(label, max);
+  }
+  if (!encryptionAvailable()) return "";
+  try {
+    return previewText(decryptMessage(engagementId, row.cipher_b64), max);
+  } catch {
+    return "[encrypted]";
+  }
 }

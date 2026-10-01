@@ -65,22 +65,12 @@ export function IncidentsTab({
         eyebrow="Action required"
         icon={<AlertOctagon className="size-4" />}
         tone={open.length > 0 ? "danger" : "default"}
-        actions={
-          <button
-            type="button"
-            disabled
-            className="inline-flex items-center gap-1 rounded-lg bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white opacity-60"
-            title="Manual incident creation arrives in v1.1"
-          >
-            + New incident
-          </button>
-        }
       >
         {open.length === 0 ? (
           <EmptyPanel
             icon={<CheckCircle2 className="size-5" />}
             title="No open incidents"
-            description="When the chat-health-alerts cron fires or you log a manual incident, it shows here with a postmortem template."
+            description="Incidents logged for this engagement show here. There is no form for them yet; they are added in the database."
           />
         ) : (
           <ul className="flex flex-col gap-3">
@@ -107,7 +97,7 @@ export function IncidentsTab({
 function IncidentItem({ incident: i, compact = false }: { incident: IncidentRow; compact?: boolean }) {
   const tone = SEVERITY_TONES[i.severity];
   return (
-    <li className={`rounded-xl border border-white/60 bg-white/55 p-4`}>
+    <li className={`rounded-xl border border-neutral-200 bg-white p-4`}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

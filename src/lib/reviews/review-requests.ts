@@ -1,7 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendSms, maskPhone } from "@/lib/notify/twilio";
-import { canSendProactive } from "@/lib/booking/gates";
+import { maskPhone } from "@/lib/notify/twilio";
+import { sendProactiveGated } from "@/lib/notify/proactive";
+import { canSendProactive, readSendWindow, type SendWindow } from "@/lib/booking/gates";
+import { DEFAULT_TIMEZONE, parseIntegrations } from "@/lib/agent-runtime/config";
 
 /**
  * Front Desk Phase 3 — post-appointment review requests. Daily cron finds
@@ -10,7 +12,9 @@ import { canSendProactive } from "@/lib/booking/gates";
  * salon's Google review link, exactly once per appointment.
  *
  * Reviews are a MARKETING message under TCPA — gated on consent_marketing,
- * never consent_transactional.
+ * never consent_transactional. The send itself goes through
+ * sendProactiveGated (lib/notify/proactive.ts), which re-checks the contact
+ * and quiet hours in the business timezone and logs the outbound message.
  */
 
 export type ReviewAgentSettings = {
@@ -20,6 +24,10 @@ export type ReviewAgentSettings = {
   delayHours: number;
   fromNumber: string;
   locale: "es" | "en";
+  /** Business timezone (integrations.calendar.timezone). */
+  timezone: string;
+  /** Allowed local send window (integrations.quiet_hours, default 8am-9pm). */
+  window: SendWindow;
 };
 
 export type ReviewRunResult = {
@@ -37,22 +45,22 @@ export function parseAgentReviewSettings(agent: {
   name: string;
   integrations: unknown;
 }): ReviewAgentSettings | null {
-  const integ = (agent.integrations ?? {}) as Record<string, unknown>;
-  const review = (integ.review ?? {}) as Record<string, unknown>;
-  const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
-
-  if (review.enabled !== true) return null;
-  const googleReviewUrl = typeof review.google_review_url === "string" ? review.google_review_url : "";
-  const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
+  // Shared AgentConfig parser (lib/agent-runtime/config).
+  const integ = parseIntegrations(agent.integrations);
+  if (!integ.review.enabled) return null;
+  const googleReviewUrl = integ.review.google_review_url ?? "";
+  const fromNumber = integ.reminders.from_number ?? "";
   if (!googleReviewUrl || !fromNumber) return null;
 
   return {
     workspaceId: agent.workspace_id,
     salonName: agent.name,
     googleReviewUrl,
-    delayHours: typeof review.delay_hours === "number" ? review.delay_hours : 2,
+    delayHours: integ.review.delay_hours,
     fromNumber,
     locale: integ.locale === "en" ? "en" : "es",
+    timezone: integ.booking.timezone ?? integ.calendar.timezone ?? DEFAULT_TIMEZONE,
+    window: readSendWindow(agent.integrations),
   };
 }
 
@@ -115,11 +123,15 @@ export async function runReviewRequestsForAgent(
     const c = appt.contact;
     if (!c?.phone) continue;
 
-    const tz = c.timezone ?? "America/New_York";
+    // Cheap pre-filter on the joined row (avoids claiming rows we can't
+    // send); the gated send below is the authoritative check.
+    const tz = c.timezone ?? s.timezone;
     const gate = canSendProactive(
       { opted_out: c.opted_out, consent_transactional: false, consent_marketing: c.consent_marketing },
       "marketing",
       tz,
+      new Date(),
+      s.window,
     );
     if (!gate.allowed) {
       res.skippedNoConsent++;
@@ -148,29 +160,25 @@ export async function runReviewRequestsForAgent(
     }
     const claimId = (claimed[0] as { id: string }).id;
 
-    const sms = await sendSms({
+    const sent = await sendProactiveGated(sb, {
       workspaceId: s.workspaceId,
       to: c.phone,
-      from: s.fromNumber,
-      body: formatReviewRequest(s),
+      kind: "marketing",
+      timezone: s.timezone,
+      window: s.window,
       actor: `front_desk_reviews:${s.workspaceId}`,
+      smsFrom: s.fromNumber,
+      smsBody: formatReviewRequest(s),
     });
 
-    if (sms.ok) {
-      await sb.from("review_requests_sent").update({ provider_sid: sms.sid }).eq("id", claimId);
-      await sb.from("messages_log").insert({
-        workspace_id: s.workspaceId,
-        contact_id: c.id,
-        channel: "sms",
-        direction: "outbound",
-        body: formatReviewRequest(s),
-        provider_sid: sms.sid,
-        status: "sent",
-      });
+    if (sent.status === "sent") {
+      // messages_log row is written by the gate.
+      await sb.from("review_requests_sent").update({ provider_sid: sent.sid }).eq("id", claimId);
       res.sent++;
     } else {
       await sb.from("review_requests_sent").delete().eq("id", claimId);
-      res.failed++;
+      if (sent.status === "blocked") res.skippedNoConsent++;
+      else res.failed++;
     }
   }
 

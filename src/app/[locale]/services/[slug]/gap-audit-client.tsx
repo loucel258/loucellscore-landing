@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { CountUp } from "@/components/motion/count-up";
 
 /* ────────────────────────────────────────────────────────────
  * Interactive pieces for the Operations Gap Audit page only.
@@ -12,20 +11,20 @@ import { CountUp } from "@/components/motion/count-up";
 export type Lens = {
   id: string;
   index: string; // "01"
-  accent: string; // CSS color
+  accent: string; // text-safe color on paper (AA)
   name: string;
   question: string;
   examine: string[];
   evidence: string;
-  finding: string; // sample finding, report-excerpt style
+  finding: string; // example finding, report-excerpt style
 };
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
- * LensExplorer — the audit's moat (3 lenses no SMB competitor runs)
- * as a tabbed instrument panel. Auto-advances until the visitor
- * touches it; from then on it's theirs.
+ * LensExplorer — the three lenses as tabs. Auto-advances while in view
+ * until the visitor touches it; from then on it's theirs. Arrow keys
+ * move between tabs.
  */
 export function LensExplorer({
   lenses,
@@ -40,135 +39,115 @@ export function LensExplorer({
   const [engaged, setEngaged] = useState(false);
   const reduce = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
-    const obs = new IntersectionObserver(
-      ([e]) => setInView(!!e?.isIntersecting),
-      { threshold: 0.3 },
-    );
+    const obs = new IntersectionObserver(([e]) => setInView(!!e?.isIntersecting), { threshold: 0.3 });
     obs.observe(node);
     return () => obs.disconnect();
   }, []);
 
   useEffect(() => {
     if (engaged || reduce || !inView) return;
-    const t = setInterval(() => {
-      setActive((a) => (a + 1) % lenses.length);
-    }, 5200);
+    const t = setInterval(() => setActive((a) => (a + 1) % lenses.length), 6000);
     return () => clearInterval(t);
   }, [engaged, reduce, inView, lenses.length]);
 
   const lens = lenses[active]!;
 
+  const onKey = (e: React.KeyboardEvent, i: number) => {
+    const n = lenses.length;
+    let next = -1;
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") next = (i + 1) % n;
+    if (e.key === "ArrowUp" || e.key === "ArrowLeft") next = (i - 1 + n) % n;
+    if (next >= 0) {
+      e.preventDefault();
+      setEngaged(true);
+      setActive(next);
+      tabRefs.current[next]?.focus();
+    }
+  };
+
   return (
-    <div
-      ref={containerRef}
-      className="grid gap-6 md:grid-cols-[0.42fr_1fr] md:gap-10"
-    >
-      {/* Tab rail */}
-      <div role="tablist" aria-label="Audit lenses" className="flex flex-col">
+    <div ref={containerRef} className="grid gap-6 md:grid-cols-[0.42fr_1fr] md:gap-12">
+      <div role="tablist" aria-label="Audit lenses" aria-orientation="vertical" className="flex flex-col border-t border-rule">
         {lenses.map((l, i) => {
           const selected = i === active;
           return (
             <button
               key={l.id}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
               role="tab"
+              id={`lens-tab-${l.id}`}
               aria-selected={selected}
+              aria-controls={`lens-panel-${l.id}`}
+              tabIndex={selected ? 0 : -1}
               onClick={() => {
                 setEngaged(true);
                 setActive(i);
               }}
-              className="group relative flex items-baseline gap-4 border-b border-border/50 py-5 text-left transition-colors last:border-b-0"
+              onKeyDown={(e) => onKey(e, i)}
+              className="group relative flex min-h-14 items-baseline gap-4 border-b border-rule py-5 text-left"
               style={selected ? { color: l.accent } : undefined}
             >
-              <span
-                className={`font-mono text-xs tabular-nums transition-opacity ${
-                  selected ? "opacity-100" : "opacity-40"
-                }`}
-              >
-                {l.index}
-              </span>
-              <span
-                className={`text-lg font-semibold tracking-tight transition-colors md:text-xl ${
-                  selected ? "" : "text-muted-foreground group-hover:text-foreground"
-                }`}
-              >
+              <span className={`lc-mono text-[12px] ${selected ? "" : "text-ink-3"}`}>{l.index}</span>
+              <span className={`text-[clamp(1.15rem,1.8vw,1.4rem)] font-medium tracking-tight ${selected ? "" : "text-ink-3 group-hover:text-ink"}`}>
                 {l.name}
               </span>
-              {/* progress hairline while auto-cycling */}
               {selected && !engaged && !reduce && (
                 <motion.span
                   key={`progress-${active}`}
-                  className="absolute bottom-0 left-0 h-px"
+                  className="absolute -bottom-px left-0 h-[2px]"
                   style={{ background: l.accent }}
                   initial={{ width: "0%" }}
                   animate={{ width: "100%" }}
-                  transition={{ duration: 5.2, ease: "linear" }}
+                  transition={{ duration: 6, ease: "linear" }}
                 />
               )}
               {selected && (engaged || reduce) && (
-                <span
-                  className="absolute bottom-0 left-0 h-px w-full"
-                  style={{ background: l.accent }}
-                />
+                <span className="absolute -bottom-px left-0 h-[2px] w-full" style={{ background: l.accent }} />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Detail panel */}
-      <div className="relative min-h-[20rem] overflow-hidden rounded-2xl border border-border/60 bg-card/60">
-        {/* accent wash, top-right */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full opacity-[0.13] blur-3xl transition-colors duration-700"
-          style={{ background: lens.accent }}
-        />
+      <div className="relative min-h-[22rem] rounded-[1.75rem] border border-rule bg-paper">
         <AnimatePresence mode="wait">
           <motion.div
             key={lens.id}
             role="tabpanel"
-            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18, filter: "blur(6px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -12, filter: "blur(6px)" }}
+            id={`lens-panel-${lens.id}`}
+            aria-labelledby={`lens-tab-${lens.id}`}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
             transition={{ duration: 0.45, ease: EASE }}
-            className="relative flex h-full flex-col gap-6 p-6 md:p-9"
+            className="flex h-full flex-col gap-6 p-6 md:p-9"
           >
-            <p className="text-balance text-xl font-medium leading-snug md:text-2xl">
-              {lens.question}
-            </p>
-
+            <p className="font-serif text-[clamp(1.5rem,2.4vw,2.05rem)] leading-[1.15]">{lens.question}</p>
             <ul className="flex flex-col gap-2.5">
-              {lens.examine.map((item, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-foreground/85 md:text-base">
-                  <span
-                    aria-hidden
-                    className="mt-[0.55em] size-1.5 shrink-0 rounded-full"
-                    style={{ background: lens.accent }}
-                  />
+              {lens.examine.map((item) => (
+                <li key={item} className="flex items-start gap-3 text-[15.5px] leading-snug text-ink-2">
+                  <span aria-hidden className="mt-[0.5em] size-1.5 shrink-0 rounded-full" style={{ background: lens.accent }} />
                   {item}
                 </li>
               ))}
             </ul>
-
-            <p className="font-mono text-xs leading-relaxed text-muted-foreground">
-              <span className="uppercase tracking-[0.18em]" style={{ color: lens.accent }}>
+            <div>
+              <p className="lc-label" style={{ color: lens.accent }}>
                 {evidenceLabel}
-              </span>{" "}
-              — {lens.evidence}
-            </p>
-
-            <figure className="mt-auto rounded-lg border border-border/60 bg-background/60 p-4">
-              <figcaption className="mb-1.5 font-mono text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
-                {findingLabel}
-              </figcaption>
-              <blockquote className="text-sm italic leading-relaxed text-foreground/80">
-                {lens.finding}
-              </blockquote>
+              </p>
+              <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink-2">{lens.evidence}</p>
+            </div>
+            <figure className="mt-auto rounded-2xl bg-paper-2 p-5">
+              <figcaption className="lc-label text-ink-3">{findingLabel}</figcaption>
+              <blockquote className="mt-2 font-serif text-[1.2rem] italic leading-snug text-ink">{lens.finding}</blockquote>
             </figure>
           </motion.div>
         </AnimatePresence>
@@ -178,95 +157,62 @@ export function LensExplorer({
 }
 
 /**
- * TimelineTrack — the 7 days as a drawn line with staggered nodes.
+ * TimelineTrack — the 7 days as a drawn line with nodes.
  * Horizontal on desktop, vertical rail on mobile.
  */
-export function TimelineTrack({
-  items,
-}: {
-  items: { day: string; title: string; detail: string }[];
-}) {
+export function TimelineTrack({ items }: { items: { day: string; title: string; detail: string }[] }) {
   const reduce = useReducedMotion();
-
   return (
     <div className="relative">
-      {/* Desktop: horizontal */}
       <div className="hidden md:block">
-        <div className="relative mb-8 h-px w-full bg-border/60">
+        <div className="relative mb-8 h-px w-full bg-rule">
           <motion.div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan via-cyan to-violet"
+            className="absolute inset-y-0 left-0 bg-ink"
             initial={{ width: reduce ? "100%" : "0%" }}
             whileInView={{ width: "100%" }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 1.6, ease: EASE }}
           />
         </div>
-        <div className="grid grid-cols-6 gap-5">
+        <ol className="grid grid-cols-6 gap-6">
           {items.map((item, i) => (
-            <motion.div
-              key={i}
-              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 20 }}
+            <motion.li
+              key={item.day}
+              initial={reduce ? false : { opacity: 0.3, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6, delay: 0.25 + i * 0.18, ease: EASE }}
+              transition={{ duration: 0.6, delay: 0.2 + i * 0.15, ease: EASE }}
               className="relative flex flex-col gap-1.5"
             >
-              <span
-                aria-hidden
-                className="absolute -top-[2.32rem] left-0 size-2 rounded-full bg-cyan ring-4 ring-background"
-              />
-              <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-accent">
-                {item.day}
-              </span>
-              <span className="text-sm font-semibold">{item.title}</span>
-              <span className="text-xs leading-relaxed text-muted-foreground">
-                {item.detail}
-              </span>
-            </motion.div>
+              <span aria-hidden className="absolute -top-[2.32rem] left-0 size-2.5 rounded-full bg-dawn ring-4 ring-paper" />
+              <span className="lc-label text-dawn-deep">{item.day}</span>
+              <span className="text-[16px] font-medium">{item.title}</span>
+              <span className="text-[14px] leading-relaxed text-ink-2">{item.detail}</span>
+            </motion.li>
           ))}
-        </div>
+        </ol>
       </div>
 
-      {/* Mobile: vertical rail */}
-      <div className="flex flex-col gap-0 md:hidden">
+      <ol className="flex flex-col md:hidden">
         {items.map((item, i) => (
-          <motion.div
-            key={i}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, x: -16 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            transition={{ duration: 0.5, delay: i * 0.08, ease: EASE }}
-            className="relative flex gap-4 pb-7 pl-6 last:pb-0"
-          >
-            <span
-              aria-hidden
-              className="absolute left-0 top-1.5 size-2 rounded-full bg-cyan ring-4 ring-background"
-            />
-            {i < items.length - 1 && (
-              <span
-                aria-hidden
-                className="absolute bottom-0 left-[3.5px] top-4 w-px bg-border/60"
-              />
-            )}
+          <li key={item.day} className="relative flex gap-4 pb-8 pl-7 last:pb-0">
+            <span aria-hidden className="absolute left-0 top-1.5 size-2.5 rounded-full bg-dawn ring-4 ring-paper" />
+            {i < items.length - 1 && <span aria-hidden className="absolute bottom-0 left-[4.5px] top-4 w-px bg-rule" />}
             <div className="flex flex-col gap-1">
-              <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-accent">
-                {item.day}
-              </span>
-              <span className="text-sm font-semibold">{item.title}</span>
-              <span className="text-xs leading-relaxed text-muted-foreground">
-                {item.detail}
-              </span>
+              <span className="lc-label text-dawn-deep">{item.day}</span>
+              <span className="text-[16px] font-medium">{item.title}</span>
+              <span className="text-[14.5px] leading-relaxed text-ink-2">{item.detail}</span>
             </div>
-          </motion.div>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }
 
 /**
- * CreditSplit — the 50% credit mechanic as one bar that splits.
- * Percentages only: the landing never shows dollar amounts.
+ * CreditSplit — the 50% credit as one bar that splits in two.
+ * Percentages only: the site never shows dollar amounts.
  */
 export function CreditSplit({
   leftLabel,
@@ -278,49 +224,30 @@ export function CreditSplit({
   windowChip: string;
 }) {
   const reduce = useReducedMotion();
-
   return (
     <div className="flex flex-col gap-5">
-      <div className="relative flex h-20 w-full overflow-hidden rounded-xl border border-border/60 md:h-24">
+      <div className="relative flex h-28 w-full overflow-hidden rounded-[1.5rem] border border-rule md:h-32">
         <motion.div
-          className="relative flex items-center justify-center bg-cyan-deep/30"
+          className="relative flex items-center justify-center bg-dawn"
           initial={{ flexBasis: reduce ? "50%" : "100%" }}
           whileInView={{ flexBasis: "50%" }}
           viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 1.1, delay: 0.4, ease: EASE }}
+          transition={{ duration: 1.1, delay: 0.3, ease: EASE }}
         >
-          <div className="flex flex-col items-center gap-0.5 px-3 text-center">
-            <span className="text-2xl font-semibold text-cyan-glow md:text-3xl">
-              <CountUp end={50} suffix="%" duration={1400} />
-            </span>
-            <span className="text-[0.7rem] leading-tight text-foreground/75 md:text-xs">
-              {leftLabel}
-            </span>
-          </div>
-          <span
-            aria-hidden
-            className="absolute inset-y-0 right-0 w-px bg-cyan/60"
-          />
-        </motion.div>
-        <motion.div
-          className="flex flex-1 items-center justify-center bg-card/60"
-          initial={{ opacity: reduce ? 1 : 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, delay: 1.1 }}
-        >
-          <div className="flex flex-col items-center gap-0.5 px-3 text-center">
-            <span className="text-2xl font-semibold text-foreground/80 md:text-3xl">
-              50%
-            </span>
-            <span className="text-[0.7rem] leading-tight text-muted-foreground md:text-xs">
-              {rightLabel}
-            </span>
+          <div className="flex flex-col items-center gap-1 px-3 text-center text-ink">
+            <span className="font-serif text-[2.6rem] leading-none md:text-[3.2rem]">50%</span>
+            <span className="text-[13px] leading-tight">{leftLabel}</span>
           </div>
         </motion.div>
+        <div className="flex flex-1 items-center justify-center bg-paper-2">
+          <div className="flex flex-col items-center gap-1 px-3 text-center">
+            <span className="font-serif text-[2.6rem] leading-none text-ink-2 md:text-[3.2rem]">50%</span>
+            <span className="text-[13px] leading-tight text-ink-2">{rightLabel}</span>
+          </div>
+        </div>
       </div>
-      <span className="inline-flex w-fit items-center gap-2 rounded-full border border-cyan/30 bg-cyan/5 px-3.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.18em] text-cyan-glow">
-        <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-cyan" />
+      <span className="lc-label inline-flex w-fit items-center gap-2 rounded-full border border-rule px-3.5 py-2 text-ink-2">
+        <span aria-hidden className="size-1.5 rounded-full bg-dawn" />
         {windowChip}
       </span>
     </div>

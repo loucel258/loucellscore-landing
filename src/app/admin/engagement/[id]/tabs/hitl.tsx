@@ -6,20 +6,21 @@ import { formatShortDate, daysAgo } from "@/lib/admin/format";
 import type { PendingApprovalRow } from "../types";
 
 export function HitlTab({
-  workspaceId,
+  workspaceIds,
   pending,
   recent,
 }: {
-  workspaceId: string | null;
+  /** Every agent workspace of the engagement; empty = no agent yet. */
+  workspaceIds: string[];
   pending: PendingApprovalRow[];
   recent: PendingApprovalRow[];
 }) {
-  if (!workspaceId) {
+  if (workspaceIds.length === 0) {
     return (
       <EmptyPanel
         icon={<ShieldCheck className="size-5" />}
         title="No agent deployed yet"
-        description="Once an agent calls request_human_approval, the proposed action lands here for you to approve, edit, or reject before it goes out."
+        description="Once an agent calls request_human_approval, the proposed action shows here and in the client's portal, where the client approves or rejects it."
       />
     );
   }
@@ -48,7 +49,7 @@ export function HitlTab({
         <Metric
           label="Pending approvals"
           value={pending.length}
-          sub={pending.length > 0 ? "Awaiting your decision" : "Inbox zero"}
+          sub={pending.length > 0 ? "Waiting on the client" : "Inbox zero"}
           tone={pending.length === 0 ? "emerald" : pending.length > 3 ? "rose" : "amber"}
           icon={<AlertOctagon className="size-4" />}
         />
@@ -83,7 +84,7 @@ export function HitlTab({
           <EmptyPanel
             icon={<CheckCircle2 className="size-5" />}
             title="Nothing waiting on you"
-            description="The agent handled everything autonomously in the last window. When something needs your approval, it shows up here."
+            description="The agent handled everything autonomously in the last window. When something needs a human decision, it shows up here and in the client's portal."
           />
         ) : (
           <ul className="flex flex-col gap-3">
@@ -95,7 +96,7 @@ export function HitlTab({
                 <header className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-white/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700 ring-1 ring-neutral-200">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-700 ring-1 ring-neutral-200">
                         {r.action_type}
                       </span>
                       {r.risk_score !== null && r.risk_score > 0 && (
@@ -130,38 +131,12 @@ export function HitlTab({
                     {daysAgo(r.created_at)}d ago
                   </p>
                 </header>
-                <p className="mt-3 whitespace-pre-wrap rounded-md border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-3 text-xs text-neutral-800">
+                <p className="mt-3 whitespace-pre-wrap rounded-md border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-3 text-xs text-neutral-800">
                   {r.proposed_text}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white opacity-60"
-                    title="Approve action — wiring lands in v1.1"
-                  >
-                    <CheckCircle2 className="size-3.5" /> Approve
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/55 px-3 py-1.5 text-xs font-medium text-neutral-700 ring-1 ring-neutral-300 opacity-60"
-                    title="Edit before approving"
-                  >
-                    Edit & approve
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-white/55 px-3 py-1.5 text-xs font-medium text-rose-700 ring-1 ring-rose-200 opacity-60"
-                    title="Reject"
-                  >
-                    <XCircle className="size-3.5" /> Reject
-                  </button>
-                  <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-neutral-500">
-                    Action buttons enabled in v1.1
-                  </span>
-                </div>
+                <p className="mt-3 text-[11px] text-neutral-500">
+                  The client approves this in their portal.
+                </p>
               </li>
             ))}
           </ul>

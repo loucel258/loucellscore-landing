@@ -1,6 +1,8 @@
 import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { AuthWall } from "@/components/admin/auth-wall";
+import { landingLeadsOrFilter, resolveLandingAgent } from "@/lib/admin/landing-leads";
+import { isCustomerSession } from "@/lib/admin/audit-actors";
 import { ChatPulseDashboard } from "./dashboard";
 
 /**
@@ -18,7 +20,9 @@ import { ChatPulseDashboard } from "./dashboard";
  * Data source: Supabase service-role queries against:
  *   - audit_logs (scoped to the live landing agent's workspace, resolved
  *     from its slug via client_agents — see chatWorkspaceId below)
- *   - leads
+ *   - leads (Loucells' own landing leads only: legacy rows with no
+ *     engagement_id plus the landing agent's engagement; client customers
+ *     are excluded)
  *
  * NEVER deploy this without ADMIN_DASHBOARD_PASSWORD set. The route is
  * marked noindex via metadata but the URL is guessable.
@@ -28,7 +32,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "chat-pulse — Loucells Core",
+  title: "chat-pulse · Loucells Core",
   robots: { index: false, follow: false },
 };
 
@@ -53,15 +57,9 @@ export default async function ChatPulsePage() {
   // workspace during the dogfood migration; resolving by slug keeps this
   // dashboard pointed at the live agent even if the workspace_id changes
   // again. Falls back to the legacy id if the agent row isn't found.
-  const agentSlug = process.env.NEXT_PUBLIC_AGENT_SLUG ?? "loucels-landing";
-  const { data: agentRow } = await sb
-    .from("client_agents")
-    .select("workspace_id")
-    .eq("slug", agentSlug)
-    .maybeSingle();
-  const chatWorkspaceId =
-    (agentRow as { workspace_id?: string } | null)?.workspace_id ??
-    "ws_chat_loucel_landing";
+  const landing = await resolveLandingAgent(sb);
+  const chatWorkspaceId = landing.workspaceId ?? "ws_chat_loucel_landing";
+  const ownLeads = landingLeadsOrFilter(landing.engagementId);
 
   // Time windows
   const now = new Date();
@@ -82,20 +80,21 @@ export default async function ChatPulsePage() {
   ] = await Promise.all([
     sb
       .from("audit_logs")
-      .select("decision, blocked_by, reason, source", { count: "exact" })
+      .select("decision, blocked_by, reason, source, user_id", { count: "exact" })
       .eq("workspace_id", chatWorkspaceId)
       .gte("inserted_at", dayAgo),
     sb
       .from("audit_logs")
-      .select("decision, blocked_by, reason, source", { count: "exact" })
+      .select("decision, blocked_by, reason, source, user_id", { count: "exact" })
       .eq("workspace_id", chatWorkspaceId)
       .gte("inserted_at", weekAgo),
-    sb.from("leads").select("id, booking_status", { count: "exact" }).gte("created_at", dayAgo),
-    sb.from("leads").select("id, booking_status", { count: "exact" }).gte("created_at", weekAgo),
-    sb.from("leads").select("id, booking_status", { count: "exact" }).gte("created_at", monthAgo),
+    sb.from("leads").select("id, booking_status", { count: "exact" }).or(ownLeads).gte("created_at", dayAgo),
+    sb.from("leads").select("id, booking_status", { count: "exact" }).or(ownLeads).gte("created_at", weekAgo),
+    sb.from("leads").select("id, booking_status", { count: "exact" }).or(ownLeads).gte("created_at", monthAgo),
     sb
       .from("leads")
       .select("id, name, email, reason, booking_status, booking_slot_iso, created_at, confirmed_at")
+      .or(ownLeads)
       .order("created_at", { ascending: false })
       .limit(20),
     sb
@@ -114,10 +113,15 @@ export default async function ChatPulsePage() {
       .limit(50),
   ]);
 
+  // Admin config saves on the landing agent share its workspace; they are
+  // not chat traffic.
+  const chat24h = (audit24h.data ?? []).filter((r) => isCustomerSession(r.user_id));
+  const chat7d = (audit7d.data ?? []).filter((r) => isCustomerSession(r.user_id));
+
   const data = {
-    auditCounts24h: countByDecision(audit24h.data ?? []),
-    auditCounts7d: countByDecision(audit7d.data ?? []),
-    blockedBy24h: countByBlockedBy(audit24h.data ?? []),
+    auditCounts24h: countByDecision(chat24h),
+    auditCounts7d: countByDecision(chat7d),
+    blockedBy24h: countByBlockedBy(chat24h),
     leadCounts24h: countByLeadStatus(leads24h.data ?? []),
     leadCounts7d: countByLeadStatus(leads7d.data ?? []),
     leadCounts30d: countByLeadStatus(leads30d.data ?? []),

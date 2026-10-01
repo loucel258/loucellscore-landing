@@ -137,8 +137,8 @@ export const es: Dictionary = {
     title: "Construido Para Operar. Construido Para Durar.",
     items: [
       {
-        title: "Se Paga Solo en 90 Días",
-        desc: "Acordamos el baseline en kickoff — leads recuperados, jobs reservados, horas ahorradas. Al día 90 tu agente ha pagado su costo de build en ingresos medibles, o lo apagamos. No debés un centavo más.",
+        title: "Medido Desde el Inicio",
+        desc: "Al empezar anotamos tus números de partida, como clientes atendidos y trabajos agendados. Tu portal muestra esos mismos números cada semana.",
       },
       {
         title: "Construido Para Aguantar Volumen",
@@ -213,8 +213,8 @@ export const es: Dictionary = {
         a: "No publicamos precios acá a propósito — cada engagement se cotiza según lo que tu negocio realmente necesita y qué está realmente roto. Un contratista solo y una medspa de 30 personas reciben builds muy distintos, y el precio refleja eso. El agente de chat de esta página puede caminarte por rangos aproximados si preguntás. Para precio exacto atado a tu scope específico, eso sale de una llamada gratis de 30 minutos — sin pitch.",
       },
       {
-        q: "¿Cuándo veo que esto se paga solo?",
-        a: "Antes de lo que imaginas. Para un contratista: el sistema paga su propio build con los primeros 2 techos que el agente reserva el domingo a las 11 PM y tú habrías perdido por no contestar el teléfono. Para una medspa: 3 a 5 bookings de turno nocturno que no se escaparon. Para un restaurante: la primera oleada de reseñas malas manejadas antes de que se acumulen. Acordamos el baseline en kickoff para que el payback sea medido, no adivinado.",
+        q: "¿Cómo sé si está funcionando?",
+        a: "Al empezar registramos tu punto de partida. Tu portal muestra cuántos clientes atendió el agente y cuántos agendó, semana a semana.",
       },
       {
         q: "¿Pueden construir agentes de IA para empresas de logística, construcción o servicios profesionales en Florida?",
@@ -337,292 +337,292 @@ export const es: Dictionary = {
   },
   webFoundation: {
     meta: {
-      title: "Fundamentos Web — Loucells Core",
+      title: "Web Foundation · Loucells Core",
       description:
-        "La infraestructura de conversión que alimenta a tus agentes de IA. Hecha a medida, optimizada para búsqueda con IA.",
+        "Sitios web rápidos y búsqueda local para negocios de servicio, conectados al agente de IA que responde a tus clientes.",
     },
     backLabel: "Volver al inicio",
     hero: {
-      eyebrow: "Fundamentos Web",
-      title: "Tu vendedor digital, operando 24/7.",
+      eyebrow: "Web Foundation",
+      title: "Un sitio web que trae clientes que tu agente puede atender.",
       subtitle:
-        "No construimos páginas decorativas. Construimos la infraestructura de captura de leads y visibilidad local que alimenta a tus agentes de IA.",
-      primaryCta: "Agenda una llamada gratis",
-      secondaryCta: "Ver cómo funciona",
+        "Construimos sitios rápidos y configuramos la búsqueda local para que te encuentren en Google y en las herramientas de búsqueda con IA. Cada formulario y cada botón le pasa el cliente directo a tu agente.",
+      primaryCta: "Agenda una llamada gratis de 30 min",
+      secondaryCta: "Ver qué construimos",
     },
     problem: {
-      eyebrow: "El Diagnóstico",
-      title: "Por qué tu sitio actual está perdiendo dinero.",
+      eyebrow: "Dónde se pierden clientes",
+      title: "Tres razones por las que un sitio no trae trabajo.",
       items: [
         {
           n: "01",
-          title: "Fuga de Tráfico",
-          desc: "La carga lenta y los templates rotos espantan a tus visitantes antes de que el sitio cargue. Cada segundo de retraso es un cliente que no vuelves a ver.",
+          title: "Carga lento",
+          desc: "La mayoría de la gente abandona una página que tarda más de unos segundos en cargar, y en un teléfono con poca señal eso pasa rápido. Vuelven a los resultados y llaman a otro.",
         },
         {
           n: "02",
-          title: "Invisible Ante la IA",
-          desc: "ChatGPT, Perplexity y los AI Overviews de Google son la nueva búsqueda. Si tu sitio no está optimizado para ellos, te están saltando en las conversaciones donde los compradores piden recomendaciones.",
+          title: "La búsqueda con IA no te menciona",
+          desc: "Cada vez más clientes le piden una recomendación a ChatGPT, Perplexity o a las respuestas con IA de Google. Si tu sitio no está preparado para ellos, no apareces en la respuesta.",
         },
         {
           n: "03",
-          title: "Desconectado De Tu Automatización",
-          desc: "La mayoría de sitios viven aislados — capturan un formulario y lo tiran en un inbox que nunca revisas. La infraestructura debajo debería entregarle el lead al agente que lo cierra.",
+          title: "Los clientes terminan en un inbox",
+          desc: "Un formulario que manda un email que nadie lee hasta el lunes no es mucho mejor que no tener formulario. El cliente debería llegar a quien responda primero.",
         },
       ],
     },
     services: {
-      eyebrow: "El Build",
-      title: "Lo que construimos para ti.",
+      eyebrow: "Qué construimos",
+      title: "Cuatro servicios con un objetivo: más llamadas y más citas.",
       items: [
         {
-          name: "Landing Pages de Alta Conversión",
-          desc: "Páginas de un solo propósito, diseñadas para convertir tráfico pago en leads calificados. Mobile-first, conectadas con tu AI Front Desk desde el día uno.",
+          name: "Landing Page",
+          desc: "Una página enfocada para tus anuncios o tu servicio principal, pensada primero para el teléfono y conectada a tu AI Front Desk desde el primer día.",
         },
         {
-          name: "Rediseño de Infraestructura Web",
-          desc: "Reconstrucción completa de tu sitio sobre un stack moderno que carga rápido, rankea y se conecta con el resto de tu capa de automatización. Sin parches legacy, sin templates inflados.",
+          name: "Rediseño de sitio",
+          desc: "Reconstruimos tu sitio con tecnología moderna para que cargue rápido, aparezca bien en Google y se conecte con el resto de tus herramientas.",
         },
         {
-          name: "Auditoría SEO Técnica",
-          desc: "Diagnóstico preciso de por qué tu sitio no rankea y exactamente qué arreglar primero. Plan de acción priorizado, no un PDF de 60 páginas que nadie lee.",
+          name: "Auditoría SEO",
+          desc: "Una lista corta de por qué tu sitio no aparece en Google y qué arreglar primero, en orden de impacto.",
         },
         {
-          name: "Optimización GEO Continua",
-          desc: "SEO local más optimización para búsqueda con IA (ChatGPT, Perplexity, Google AI Overviews) para que tus clientes te encuentren donde sea que estén buscando.",
+          name: "Paquete SEO + GEO",
+          desc: "SEO local continuo y configuración para herramientas de búsqueda con IA como ChatGPT, Perplexity y las respuestas de Google, con un reporte mensual.",
         },
       ],
     },
     process: {
-      eyebrow: "Cómo Trabajamos",
-      title: "Audit. Build. Launch.",
+      eyebrow: "Cómo trabajamos",
+      title: "Auditoría, construcción, lanzamiento.",
       steps: [
         {
           n: "01",
-          title: "Audit",
-          desc: "Mapeamos tus fuentes de tráfico, brechas de conversión y posición competitiva. Sabes dónde se fuga el dinero antes de que escribamos una línea de código.",
+          title: "Auditoría",
+          desc: "Revisamos de dónde viene tu tráfico, dónde se van los visitantes y cómo te comparas con la competencia local. Ves los problemas antes de que escribamos código.",
         },
         {
           n: "02",
-          title: "Build",
-          desc: "2–6 semanas. Código a medida, sin templates. Progreso semanal, tú apruebas cada hito clave.",
+          title: "Construcción",
+          desc: "De dos a seis semanas de trabajo a la medida, sin plantillas. Recibes una actualización cada semana y apruebas cada etapa.",
         },
         {
           n: "03",
-          title: "Launch",
-          desc: "Desplegamos, conectamos analítica, CRM y agentes, capacitamos a tu equipo. Ves flujo de leads en días, no en trimestres.",
+          title: "Lanzamiento",
+          desc: "Publicamos el sitio, configuramos las métricas, conectamos tu CRM y tu agente, y le mostramos a tu equipo cómo funciona.",
         },
       ],
     },
     why: {
-      eyebrow: "Por Qué Loucells Core",
-      title: "Construido diferente.",
+      eyebrow: "Por qué Loucells Core",
+      title: "Qué hace distintos a nuestros sitios.",
       items: [
         {
-          title: "Conectado a Tus Agentes",
-          desc: "Cada página, formulario y CTA está construido para entregarle el lead al agente que lo cierra — no para tirarlo en un inbox estático.",
+          title: "Conectado a tu agente",
+          desc: "Cada formulario, chat y botón le pasa el cliente al agente que lo atiende, en lugar de mandarlo a un inbox.",
         },
         {
-          title: "Arquitectura a Medida",
-          desc: "Un stack moderno diseñado para velocidad y escala. Sin parches legacy, sin templates inflados. Software que crece con tu negocio.",
+          title: "Código a la medida",
+          desc: "Hecho con tecnología moderna para que sea rápido. Sin constructores de páginas ni plugins que se acumulan con los años.",
         },
         {
-          title: "Optimizado Para Búsqueda con IA",
-          desc: "Tu sitio no solo rankea en Google. Rankea en ChatGPT, Perplexity y Google AI Overviews — donde los compradores ahora están pidiendo recomendaciones.",
+          title: "Listo para la búsqueda con IA",
+          desc: "Configurado para que Google, ChatGPT y Perplexity puedan leer y citar tu negocio correctamente.",
         },
       ],
     },
   },
   smvModels: {
     meta: {
-      title: "Departamentos de IA — Loucells Core",
+      title: "Departamentos de IA · Loucells Core",
       description:
-        "No es un chatbot. Un departamento entero operando en milisegundos. Agentes de IA especializados y gobernados — nosotros los operamos, tú tienes las llaves.",
+        "Agentes de IA que se encargan de un trabajo cada uno: responder y agendar, preparar cotizaciones o responder reseñas. Nosotros los operamos, tú tienes las llaves.",
     },
     backLabel: "Volver al inicio",
     hero: {
       eyebrow: "Departamentos de IA",
-      title: "No es un chatbot. Un departamento entero, operando en milisegundos.",
+      title: "Un agente para cada trabajo que se te escapa.",
       subtitle:
-        "Cada departamento de IA es un agente especializado diseñado para un solo trabajo y blindado para no salirse del guion. Multicanal, blindado y gobernado todos los días.",
-      primaryCta: "Agenda una llamada gratis",
-      secondaryCta: "Ver los modelos",
+        "Cada agente se encarga de una parte del trabajo, como responder a clientes nuevos o preparar cotizaciones. Sigue tu guion, trabaja en tus herramientas y le pasa a una persona todo lo que no es normal.",
+      primaryCta: "Agenda una llamada gratis de 30 min",
+      secondaryCta: "Prueba las demos",
     },
     problem: {
-      eyebrow: "Las Fugas",
-      title: "Tres fugas operativas que un agente especializado cierra hoy.",
+      eyebrow: "Dónde se escapa el trabajo",
+      title: "Tres lugares donde un negocio de servicio pierde clientes.",
       items: [
         {
           n: "01",
-          title: "Leads Perdidos Fuera de Horario",
-          desc: "El lead que llena el formulario a las 9:47pm rara vez espera hasta el lunes para que le respondas. Para cuando tu equipo contesta, tu competencia ya cerró el trabajo.",
+          title: "Clientes fuera de horario",
+          desc: "Alguien llena tu formulario a las 9:47 PM. Cuando lo llamas el lunes, ya agendó con quien le contestó primero.",
         },
         {
           n: "02",
-          title: "Cotizaciones que Tardan Días",
-          desc: "Cada hora que pasa entre la solicitud y la cotización corta tu tasa de cierre. Cotizar a mano convierte a tu mejor estimador en cuello de botella, no en cerrador.",
+          title: "Cotizaciones que tardan días",
+          desc: "Mientras más espera un cliente por un precio, menos probable es que diga que sí. Cuando una sola persona hace todos los estimados, las cotizaciones se acumulan.",
         },
         {
           n: "03",
-          title: "Reseñas Sin Respuesta",
-          desc: "Una reseña negativa sin respuesta se lee como admisión de culpa. Una reseña positiva sin agradecimiento nunca produce referidos. Las dos matan tu visibilidad local.",
+          title: "Reseñas sin respuesta",
+          desc: "Una mala reseña sin respuesta parece que le das la razón, y los clientes contentos casi nunca dejan reseña si nadie se la pide. Las dos cosas afectan cómo apareces en la búsqueda local.",
         },
       ],
     },
     services: {
-      eyebrow: "Los Modelos",
-      title: "Cuatro puntos de entrada. Una sola capa operativa.",
+      eyebrow: "Los agentes",
+      title: "Elige el que resuelve tu mayor fuga.",
       items: [
         {
           name: "AI Front Desk",
-          desc: "Captura y califica leads entrantes 24/7 en chat web, SMS y WhatsApp. Blindado, atado a tu guion, nunca improvisa. Pasa los leads calificados a tu equipo y descarta el spam sin que tú lo veas.",
+          desc: "Responde y califica a los clientes nuevos por chat web, SMS y WhatsApp, de día y de noche, y los agenda en tu calendario. Se apega a tu guion y le pasa todo lo demás a tu equipo.",
         },
         {
-          name: "Acelerador de Cotizaciones",
-          desc: "Convierte la foto o descripción del cliente en una cotización real y enviable, con tu lógica de precios cerrada. Seguimiento automático, sin números inventados, sin superficie de prompt injection.",
+          name: "Quote Accelerator",
+          desc: "Convierte una foto o una descripción en una cotización con tu lista de precios. Tú la apruebas antes de que salga, y el agente le da seguimiento si el cliente no responde.",
         },
         {
-          name: "Gestor de Reseñas y Reputación",
-          desc: "Monitorea Google, Yelp y Facebook en el tono de tu marca. Redacta respuestas para tu aprobación, escala las negativas en privado y pide reseñas a clientes contentos en el momento exacto en que es más probable que las dejen.",
+          name: "Review Manager",
+          desc: "Revisa Google, Yelp y Facebook, prepara respuestas con tu tono para que las apruebes, atiende en privado a los clientes molestos y les pide reseña a los contentos.",
         },
         {
           name: "Auditoría de Gaps Operativos",
-          desc: "1 semana. Mapeamos dónde tu operación está perdiendo leads, cotizaciones o reseñas — after-hours, fines de semana, follow-up lento. Entregamos un Gap Map de 3-5 páginas + un Trust Stack Risk Snapshot identificando exposiciones de seguridad. Ambos documentos son tuyos. Si firmas un build dentro de 30 días, 50% se acredita.",
+          desc: "Una semana para encontrar dónde pierdes clientes, cotizaciones y reseñas, y qué agente resolvería cada problema. Te quedas con el Gap Map y el Trust Stack Risk Snapshot. Si contratas un proyecto dentro de 30 días, la mitad de lo que pagaste se descuenta.",
         },
       ],
     },
     process: {
-      eyebrow: "Cómo Trabajamos",
-      title: "Audit. Build. Launch.",
+      eyebrow: "Cómo trabajamos",
+      title: "Auditoría, construcción, lanzamiento.",
       steps: [
         {
           n: "01",
-          title: "Audit",
-          desc: "Mapeamos tus canales entrantes, tiempos de respuesta y los momentos exactos donde se fuga ingreso. Ves los números antes de que propongamos un solo agente.",
+          title: "Auditoría",
+          desc: "Revisamos tus canales, cuánto espera la gente una respuesta y dónde se caen los clientes. Ves los números antes de que te recomendemos un agente.",
         },
         {
           n: "02",
-          title: "Build",
-          desc: "3–8 semanas según el modelo. Prompts especializados, guardrails blindados, tu CRM y tus herramientas conectadas. Tú apruebas cada guion y cada integración.",
+          title: "Construcción",
+          desc: "De tres a ocho semanas, según el agente. Escribimos el guion contigo, definimos las reglas y conectamos tu CRM y tus herramientas. Tú apruebas cada parte.",
         },
         {
           n: "03",
-          title: "Launch",
-          desc: "Lanzamos primero en modo sombra, luego en producción. Reportes semanales de gobernanza desde el día uno: qué contestó el agente, qué escaló, qué mejoró.",
+          title: "Lanzamiento",
+          desc: "Primero el agente corre en modo sombra y después sale en vivo. Cada semana recibes un reporte de lo que respondió, lo que le pasó a tu equipo y lo que cambiamos.",
         },
       ],
     },
     why: {
-      eyebrow: "Por Qué Nuestros Agentes",
+      eyebrow: "Por qué nuestros agentes",
       title: "Nosotros operamos el agente. Tú tienes las llaves.",
       items: [
         {
-          title: "Especializados, No Generales",
-          desc: "Cada departamento de IA está construido para un solo trabajo. No un asistente inflado que intenta hacerlo todo y lo hace mal. El AI Front Desk contesta leads. No intenta cotizar ni contestar reseñas. Por eso no falla.",
+          title: "Un trabajo cada uno",
+          desc: "El Front Desk responde a clientes. No intenta cotizar trabajos ni responder reseñas. Un trabajo acotado es más fácil de hacer bien y de revisar.",
         },
         {
-          title: "Gobernados, Sin Alucinaciones",
-          desc: "Lógica de precios bloqueada. Prompts blindados. El agente se queda en el guion, está construido para no inventar información, y enmascara datos sensibles antes de que lleguen al modelo.",
+          title: "Reglas en el código",
+          desc: "Los precios y las políticas están en el código, así que el agente no los puede inventar. Los datos sensibles se enmascaran antes de que el modelo los lea.",
         },
         {
-          title: "Tu Data. Tus Llaves. Tu Decisión.",
-          desc: "Tus datos de clientes viven en tus sistemas — tu CRM, tu QuickBooks, tu storage. El agente corre en nuestra plataforma, pero las API keys están a tu nombre. Cancela mes a mes y te desconectamos limpio: llaves revocadas, data exportada, nada cableado a tu dinero.",
+          title: "Tus datos y tus llaves",
+          desc: "Los datos de tus clientes se quedan en tu CRM, tu QuickBooks y tu almacenamiento. Las API keys están a tu nombre. Puedes cancelar mes a mes y lo desconectamos todo limpio.",
         },
       ],
     },
   },
   integrationControl: {
     meta: {
-      title: "Integración y Control — Loucells Core",
+      title: "Integration & Control · Loucells Core",
       description:
-        "Arquitectura y gobernanza de IA para mid-market. Agentes seguros y operando en semanas, no engagements de consultoría de 6 meses. Diseñado bajo los principios de NIST AI RMF e ISO 42001.",
+        "Arquitectura y gobernanza de IA para empresas medianas. Agentes funcionando y gobernados en semanas, diseñados con los principios de NIST AI RMF e ISO 42001.",
     },
     backLabel: "Volver al inicio",
     hero: {
-      eyebrow: "Integración y Control",
-      title: "IA que tu CTO y tu equipo de compliance van a firmar de verdad.",
+      eyebrow: "Integration & Control",
+      title: "IA que tu CTO y tu equipo de cumplimiento pueden aprobar.",
       subtitle:
-        "Arquitectura y gobernanza de IA nivel empresarial. Agentes seguros y funcionando en semanas, no engagements de consultoría de 6 meses ni PDFs de 200 páginas.",
-      primaryCta: "Agenda una llamada gratis",
-      secondaryCta: "Ver la arquitectura",
+        "Diseñamos y operamos agentes de IA gobernados para empresas medianas: registro de auditoría, control de acceso, enmascaramiento de datos y aprobación humana desde la primera versión.",
+      primaryCta: "Agenda una llamada gratis de 30 min",
+      secondaryCta: "Ver los controles",
       trustStrip:
-        "Arquitectura diseñada bajo los principios de NIST AI RMF e ISO 42001. Estructurada para apoyar el trabajo de SOC 2 readiness de tu equipo interno de compliance.",
+        "Diseñado con los principios de NIST AI RMF e ISO 42001 y estructurado para apoyar el trabajo de preparación SOC 2 de tu propio equipo. Loucells Core no tiene certificación SOC 2.",
     },
     problem: {
-      eyebrow: "Los Riesgos",
-      title: "Los tres riesgos que bloquean tu deployment de IA hoy.",
+      eyebrow: "Los riesgos",
+      title: "Lo que suele frenar la IA dentro de una empresa.",
       items: [
         {
           n: "01",
-          title: "La Amenaza del Shadow AI",
-          desc: "Tu equipo ya está metiendo datos sensibles de la empresa en modelos de IA públicos. Mientras más tardas en gobernarlo, más alto es tu riesgo de filtración.",
+          title: "El equipo ya usa IA pública",
+          desc: "La gente pega datos de clientes y de la empresa en chatbots para sacar el trabajo. Mientras no haya una opción gobernada, eso va a seguir pasando.",
         },
         {
           n: "02",
-          title: "Deuda de Gobernanza",
-          desc: "Desplegar IA sin audit trails ni controles de acceso es como los equipos terminan fallando una auditoría de compliance más adelante.",
+          title: "Sin registro de auditoría",
+          desc: "Un agente sin registro y sin control de acceso es difícil de defender en una revisión de seguridad o en una auditoría.",
         },
         {
           n: "03",
-          title: "La Trampa del SaaS de Compliance",
-          desc: "Las herramientas «wrapper» genéricas no cumplen tu barra interna de seguridad. Necesitas arquitectura propia, no otra suscripción de caja negra.",
+          title: "Herramientas que no puedes revisar",
+          desc: "Muchos productos de IA no muestran qué hacen con tus datos ni por qué respondieron lo que respondieron. Eso es difícil de aprobar.",
         },
       ],
     },
     services: {
-      eyebrow: "El Arsenal",
-      title: "Tres servicios. Un resultado de grado empresarial.",
+      eyebrow: "Servicios",
+      title: "Tres formas de trabajar con nosotros.",
       items: [
         {
-          name: "Auditoría de Seguridad Arquitectónica",
-          desc: "Diagnóstico de 3 semanas mapeando tus flujos de datos, vulnerabilidades y exposición al riesgo, alineado a NIST AI RMF. Te llevas un roadmap de remediación que tu CTO y compliance firman al mismo tiempo.",
+          name: "Auditoría de Arquitectura de Agentes",
+          desc: "Una revisión de tres semanas de tus flujos de datos, tu uso actual de IA y tus riesgos, medidos contra el NIST AI RMF. Recibes un plan que tu CTO y tu equipo de cumplimiento pueden firmar.",
         },
         {
           name: "Implementación de Agente Gobernado",
-          desc: "Agente productivo con audit trail, RBAC, DLP, conocimiento curado y checkpoints human-in-the-loop. Multicanal incluyendo WhatsApp Business. Construido Claude-native, blindado desde el día uno.",
+          desc: "Un agente en producción con registro de auditoría, acceso por roles, enmascaramiento de datos, una base de conocimiento curada y aprobación humana para acciones sensibles. Web, WhatsApp Business, email y Slack. Construido sobre Claude.",
         },
         {
-          name: "Setup de Gobernanza de IA Institucional",
-          desc: "Inventario de IA, perfil NIST AI RMF, políticas de gobernanza, framework de vendors y un kit de evidencia que apoya tu propio ejercicio de SOC 2 readiness. Gobierna tu IA antes de que escale fuera de control.",
+          name: "Gobernanza de IA",
+          desc: "Un inventario de cada herramienta de IA que usas, un perfil NIST AI RMF, políticas escritas, un proceso para evaluar proveedores y un paquete de evidencia para tu propio trabajo de SOC 2.",
         },
       ],
     },
     process: {
-      eyebrow: "El Ciclo Crítico",
-      title: "Audit. Build. Govern.",
+      eyebrow: "Cómo trabajamos",
+      title: "Auditoría, construcción, gobernanza.",
       steps: [
         {
           n: "01",
-          title: "Audit",
-          desc: "Mapeamos tus flujos de datos, identificamos vulnerabilidades y definimos límites operativos estrictos.",
+          title: "Auditoría",
+          desc: "Mapeamos tus flujos de datos, encontramos los puntos débiles y acordamos qué puede y qué no puede hacer el agente.",
         },
         {
           n: "02",
-          title: "Build",
-          desc: "Implementación de arquitectura Claude-native con RBAC, DLP y protocolos de Human-in-the-Loop (HITL).",
+          title: "Construcción",
+          desc: "Construimos sobre Claude con acceso por roles, enmascaramiento de datos y aprobación humana para las acciones riesgosas.",
         },
         {
           n: "03",
-          title: "Govern",
-          desc: "Monitoreo continuo de compliance, registro de audit trail y tuning de performance. Nosotros mantenemos el escudo.",
+          title: "Gobernanza",
+          desc: "Cada mes revisamos los registros, ajustamos el agente y mantenemos los controles al día.",
         },
       ],
     },
     why: {
-      eyebrow: "La Diferencia Loucells Core",
-      title: "Por qué los equipos bajo presión real de compliance eligen Loucells Core.",
+      eyebrow: "Por qué Loucells Core",
+      title: "Por qué trabajan con nosotros los equipos con requisitos de cumplimiento.",
       items: [
         {
-          title: "Velocidad Boutique, Disciplina Empresarial",
-          desc: "Desplegamos con la agilidad de un laboratorio especializado, pero construimos con los protocolos estrictos de seguridad de una consultora Fortune 500.",
+          title: "Equipo pequeño, proceso estricto",
+          desc: "Trabajas directo con quienes construyen el sistema, y cada cambio pasa por revisión y deja registro.",
         },
         {
-          title: "Anthropic / Claude-Native",
-          desc: "Diseñado para seguridad empresarial. Construimos sobre modelos diseñados específicamente para minimizar alucinaciones y maximizar la seguridad de datos.",
+          title: "Construido sobre Claude",
+          desc: "Usamos la API comercial de Anthropic y tus datos no se usan para entrenar sus modelos.",
         },
         {
-          title: "Operado por Nosotros. Controlado por Ti.",
-          desc: "Tus datos y tus llaves siguen siendo tuyos. Nuestro retainer continuo mantiene los controles de gobernanza alineados con los principios actuales de NIST AI RMF y apoya tu propio trabajo de SOC 2 readiness.",
+          title: "Lo operamos nosotros, lo controlas tú",
+          desc: "Tus datos y tus llaves siguen siendo tuyos. El pago mensual mantiene los controles alineados con el NIST AI RMF y apoya tu propio trabajo de SOC 2.",
         },
       ],
     },

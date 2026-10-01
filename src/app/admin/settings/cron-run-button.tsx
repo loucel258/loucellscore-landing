@@ -3,12 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, Loader2, Check, X } from "lucide-react";
+import { useConfirmTap } from "@/components/admin/use-confirm-tap";
 
-/** "Run now" trigger for a single cron, used in the Automation health table. */
+/**
+ * "Run now" trigger for a single cron, used in the Automation health table.
+ * Crons send real messages (reminders, alerts), so it takes two taps.
+ */
 export function CronRunButton({ job }: { job: string }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<"ok" | "err" | null>(null);
+  const confirm = useConfirmTap();
+  const armed = confirm.armed === "run";
 
   async function run() {
     setRunning(true);
@@ -34,10 +40,15 @@ export function CronRunButton({ job }: { job: string }) {
 
   return (
     <button
-      onClick={run}
+      type="button"
+      onClick={() => confirm.tap("run", run)}
       disabled={running}
-      className="inline-flex items-center gap-1 rounded-md border border-white/60 bg-white/70 px-2 py-1 text-[11px] font-medium text-neutral-700 transition-colors hover:bg-white/85 disabled:opacity-50"
-      title="Trigger this cron now"
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+        armed
+          ? "border-rose-300 bg-rose-50 text-rose-700"
+          : "border-neutral-200 bg-white text-neutral-700 hover:bg-white"
+      }`}
+      title={armed ? "Tap again to run this cron now" : "Trigger this cron now"}
     >
       {running ? (
         <Loader2 className="size-3 animate-spin" />
@@ -48,7 +59,7 @@ export function CronRunButton({ job }: { job: string }) {
       ) : (
         <Play className="size-3" />
       )}
-      Run
+      {armed ? "Confirm?" : "Run"}
     </button>
   );
 }

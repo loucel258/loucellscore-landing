@@ -1,6 +1,10 @@
-import { DollarSign, TrendingUp, FileText, Briefcase } from "lucide-react";
+import { DollarSign, TrendingUp, FileText, Briefcase, Gauge } from "lucide-react";
 import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
 import { isAdminAuthed } from "@/lib/admin/auth";
+import { getWorkspaceMetrics, mrrCents } from "@/lib/metrics";
+import { loadClientBase, metricWindowStart } from "@/lib/admin/clients";
+import { buildClientRows } from "@/lib/admin/client-list";
+import { tokensToUsd, formatUsdPrecise } from "@/lib/admin/costs";
 import { formatUsdInt, formatPct } from "@/lib/admin/format";
 import { AuthWall } from "@/components/admin/auth-wall";
 import { PageHeader } from "@/components/admin/page-header";
@@ -12,12 +16,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "Revenue — Loucells Core admin",
+  title: "Revenue · Loucells Core admin",
   robots: { index: false, follow: false },
 };
 
 type AgentRow = {
-  client_legal_name: string | null;
+  workspace_id: string;
+  status: string;
   monthly_retainer_cents: number;
   retainer_active: boolean;
   retainer_activated_at: string | null;
@@ -48,11 +53,11 @@ export default async function RevenuePage() {
     );
   }
 
-  const [agentsRes, paidRes] = await Promise.all([
+  const [agentsRes, paidRes, base] = await Promise.all([
     sb
       .from("client_agents")
       .select(
-        "client_legal_name:engagement_ref, monthly_retainer_cents, retainer_active, retainer_activated_at, retainer_cancelled_at",
+        "workspace_id, status, monthly_retainer_cents, retainer_active, retainer_activated_at, retainer_cancelled_at",
       ),
     sb
       .from("engagements")
@@ -60,23 +65,35 @@ export default async function RevenuePage() {
         "audit_fee_cents, stripe_amount_paid_cents, stripe_paid_at, engagement_type, outcome_at, status",
       )
       .not("stripe_paid_at", "is", null),
+    loadClientBase(sb),
   ]);
 
-  const agents = ((agentsRes.data as unknown) as AgentRow[]) ?? [];
+  const agents = (agentsRes.data as AgentRow[]) ?? [];
   const paidEngagements = ((paidRes.data as EngagementRow[]) ?? []);
 
   // ── KPIs ──────────────────────────────────────────────────────
-  const activeRetainers = agents.filter((a) => a.retainer_active);
-  const totalMrrCents = activeRetainers.reduce(
-    (s, a) => s + (a.monthly_retainer_cents || 0),
-    0,
-  );
+  // MRR has one definition (lib/metrics): active retainers on agents that
+  // aren't archived.
+  const totalMrrCents = mrrCents(agents);
+  const activeRetainers = agents.filter((a) => a.retainer_active && a.status !== "archived");
+
+  // Infra margin, 30 days: retainers against Anthropic token spend of the
+  // agents that bill (admin only).
+  const billing = activeRetainers.map((a) => a.workspace_id);
+  const usage = await getWorkspaceMetrics(sb, billing, metricWindowStart());
+  let tokensIn = 0;
+  let tokensOut = 0;
+  for (const m of usage.values()) {
+    tokensIn += m.tokensIn;
+    tokensOut += m.tokensOut;
+  }
+  const infraUsd = tokensToUsd(tokensIn, tokensOut);
+  const marginPct = totalMrrCents > 0 ? ((totalMrrCents / 100 - infraUsd) / (totalMrrCents / 100)) * 100 : null;
 
   // MoM change: compute "MRR at end of previous month" by removing retainers
   // activated after that date.
   const now = new Date();
   const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(firstOfThisMonth.getTime() - 1);
 
   const mrrAtMonthEnd = (asOf: Date): number =>
@@ -163,20 +180,12 @@ export default async function RevenuePage() {
         ].filter((d) => d.value > 0)
       : [];
 
-  // ── Top 5 clients by MRR ──────────────────────────────────────
-  const byClient = new Map<string, number>();
-  for (const a of activeRetainers) {
-    if (!a.client_legal_name) continue;
-    byClient.set(
-      a.client_legal_name,
-      (byClient.get(a.client_legal_name) ?? 0) +
-        (a.monthly_retainer_cents || 0),
-    );
-  }
-  const topClients: TopClient[] = [...byClient.entries()]
-    .sort((a, b) => b[1] - a[1])
+  // ── Top 5 clients by MRR (grouped by client, all their agents) ──
+  const topClients: TopClient[] = buildClientRows({ ...base, metrics: new Map(), now: now.getTime() })
+    .filter((r) => r.mrrCents > 0)
+    .sort((a, b) => b.mrrCents - a.mrrCents)
     .slice(0, 5)
-    .map(([name, cents]) => ({ name, mrr: cents / 100 }));
+    .map((r) => ({ name: r.name, mrr: r.mrrCents / 100 }));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
@@ -185,7 +194,7 @@ export default async function RevenuePage() {
         subtitle="MRR is the hero metric. Audit + build fees are one-time signals."
       />
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <KpiCard
           label="Total MRR"
           value={formatUsdInt(totalMrrCents / 100)}
@@ -217,6 +226,13 @@ export default async function RevenuePage() {
           tone={momDelta === null ? "neutral" : momDelta >= 0 ? "emerald" : "amber"}
         />
         <KpiCard
+          label="Infra margin · 30d"
+          value={marginPct === null ? "—" : formatPct(marginPct)}
+          sub={`${formatUsdPrecise(infraUsd)} Anthropic tokens`}
+          icon={<Gauge className="size-4" />}
+          tone={marginPct === null ? "neutral" : marginPct >= 75 ? "emerald" : marginPct >= 50 ? "amber" : "rose"}
+        />
+        <KpiCard
           label="Audit fees · Q"
           value={formatUsdInt(auditFeesThisQuarter / 100)}
           sub="this quarter"
@@ -240,7 +256,7 @@ export default async function RevenuePage() {
             icon={<DollarSign className="size-5" />}
             title="No revenue yet"
             description="When your first Stripe payment clears (audit or build) or a retainer activates, the charts populate here."
-            cta={{ label: "Create first engagement", href: "/admin/new-engagement" }}
+            cta={{ label: "Add a client", href: "/admin/clients/new" }}
           />
         </div>
       ) : (

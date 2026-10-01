@@ -11,6 +11,41 @@ import { getAdminSettings } from "@/lib/admin/settings";
  * the audit chain still records every turn's usage, so drift is visible.
  */
 
+/** The subset of Anthropic's `usage` object the budget cares about. */
+export type UsageLike = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+} | null | undefined;
+
+/**
+ * Normalize one Claude response's usage into budget tokens. With prompt
+ * caching on, `input_tokens` only counts the UNCACHED part of the prompt;
+ * the system prompt shows up under cache_creation / cache_read instead.
+ * Counting only `input_tokens` made every cached turn look nearly free, so
+ * the budget under-counted real usage.
+ *
+ * Cache buckets are weighted by their price relative to plain input
+ * (writes 1.25x, reads 0.1x) so the budget keeps tracking spend: counting
+ * a cached 3K-token system prompt at full weight on every turn would burn
+ * the monthly budget several times faster than the money actually spent.
+ */
+const CACHE_WRITE_WEIGHT = 1.25;
+const CACHE_READ_WEIGHT = 0.1;
+
+export function usageTokens(usage: UsageLike): { tokensIn: number; tokensOut: number } {
+  const n = (v: number | null | undefined) => (typeof v === "number" && v > 0 ? v : 0);
+  return {
+    tokensIn: Math.round(
+      n(usage?.input_tokens) +
+        n(usage?.cache_creation_input_tokens) * CACHE_WRITE_WEIGHT +
+        n(usage?.cache_read_input_tokens) * CACHE_READ_WEIGHT,
+    ),
+    tokensOut: n(usage?.output_tokens),
+  };
+}
+
 export async function isBudgetExhausted(
   workspaceId: string,
   monthlyBudget: number,

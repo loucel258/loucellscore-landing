@@ -1,7 +1,8 @@
 import "server-only";
 import { writeAuditEntry } from "@/lib/audit/writer";
 import { normalizeRedactionSummary } from "@/lib/audit/redaction-summary";
-import type { SanitizeResult } from "@/lib/dlp/sanitizer";
+import { sanitize, type SanitizeResult } from "@/lib/dlp/sanitizer";
+import { modelFor } from "@/lib/ai/models";
 
 /**
  * Chat → audit_logs bridge.
@@ -29,8 +30,7 @@ import type { SanitizeResult } from "@/lib/dlp/sanitizer";
  */
 
 const WORKSPACE_ID = "ws_chat_loucel_landing";
-const MODEL_VERSION =
-  process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
+const MODEL_VERSION = modelFor("chat");
 
 type BaseChatAudit = {
   sessionId: string;
@@ -370,7 +370,9 @@ export async function auditEscalationToHuman(
     source: "chat",
     decision: "DENY",
     blocked_by: "agent_hitl_escalation",
-    reason: `escalation:${args.category}|${args.summary.slice(0, 200)}`,
+    // audit_logs is append-only and can never be scrubbed, so the
+    // model-written summary goes in DLP-masked.
+    reason: `escalation:${args.category}|${sanitize(args.summary).sanitized.slice(0, 200)}`,
     sanitized_prompt_hash: "",
   });
 }

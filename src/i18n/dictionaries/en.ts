@@ -135,8 +135,8 @@ export const en: Dictionary = {
     title: "Built To Run. Built To Last.",
     items: [
       {
-        title: "Pays For Itself By Day 90",
-        desc: "We agree the baseline on kickoff — leads recovered, jobs booked, hours saved. By day 90 your agent has paid back its build cost in measurable revenue, or we shut it down. You don't owe a cent more.",
+        title: "Measured From The Start",
+        desc: "At kickoff we write down your starting numbers, like leads answered and jobs booked. Your portal shows the same numbers every week.",
       },
       {
         title: "Built To Survive Volume",
@@ -211,8 +211,8 @@ export const en: Dictionary = {
         a: "We don't post prices here on purpose — every engagement is scoped to what your business actually needs and what's actually broken. A solo contractor and a 30-person medspa get very different builds, and the price reflects that. The chat agent on this page can walk you through approximate ranges if you ask. For exact pricing tied to your specific scope, that comes from a free 30-minute call — no pitch.",
       },
       {
-        q: "When do I see this paying for itself?",
-        a: "Sooner than you'd guess. For a contractor: the system pays its own build cost on the first 2 roofs the agent books that you would have lost by not answering the phone Sunday at 11 PM. For a medspa: 3 to 5 night-shift bookings that didn't slip through. For a restaurant: the first wave of bad reviews handled before they pile up. We agree the baseline on kickoff so payback is measured, not guessed.",
+        q: "How do I know it's working?",
+        a: "At kickoff we record your starting point. Your portal shows how many leads the agent handled and how many it booked, week by week.",
       },
       {
         q: "Can you build AI agents for logistics, construction, or professional service companies in Florida?",
@@ -332,292 +332,292 @@ export const en: Dictionary = {
   },
   webFoundation: {
     meta: {
-      title: "Web Foundation — Loucells Core",
+      title: "Web Foundation · Loucells Core",
       description:
-        "The conversion infrastructure that feeds your AI agents. Custom-built, optimized for AI search.",
+        "Fast websites and local search for service businesses, connected to the AI agent that answers your leads.",
     },
     backLabel: "Back to home",
     hero: {
       eyebrow: "Web Foundation",
-      title: "Your digital salesperson, operating 24/7.",
+      title: "A website that brings in leads your agent can answer.",
       subtitle:
-        "We don't build decorative pages. We build the lead capture and local visibility infrastructure that feeds your AI agents.",
+        "We build fast websites and set up local search, so people find you on Google and in AI search tools. Every form and button hands the lead straight to your agent.",
       primaryCta: "Book a free 30-min call",
-      secondaryCta: "See how it works",
+      secondaryCta: "See what we build",
     },
     problem: {
-      eyebrow: "The Diagnosis",
-      title: "Why your current site is leaking revenue.",
+      eyebrow: "Where sites lose leads",
+      title: "Three reasons a website doesn't bring in work.",
       items: [
         {
           n: "01",
-          title: "Traffic Leak",
-          desc: "Slow load times and broken templates push visitors away before the site even loads. Every second of delay is a customer you'll never see again.",
+          title: "It loads slowly",
+          desc: "Most people leave a page that takes more than a few seconds to load, and on a phone with weak signal that happens fast. They go back to the search results and call someone else.",
         },
         {
           n: "02",
-          title: "Invisible to AI Search",
-          desc: "ChatGPT, Perplexity, and Google AI Overviews are now the search. If your site isn't optimized for them, you're being skipped in the conversations where buyers ask for recommendations.",
+          title: "AI search doesn't mention you",
+          desc: "More customers now ask ChatGPT, Perplexity or Google's AI answers for a recommendation. If your site isn't set up for them, you don't show up in the answer.",
         },
         {
           n: "03",
-          title: "Disconnected From Your Automation",
-          desc: "Most sites live in isolation — they capture a form, then drop it into an inbox you never check. The infrastructure underneath should hand the lead to the agent that closes it.",
+          title: "Leads end up in an inbox",
+          desc: "A contact form that sends an email nobody reads until Monday isn't much better than no form. The lead should go to whoever, or whatever, answers first.",
         },
       ],
     },
     services: {
-      eyebrow: "The Build",
-      title: "What we build for you.",
+      eyebrow: "What we build",
+      title: "Four services, one goal: more calls and bookings.",
       items: [
         {
-          name: "High-Conversion Landing Pages",
-          desc: "Single-purpose pages engineered to turn paid traffic into qualified leads. Mobile-first, wired into your AI Front Desk from day one.",
+          name: "Landing Page Build",
+          desc: "A focused page for your ads or your main service, built for phones first and connected to your AI Front Desk from day one.",
         },
         {
-          name: "Web Infrastructure Redesign",
-          desc: "Full rebuild of your site on a modern stack that loads fast, ranks, and connects to the rest of your automation layer. No legacy patches, no template bloat.",
+          name: "Website Redesign",
+          desc: "We rebuild your site on a modern stack that loads fast, ranks well and connects to the rest of your tools.",
         },
         {
-          name: "Technical SEO Audit",
-          desc: "A precise diagnosis of why your site isn't ranking and exactly what to fix first. Delivered as a prioritized action plan, not a 60-page PDF nobody reads.",
+          name: "SEO Audit",
+          desc: "A short list of why your site doesn't rank and what to fix first, in order of impact.",
         },
         {
-          name: "Continuous GEO Optimization",
-          desc: "Local SEO plus AI search optimization (ChatGPT, Perplexity, Google AI Overviews) so customers find you wherever they're looking.",
+          name: "SEO + GEO Package",
+          desc: "Ongoing local SEO plus setup for AI search tools like ChatGPT, Perplexity and Google's AI answers, with a monthly report.",
         },
       ],
     },
     process: {
-      eyebrow: "How We Work",
-      title: "Audit. Build. Launch.",
+      eyebrow: "How we work",
+      title: "Audit, build, launch.",
       steps: [
         {
           n: "01",
           title: "Audit",
-          desc: "We map your traffic sources, conversion gaps, and competitive position. You know exactly where the money is leaking before we write a line of code.",
+          desc: "We look at where your traffic comes from, where visitors drop off and how you compare to local competitors. You see the problems before we write any code.",
         },
         {
           n: "02",
           title: "Build",
-          desc: "2–6 weeks. Custom code, no templates. Weekly progress, you approve every key milestone.",
+          desc: "Two to six weeks of custom work, no templates. You get a weekly update and approve each milestone.",
         },
         {
           n: "03",
           title: "Launch",
-          desc: "We deploy, wire up analytics, connect your CRM and agents, and train your team. You see lead flow within days, not quarters.",
+          desc: "We publish the site, set up analytics, connect your CRM and your agent, and show your team how it works.",
         },
       ],
     },
     why: {
       eyebrow: "Why Loucells Core",
-      title: "Built different.",
+      title: "What makes our sites different.",
       items: [
         {
-          title: "Wired To Your Agents",
-          desc: "Every page, form, and CTA is built to hand the lead off to the agent that closes it — not drop it into a static inbox.",
+          title: "Connected to your agent",
+          desc: "Every form, chat and button sends the lead to the agent that answers it, instead of to an inbox.",
         },
         {
-          title: "Custom Architecture",
-          desc: "A modern stack engineered for speed and scale. No legacy patches, no template bloat. Software that grows with your business.",
+          title: "Custom code",
+          desc: "Built on a modern stack for speed. No page builders, no plugins piling up over the years.",
         },
         {
-          title: "Optimized For AI Search",
-          desc: "Your site doesn't just rank in Google. It ranks in ChatGPT, Perplexity, and Google AI Overviews — where buyers are actually asking for recommendations now.",
+          title: "Ready for AI search",
+          desc: "Set up so Google, ChatGPT and Perplexity can read and cite your business correctly.",
         },
       ],
     },
   },
   smvModels: {
     meta: {
-      title: "AI Departments — Loucells Core",
+      title: "AI Departments · Loucells Core",
       description:
-        "Not a chatbot. An entire department operating in milliseconds. Specialized, governed AI agents — we run them, you hold the keys.",
+        "AI agents that each handle one job for your business: answering and booking, drafting quotes, or replying to reviews. We run them, you hold the keys.",
     },
     backLabel: "Back to home",
     hero: {
       eyebrow: "AI Departments",
-      title: "Not a chatbot. An entire department, operating in milliseconds.",
+      title: "One agent for each job that keeps slipping.",
       subtitle:
-        "Each AI department is a specialized agent engineered for one job and kept on-script by hardened guardrails. Multi-channel, governed every single day.",
+        "Each agent handles one part of the work, like answering new leads or drafting quotes. It follows your script, works in your tools, and hands anything unusual to a person.",
       primaryCta: "Book a free 30-min call",
-      secondaryCta: "See the models",
+      secondaryCta: "Try the demos",
     },
     problem: {
-      eyebrow: "The Leaks",
-      title: "Three operational leaks a specialized agent closes today.",
+      eyebrow: "Where the work slips",
+      title: "Three places service businesses lose customers.",
       items: [
         {
           n: "01",
-          title: "Leads Lost After Hours",
-          desc: "The lead that fills out the form at 9:47pm rarely waits until Monday for your callback. By the time your team replies, your competitor already booked the job.",
+          title: "Leads after hours",
+          desc: "Someone fills out your form at 9:47 PM. By the time you call back on Monday, they've booked with whoever answered first.",
         },
         {
           n: "02",
-          title: "Quotes That Take Days",
-          desc: "Every hour that passes between request and quote cuts your win rate. Manual estimating means your best estimator becomes the bottleneck instead of the closer.",
+          title: "Quotes that take days",
+          desc: "The longer a customer waits for a price, the less likely they are to say yes. When one person writes every estimate, quotes pile up behind them.",
         },
         {
           n: "03",
-          title: "Reviews Left Unanswered",
-          desc: "Negative reviews without a reply read like an admission of guilt. Positive reviews without a thank you never get followed by referrals. Both kill your local visibility.",
+          title: "Reviews with no reply",
+          desc: "An unanswered bad review looks like you agree with it, and happy customers rarely leave a review unless someone asks. Both affect how you show up in local search.",
         },
       ],
     },
     services: {
-      eyebrow: "The Models",
-      title: "Four entry paths. One operating layer.",
+      eyebrow: "The agents",
+      title: "Pick the one that fixes your biggest leak.",
       items: [
         {
           name: "AI Front Desk",
-          desc: "Captures and qualifies inbound leads 24/7 across web chat, SMS, and WhatsApp. Hardened, locked to your script, never improvises. Routes warm leads to your team, dismisses spam without you ever seeing it.",
+          desc: "Answers and qualifies new leads on web chat, SMS and WhatsApp, day and night, and books them on your calendar. It sticks to your script and sends anything else to your team.",
         },
         {
           name: "Quote Accelerator",
-          desc: "Turns a customer photo or description into a real, sendable quote with your pricing rules locked in. Auto-follow-up, no hallucinated numbers, no prompt-injection surface.",
+          desc: "Turns a photo or a description into a quote from your price list. You approve it before it goes out, and the agent follows up if the customer goes quiet.",
         },
         {
-          name: "Review & Reputation Manager",
-          desc: "Monitors Google, Yelp, and Facebook in your brand voice. Drafts replies for approval, escalates negative reviews privately, and asks happy customers to leave a review at the moment they're most likely to do it.",
+          name: "Review Manager",
+          desc: "Watches Google, Yelp and Facebook, drafts replies in your tone for you to approve, handles unhappy customers in private and asks happy ones for a review.",
         },
         {
           name: "Operations Gap Audit",
-          desc: "1 week. We map where your operation is leaking leads, quotes, or reviews — after-hours, weekends, slow follow-up. Delivered as a 3-5 page Gap Map + a Trust Stack Risk Snapshot identifying security exposures. Both documents are yours to keep. If you sign for a build within 30 days, 50% credits toward it.",
+          desc: "One week to find where you lose leads, quotes and reviews, and which agent would fix each problem. You keep the Gap Map and the Trust Stack Risk Snapshot. If you sign a build within 30 days, half the fee goes toward it.",
         },
       ],
     },
     process: {
-      eyebrow: "How We Work",
-      title: "Audit. Build. Launch.",
+      eyebrow: "How we work",
+      title: "Audit, build, launch.",
       steps: [
         {
           n: "01",
           title: "Audit",
-          desc: "We map your inbound channels, response times, and the exact moments revenue is leaking. You see the math before we propose a single agent.",
+          desc: "We look at your channels, how long people wait for a reply and where leads drop off. You see the numbers before we recommend an agent.",
         },
         {
           n: "02",
           title: "Build",
-          desc: "3–8 weeks depending on the model. Specialized prompts, locked guardrails, your CRM and tools wired in. You approve every script and every integration.",
+          desc: "Three to eight weeks, depending on the agent. We write the script with you, set the rules and connect your CRM and tools. You approve each part.",
         },
         {
           n: "03",
           title: "Launch",
-          desc: "We deploy in shadow mode first, then go live. Weekly governance reports from day one: what the agent answered, what it escalated, what it improved.",
+          desc: "The agent runs in shadow mode first, then goes live. Every week you get a report on what it answered, what it passed to your team and what we changed.",
         },
       ],
     },
     why: {
-      eyebrow: "Why Loucells Core Agents",
+      eyebrow: "Why our agents",
       title: "We run the agent. You hold the keys.",
       items: [
         {
-          title: "Specialized, Not General",
-          desc: "Each AI department is built for one job. No bloated assistant trying to do everything badly. The AI Front Desk answers leads. It doesn't try to quote or reply to reviews. That's why it doesn't fail.",
+          title: "One job each",
+          desc: "The Front Desk answers leads. It doesn't try to quote jobs or reply to reviews. A narrow job is easier to get right and easier to check.",
         },
         {
-          title: "Governed, Not Hallucinating",
-          desc: "Locked pricing logic. Hardened prompts. The agent stays on-script, is built not to invent information, and masks sensitive data before it reaches the model.",
+          title: "Rules in code",
+          desc: "Prices and policies are set in code, so the agent can't make them up. Sensitive details are masked before the AI model sees them.",
         },
         {
-          title: "Your Data. Your Keys. Your Call.",
-          desc: "Your customer data stays in your systems — your CRM, your QuickBooks, your storage. The agent runs on our platform, but the API keys are in your name. Cancel month-to-month and we disconnect you clean: keys revoked, data exported, nothing left wired to your money.",
+          title: "Your data and your keys",
+          desc: "Your customer data stays in your CRM, QuickBooks and storage. The API keys are in your name. You can cancel month to month, and we disconnect everything cleanly.",
         },
       ],
     },
   },
   integrationControl: {
     meta: {
-      title: "Integration & Control — Loucells Core",
+      title: "Integration & Control · Loucells Core",
       description:
-        "Mid-market AI architecture and governance. Secure, functioning agents in weeks, not 6-month consulting engagements. Designed under the principles of NIST AI RMF and ISO 42001.",
+        "AI architecture and governance for mid-sized companies. Working, governed agents in weeks, designed around the NIST AI RMF and ISO 42001 principles.",
     },
     backLabel: "Back to home",
     hero: {
       eyebrow: "Integration & Control",
-      title: "AI that your CTO and compliance team will actually sign off on.",
+      title: "AI your CTO and your compliance team can both approve.",
       subtitle:
-        "Enterprise-grade AI architecture and governance. Get secure, functioning agents in weeks, not 6-month consulting engagements or 200-page PDFs.",
+        "We design and run governed AI agents for mid-sized companies: audit trail, access control, data masking and human approval built in from the first version.",
       primaryCta: "Book a free 30-min call",
-      secondaryCta: "See the architecture",
+      secondaryCta: "See the controls",
       trustStrip:
-        "Architecture designed under the principles of NIST AI RMF and ISO 42001. Structured to support your internal compliance team's SOC 2 readiness work.",
+        "Designed around the NIST AI RMF and ISO 42001 principles, and structured to support your own team's SOC 2 readiness work. Loucells Core is not SOC 2 certified.",
     },
     problem: {
-      eyebrow: "The Risks",
-      title: "The three risks blocking your AI deployment today.",
+      eyebrow: "The risks",
+      title: "What usually blocks AI inside a company.",
       items: [
         {
           n: "01",
-          title: "The Shadow AI Threat",
-          desc: "Your team is already feeding sensitive company data into public AI models. The longer you wait to govern it, the higher your breach risk.",
+          title: "Staff already use public AI tools",
+          desc: "People paste customer and company data into chatbots to get work done. Until there's a governed option, that keeps happening.",
         },
         {
           n: "02",
-          title: "Governance Debt",
-          desc: "Deploying AI without audit trails or access controls is how teams fail a compliance audit down the line.",
+          title: "No audit trail",
+          desc: "An agent with no log and no access control is hard to defend in a security review or an audit.",
         },
         {
           n: "03",
-          title: "The SaaS Compliance Trap",
-          desc: "Generic «wrapper» tools don't meet your internal security bar. You need proprietary architecture, not another black-box subscription.",
+          title: "Tools you can't inspect",
+          desc: "Many AI products don't show what they do with your data or why they answered the way they did. That's hard to sign off on.",
         },
       ],
     },
     services: {
-      eyebrow: "The Arsenal",
-      title: "Three services. One enterprise-grade outcome.",
+      eyebrow: "Services",
+      title: "Three ways to work with us.",
       items: [
         {
-          name: "Architecture Security Audit",
-          desc: "3-week diagnostic mapping your data flows, vulnerabilities, and risk exposure aligned to NIST AI RMF. You walk away with a remediation roadmap your CTO and compliance team both sign.",
+          name: "Agent Architecture Audit",
+          desc: "A three-week review of your data flows, current AI use and risks, measured against the NIST AI RMF. You get a roadmap your CTO and compliance team can both sign.",
         },
         {
           name: "Governed Agent Implementation",
-          desc: "Production-grade agent with audit trail, RBAC, DLP, grounded knowledge, and human-in-the-loop checkpoints. Multi-channel including WhatsApp Business. Built Claude-native, hardened from day one.",
+          desc: "A production agent with an audit trail, role-based access, data masking, a curated knowledge base and human approval for sensitive actions. Web, WhatsApp Business, email and Slack. Built on Claude.",
         },
         {
-          name: "Institutional AI Governance Setup",
-          desc: "AI inventory, NIST AI RMF profile, governance policies, vendor framework, and an evidence kit that supports your own SOC 2 readiness exercise. Govern your AI before it scales beyond control.",
+          name: "AI Governance Setup",
+          desc: "An inventory of every AI tool you use, a NIST AI RMF profile, written policies, a vendor review process and an evidence kit for your own SOC 2 work.",
         },
       ],
     },
     process: {
-      eyebrow: "The Critical Lifecycle",
-      title: "Audit. Build. Govern.",
+      eyebrow: "How we work",
+      title: "Audit, build, govern.",
       steps: [
         {
           n: "01",
           title: "Audit",
-          desc: "We map your data flows, identify vulnerabilities, and define strict operational boundaries.",
+          desc: "We map your data flows, find the weak points and agree on what the agent may and may not do.",
         },
         {
           n: "02",
           title: "Build",
-          desc: "Implementation of Claude-native architecture with RBAC, DLP, and human-in-the-loop (HITL) protocols.",
+          desc: "We build on Claude with role-based access, data masking and human approval for risky actions.",
         },
         {
           n: "03",
           title: "Govern",
-          desc: "Continuous compliance monitoring, audit trail logging, and performance tuning. We maintain the shield.",
+          desc: "Every month we review the logs, tune the agent and keep the controls current.",
         },
       ],
     },
     why: {
-      eyebrow: "The Loucells Core Difference",
-      title: "Why teams under real compliance pressure pick Loucells Core.",
+      eyebrow: "Why Loucells Core",
+      title: "Why teams with compliance requirements work with us.",
       items: [
         {
-          title: "Boutique Speed, Enterprise Discipline",
-          desc: "We deploy with the agility of a specialized lab, but build with the strict security protocols of a Fortune 500 consultancy.",
+          title: "Small team, strict process",
+          desc: "You work directly with the people building the system, and every change goes through review and leaves a record.",
         },
         {
-          title: "Anthropic / Claude-Native",
-          desc: "Engineered for enterprise safety. We build on models designed specifically to minimize hallucinations and maximize data security.",
+          title: "Built on Claude",
+          desc: "We use Anthropic's commercial API, and your data isn't used to train their models.",
         },
         {
-          title: "Run by Us. Controlled by You.",
-          desc: "Your data and your keys stay yours. Our ongoing retainer keeps the governance controls aligned with current NIST AI RMF principles and supports your own SOC 2 readiness work.",
+          title: "Run by us, controlled by you",
+          desc: "Your data and your keys stay yours. The monthly retainer keeps the controls aligned with the NIST AI RMF and supports your own SOC 2 work.",
         },
       ],
     },

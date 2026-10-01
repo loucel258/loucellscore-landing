@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Lock } from "lucide-react";
+import { safeAdminNext } from "@/lib/admin/safe-next";
 
 export function LoginForm({ nextPath }: { nextPath: string }) {
   const [password, setPassword] = useState("");
@@ -19,7 +20,8 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
         body: JSON.stringify({ password }),
       });
       if (res.ok) {
-        window.location.href = nextPath;
+        // Re-checked client-side too: this is the sink that navigates.
+        window.location.href = safeAdminNext(nextPath);
         return;
       }
       if (res.status === 429) setError("Too many attempts. Try again later.");
@@ -34,7 +36,7 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
 
   return (
     <div className="mx-auto mt-20 max-w-sm px-4">
-      <div className="rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-6">
+      <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-6">
         <div className="inline-flex size-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-500">
           <Lock className="size-4" />
         </div>

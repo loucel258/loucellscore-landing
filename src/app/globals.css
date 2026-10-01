@@ -32,6 +32,25 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
 
+  /* Home "Night shift" system (2026-09 redesign). Values live under
+     .lc-home so subpages keep the slate system until they migrate. */
+  --color-paper: var(--lc-paper);
+  --color-paper-2: var(--lc-paper-2);
+  --color-paper-3: var(--lc-paper-3);
+  --color-ink: var(--lc-ink);
+  --color-ink-2: var(--lc-ink-2);
+  --color-ink-3: var(--lc-ink-3);
+  --color-rule: var(--lc-rule);
+  --color-night: var(--lc-night);
+  --color-night-2: var(--lc-night-2);
+  --color-bone: var(--lc-bone);
+  --color-bone-2: var(--lc-bone-2);
+  --color-bone-3: var(--lc-bone-3);
+  --color-dawn: var(--lc-dawn);
+  --color-dawn-deep: var(--lc-dawn-deep);
+  --color-live: var(--lc-live);
+  --font-serif: var(--font-instrument-serif);
+
   --color-cyan: var(--accent-cyan);
   --color-cyan-glow: var(--accent-cyan-glow);
   --color-cyan-deep: var(--accent-cyan-deep);
@@ -360,4 +379,284 @@
   outline: 2px solid oklch(0.7 0.12 220);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* =====================================================================
+   HOME — "Night shift" system (2026-09 redesign)
+   Paper + ink by day, night + bone in the hero, one sunrise accent.
+   Contrast (WCAG): ink/paper 15.9, ink-2/paper 8.3, ink-3/paper 5.1,
+   dawn-deep/paper 5.2, ink on dawn 6.1, bone-2/night 9.2, bone-3/night 5.4.
+   Never paper text on dawn (2.6).
+   ===================================================================== */
+.lc-home,
+.lc-app {
+  --lc-paper: #f2eee6;
+  --lc-paper-2: #e9e3d8;
+  --lc-paper-3: #ddd5c7;
+  --lc-ink: #17140f;
+  --lc-ink-2: #4a443b;
+  --lc-ink-3: #6a6358;
+  --lc-rule: rgba(23, 20, 15, 0.14);
+  --lc-night: #0b0d11;
+  --lc-night-2: #141821;
+  --lc-bone: #eee8dd;
+  --lc-bone-2: #b9b2a6;
+  --lc-bone-3: #8c867c;
+  --lc-dawn: #e4773a;
+  --lc-dawn-deep: #a4460f;
+  --lc-live: #62d6c9;
+  --lc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lc-home {
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  background: var(--lc-paper);
+  color: var(--lc-ink);
+}
+.lc-home ::selection {
+  background: color-mix(in oklab, var(--lc-dawn) 45%, transparent);
+  color: var(--lc-ink);
+}
+.lc-home :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--lc-dawn);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@layer utilities {
+  .lc-display {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(3rem, 8.2vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.025em;
+  }
+  .lc-h2 {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2.4rem, 5.4vw, 4.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+  }
+  .lc-h3 {
+    font-size: clamp(1.25rem, 2vw, 1.5rem);
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    font-weight: 500;
+  }
+  .lc-lead {
+    font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+    line-height: 1.55;
+  }
+  .lc-label {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .lc-mono {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .lc-wrap {
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .lc-wrap { padding-inline: 2rem; }
+  }
+  @media (min-width: 1024px) {
+    .lc-wrap { padding-inline: 3rem; }
+  }
+}
+
+/* Film grain over the hero media: hides upscale softness, reads as film. */
+.lc-grain {
+  pointer-events: none;
+  position: absolute;
+  inset: -50%;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 1.2 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: lc-grain 1.2s steps(6) infinite;
+}
+@keyframes lc-grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -4%); }
+  60% { transform: translate(-4%, -2%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-grain { animation: none; }
+}
+
+/* Leak math sliders */
+.lc-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.lc-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--lc-ink) var(--pct), var(--lc-paper-3) var(--pct));
+}
+.lc-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--lc-paper-3);
+}
+.lc-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--lc-ink);
+}
+.lc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -11px;
+  border-radius: 999px;
+  background: var(--lc-dawn);
+  border: 3px solid var(--lc-paper);
+  box-shadow: 0 0 0 1px var(--lc-ink), 0 6px 16px -6px rgba(23, 20, 15, 0.5);
+  transition: transform 160ms var(--lc-ease);
+}
+.lc-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--lc-dawn);
+  border: 3px solid var(--lc-paper);
+  box-shadow: 0 0 0 1px var(--lc-ink);
+}
+.lc-range:active::-webkit-slider-thumb { transform: scale(1.12); }
+.lc-range:focus-visible { outline: none; }
+.lc-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--lc-ink), 0 0 0 5px color-mix(in oklab, var(--lc-dawn) 45%, transparent); }
+
+
+/* =====================================================================
+   APP — "Night shift" for /portal and /admin (2026-09-30)
+   Night sidebar, paper workspace, white sheets for cards, dawn accent.
+   The old pages were written against Tailwind's default palettes
+   (neutral / cyan / violet / emerald / amber / rose). Tailwind v4 emits
+   those as CSS variables, so inside .lc-app they are re-pointed at the
+   new system instead of rewriting ~700 class names:
+     neutral → warm ink scale      cyan    → dawn (the accent)
+     violet  → night blue          emerald → teal (good)
+     amber   → ochre (attention)   rose/red → brick (critical)
+   Contrast on white: neutral-400 5.0, neutral-500 5.6, cyan-700 5.6,
+   emerald-700 7.4, rose-700 8.0, amber-700 7.0, violet-700 11.2.
+   White text on cyan-600 4.9, on emerald-600 6.3 (never on cyan-500: 3.0).
+   ===================================================================== */
+.lc-app {
+  --lc-sheet: #fffdfa;
+  --color-white: #fffdfa;
+
+  --color-neutral-50: #f7f4ee;
+  --color-neutral-100: #efeae1;
+  --color-neutral-200: #e2dccf;
+  --color-neutral-300: #cbc3b4;
+  --color-neutral-400: #736c61;
+  --color-neutral-500: #645e54;
+  --color-neutral-600: #554f46;
+  --color-neutral-700: #4a443b;
+  --color-neutral-800: #2c2822;
+  --color-neutral-900: #17140f;
+  --color-neutral-950: #0f0d0a;
+
+  --color-cyan-50: #fcf1e8;
+  --color-cyan-100: #f8e0cd;
+  --color-cyan-200: #f1c6a4;
+  --color-cyan-300: #eaa877;
+  --color-cyan-400: #e8925b;
+  --color-cyan-500: #e4773a;
+  --color-cyan-600: #b3541c;
+  --color-cyan-700: #9a440f;
+  --color-cyan-800: #7d370c;
+  --color-cyan-900: #5f2909;
+
+  --color-violet-50: #eef0f4;
+  --color-violet-100: #dfe3ea;
+  --color-violet-200: #c3cad6;
+  --color-violet-300: #9aa5b8;
+  --color-violet-400: #6f7c94;
+  --color-violet-500: #4a5872;
+  --color-violet-600: #3b4760;
+  --color-violet-700: #2f3a50;
+  --color-violet-800: #232c3d;
+
+  --color-emerald-50: #e8f3f1;
+  --color-emerald-100: #d0e8e4;
+  --color-emerald-200: #a6d3cb;
+  --color-emerald-300: #74b8ad;
+  --color-emerald-400: #3f9a8d;
+  --color-emerald-500: #1f8577;
+  --color-emerald-600: #146b62;
+  --color-emerald-700: #11594f;
+  --color-emerald-800: #0d463e;
+  --color-emerald-900: #0a352f;
+
+  --color-amber-50: #fbf4e4;
+  --color-amber-100: #f6e7c4;
+  --color-amber-200: #eed39a;
+  --color-amber-300: #e3b965;
+  --color-amber-400: #d39d37;
+  --color-amber-500: #b9821d;
+  --color-amber-600: #946613;
+  --color-amber-700: #7a540f;
+  --color-amber-800: #5f410c;
+  --color-amber-900: #473109;
+
+  --color-rose-50: #fbeeeb;
+  --color-rose-100: #f6dbd5;
+  --color-rose-200: #edb9ae;
+  --color-rose-300: #e09180;
+  --color-rose-400: #cf6650;
+  --color-rose-500: #b8432c;
+  --color-rose-600: #9b2c1b;
+  --color-rose-700: #8a2617;
+  --color-rose-800: #6e1e12;
+  --color-red-50: #fbeeeb;
+  --color-red-100: #f6dbd5;
+  --color-red-500: #b8432c;
+  --color-red-600: #9b2c1b;
+  --color-red-700: #8a2617;
+
+  --color-slate-100: #eee8dd;
+  --color-slate-200: #e2dccf;
+  --color-slate-300: #cfc8bc;
+  --color-slate-400: #a39c90;
+  --color-slate-700: #4a443b;
+  --color-slate-900: #17140f;
+  --color-slate-950: #0b0d11;
+
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  background: var(--lc-paper);
+  color: var(--lc-ink);
+}
+.lc-app ::selection {
+  background: color-mix(in oklab, var(--lc-dawn) 40%, transparent);
+}
+/* One page title style everywhere: the display serif. */
+.lc-app main h1 {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+  font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+}
+.lc-app .tabular-nums,
+.lc-app .font-mono {
+  font-variant-numeric: tabular-nums;
 }

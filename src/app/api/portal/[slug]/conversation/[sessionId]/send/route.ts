@@ -6,6 +6,7 @@ import { rateLimit } from "@/lib/rate-limit/limiter";
 import { encryptMessage } from "@/lib/portal/encrypt";
 import { sendEmail } from "@/lib/notify/resend";
 import { writeAuditEntry } from "@/lib/audit/writer";
+import { subjectSafe, textToEmailHtml } from "@/lib/portal/html";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,9 +24,14 @@ function getClientIp(req: Request): string {
 /**
  * POST /api/portal/[slug]/conversation/[sessionId]/send
  *
- * Owner take-over: append a manual message to a conversation as if the
- * agent sent it, pause the agent for that session, and try to deliver
- * the message to the visitor's email if we have it on file.
+ * Owner take-over: email the owner's reply to the visitor, record it in
+ * the transcript, and pause the agent for that session.
+ *
+ * Delivery is honest: the only channel for a manual reply is the email on
+ * the session's lead (scoped to this engagement). No email on file →
+ * 409 no_contact, nothing is stored. Email send fails → 502 email_failed,
+ * nothing is stored and the agent keeps running, so the transcript never
+ * shows a reply the customer did not get.
  */
 export async function POST(
   req: Request,
@@ -79,8 +85,34 @@ export async function POST(
   }
   const workspaceId = (existingMsg as { workspace_id: string }).workspace_id;
 
-  // Persist the owner's message as if the agent sent it (tool_summary
-  // labels it so the Bandeja UI can render the take-over marker).
+  // The visitor's email, from a lead of THIS engagement only (session ids
+  // are not unique across tenants).
+  const { data: lead } = await sb
+    .from("leads")
+    .select("email")
+    .eq("session_id", sessionId)
+    .eq("engagement_id", engagementId)
+    .neq("email", "")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const to = (lead as { email: string | null } | null)?.email?.trim();
+  if (!to) {
+    return NextResponse.json({ ok: false, error: "no_contact" }, { status: 409 });
+  }
+
+  const sent = await sendEmail({
+    to,
+    subject: `Follow-up from ${subjectSafe(displayName)}`,
+    html: textToEmailHtml(body.text),
+    text: body.text,
+  });
+  if (!sent.ok) {
+    return NextResponse.json({ ok: false, error: "email_failed" }, { status: 502 });
+  }
+
+  // Record the reply as an agent turn (tool_summary marks it as the
+  // owner's so the Bandeja renders the take-over style).
   const expiresAt = new Date(Date.now() + 90 * 86400_000).toISOString();
   const { error: insertErr } = await sb
     .from("conversation_messages")
@@ -94,7 +126,9 @@ export async function POST(
       expires_at: expiresAt,
     });
   if (insertErr) {
-    return NextResponse.json({ ok: false, error: "insert_failed" }, { status: 500 });
+    // The email already went out: report the delivery, don't invite a
+    // second send. The gap is in the transcript only.
+    console.error("[portal/takeover] transcript insert failed:", insertErr.message);
   }
 
   // Mark the session paused so the chat agent stands down on its next turn.
@@ -111,24 +145,6 @@ export async function POST(
       { onConflict: "session_id" },
     );
 
-  // Best-effort: email the visitor if we have their address from a linked lead
-  const { data: lead } = await sb
-    .from("leads")
-    .select("email, name")
-    .eq("session_id", sessionId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  let emailDelivered = false;
-  if (lead && (lead as { email: string }).email) {
-    const sent = await sendEmail({
-      to: (lead as { email: string }).email,
-      subject: `Follow-up from ${displayName}`,
-      html: `<div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;line-height:1.55;color:#111">${body.text.replace(/\n/g, "<br>")}</div>`,
-    });
-    if (sent.ok) emailDelivered = true;
-  }
-
   // Audit trail
   await writeAuditEntry({
     request_id: crypto.randomUUID(),
@@ -140,10 +156,10 @@ export async function POST(
     sanitized_prompt_hash: "",
     decision: "ALLOW",
     blocked_by: null,
-    reason: `take_over_message:${emailDelivered ? "emailed" : "queued"}`,
+    reason: "take_over_message:emailed",
   });
 
-  return NextResponse.json({ ok: true, emailDelivered });
+  return NextResponse.json({ ok: true, emailDelivered: true, delivery: "emailed" });
 }
 
 /**

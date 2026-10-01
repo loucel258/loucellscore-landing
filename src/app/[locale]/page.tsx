@@ -1,23 +1,49 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLocale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { ScrollProgress } from "@/components/scroll-progress";
-import { Nav } from "@/components/nav";
-import { Hero } from "@/components/sections/hero";
-import { LogosMarquee } from "@/components/sections/logos-marquee";
-import { SmsDemo } from "@/components/sections/sms-demo";
-import { Manifesto } from "@/components/sections/manifesto";
-import { Offer } from "@/components/sections/offer";
-import { Templates } from "@/components/sections/templates";
-import { WhyUs } from "@/components/sections/why-us";
-import { Process } from "@/components/sections/process";
-import { Architecture } from "@/components/sections/architecture";
-import { FAQ } from "@/components/sections/faq";
-import { CTA } from "@/components/sections/cta";
-import { ContactForm } from "@/components/sections/contact-form";
-import { TrustStackPdfCta } from "@/components/sections/trust-stack-pdf-cta";
-import { Footer } from "@/components/sections/footer";
+import { isLocale, locales } from "@/i18n/config";
+import { siteConfig } from "@/lib/site-config";
+import { SiteShell } from "@/components/site/site-shell";
+import { getHomeCopy } from "@/components/home/copy";
+import { NightHero } from "@/components/home/night-hero";
+import { LeakMath } from "@/components/home/leak-math";
+import { Departments } from "@/components/home/departments";
+import { ControlRoom } from "@/components/home/control-room";
+import { HowItStarts } from "@/components/home/how-it-starts";
+import { HomeFaq } from "@/components/home/home-faq";
+import { Tonight } from "@/components/home/tonight";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const { meta } = getHomeCopy(locale);
+  return {
+    title: meta.title,
+    description: meta.description,
+    alternates: {
+      canonical: `/${locale}`,
+      languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
+    },
+    openGraph: {
+      type: "website",
+      url: `${siteConfig.url}/${locale}`,
+      title: meta.title,
+      description: meta.description,
+      siteName: siteConfig.name,
+      locale: locale === "es" ? "es_US" : "en_US",
+      images: [{ url: siteConfig.ogImage, width: 1200, height: 630, alt: siteConfig.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: meta.title,
+      description: meta.description,
+      images: [siteConfig.ogImage],
+    },
+  };
+}
 
 export default async function HomePage({
   params,
@@ -26,29 +52,17 @@ export default async function HomePage({
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const dict = getDictionary(locale);
+  const copy = getHomeCopy(locale);
 
   return (
-    <>
-      <SmoothScroll />
-      <ScrollProgress />
-      <Nav locale={locale} dict={dict} />
-      <main className="relative bg-bg">
-        <Hero dict={dict} />
-        <LogosMarquee locale={locale} />
-        <SmsDemo dict={dict} />
-        <Offer dict={dict} />
-        <Templates dict={dict} />
-        <Manifesto dict={dict} />
-        <WhyUs dict={dict} />
-        <Process dict={dict} />
-        <Architecture dict={dict} locale={locale} />
-        <FAQ dict={dict} />
-        <CTA dict={dict} />
-        <ContactForm locale={locale} />
-        <TrustStackPdfCta locale={locale} />
-        <Footer dict={dict} locale={locale} />
-      </main>
-    </>
+    <SiteShell locale={locale}>
+      <NightHero copy={copy.hero} />
+      <LeakMath copy={copy.math} locale={locale} />
+      <Departments copy={copy.departments} />
+      <ControlRoom copy={copy.control} />
+      <HowItStarts copy={copy.start} locale={locale} />
+      <HomeFaq copy={copy.faq} />
+      <Tonight copy={copy.tonight} locale={locale} />
+    </SiteShell>
   );
 }

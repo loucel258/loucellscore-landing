@@ -7,17 +7,18 @@ import { formatUsdInt } from "@/lib/admin/format";
 import { formatUsdPrecise, type CostBreakdown } from "@/lib/admin/costs";
 
 export function CostsTab({
-  workspaceId,
+  workspaceIds,
   cost30d,
   cost7d,
   monthlyRetainerUsd,
 }: {
-  workspaceId: string | null;
+  /** Every agent workspace of the engagement; empty = no agent yet. */
+  workspaceIds: string[];
   cost30d: CostBreakdown;
   cost7d: CostBreakdown;
   monthlyRetainerUsd: number;
 }) {
-  if (!workspaceId) {
+  if (workspaceIds.length === 0) {
     return (
       <EmptyPanel
         icon={<DollarSign className="size-5" />}
@@ -87,7 +88,7 @@ export function CostsTab({
           </div>
         ) : (
           <p className="text-xs italic text-neutral-500">
-            Not enough data yet — at least 2 days of activity needed for a trend line.
+            Not enough data yet. A trend line needs at least 2 days of activity.
           </p>
         )}
       </Panel>
@@ -133,7 +134,7 @@ export function CostsTab({
             <ul className="ml-4 list-disc space-y-1 text-neutral-600">
               <li>PII blocks, origin blocks, and rate limits cost $0 (no model call).</li>
               <li>Layer-2 DLP escalations are included in input tokens.</li>
-              <li>Resend + Twilio costs not yet tracked here — coming in v2.</li>
+              <li>Resend and Twilio costs are not tracked here yet.</li>
             </ul>
             <p className="text-[10px] text-neutral-500">
               Estimates may differ from Anthropic&apos;s monthly invoice by ±5% due to rounding and prompt caching credits.

@@ -5,6 +5,10 @@ import "server-only";
  * events show up in `npm run dev` output AND in Vercel's runtime logs
  * (queryable in the Vercel dashboard with the "filter by message" search).
  *
+ * PII rule: events carry counts, lengths and categories only. Message text,
+ * visitor names, emails and booking reasons never reach runtime logs (those
+ * are retained by third parties outside our retention policy).
+ *
  * Roadmap:
  *  - When RESEND_API_KEY is set, opportunistically email Steven daily digests
  *    of `booking_offered` events + any `pii_blocked` / `chat_failed` errors.
@@ -45,18 +49,20 @@ export type ChatEvent =
       kind: "user_message";
       locale: "en" | "es";
       messageCount: number;
-      lastMessagePreview: string;
+      /** Length only. Never log message text (names, emails, phones). */
+      lastMessageChars: number;
     })
   | (BaseEvent & {
       kind: "assistant_reply";
       bookingOffered: boolean;
-      replyPreview: string;
+      replyChars: number;
+      escalationReason?: string;
     })
   | (BaseEvent & {
       kind: "booking_offered";
-      name: string;
-      email: string;
-      reason: string;
+      /** Visitor name/email/reason live in the leads table, not in logs. */
+      reasonChars: number;
+      hasPreferredWindow: boolean;
     });
 
 export function logChatEvent(event: ChatEvent): void {

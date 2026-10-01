@@ -166,9 +166,9 @@ export function IntegrationsPanel({
   const labelCls = "block text-xs font-medium text-neutral-600 mb-1";
 
   return (
-    <section className="mt-6 rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
+    <section className="mt-6 rounded-xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
-        <CalendarClock className="size-4" /> Front Desk — Reminders &amp; Keys
+        <CalendarClock className="size-4" /> Front Desk: reminders and keys
       </h3>
       <p className="mt-1 text-xs text-neutral-500">
         Powers the 24h appointment reminder cron. Reads the client&apos;s Google Calendar and
@@ -180,6 +180,9 @@ export function IntegrationsPanel({
         <label className="flex items-center gap-2 text-sm text-neutral-700 sm:col-span-2">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           Reminders enabled
+          {!twilioConfigured && (
+            <span className="text-xs text-amber-700">Needs the Twilio keys below and a from number.</span>
+          )}
         </label>
         <div className="sm:col-span-2">
           <span className={labelCls}>Google Calendar ID (share calendar w/ the service account)</span>

@@ -31,6 +31,14 @@ export type ResolvedAgent = {
   minutesPerConv: number;
   /** Monthly token ceiling (in + out). <= 0 means unlimited. */
   monthlyTokenBudget: number;
+  /**
+   * The agent's integrations jsonb (booking link, calendar, reminders...).
+   * Optional so hand-built test fixtures stay valid; resolveAgent always
+   * sets it (empty object when the column is null).
+   */
+  integrations?: Record<string, unknown>;
+  /** engagements.vertical (free text). Feeds AgentConfig.vertical when integrations.vertical is unset. */
+  vertical?: string | null;
 };
 
 type CacheEntry = { agent: ResolvedAgent | null; cachedAt: number };
@@ -50,7 +58,7 @@ export async function resolveAgent(slug: string): Promise<ResolvedAgent | null> 
   const { data: agentData } = await sb
     .from("client_agents")
     .select(
-      "id, slug, engagement_id, workspace_id, name, agent_type, status, system_prompt, allowed_origins, tools_enabled, greeting_message, brand_color, max_tokens_per_message, conversation_retention_days, minutes_saved_per_conversation, monthly_token_budget",
+      "id, slug, engagement_id, workspace_id, name, agent_type, status, system_prompt, allowed_origins, tools_enabled, greeting_message, brand_color, max_tokens_per_message, conversation_retention_days, minutes_saved_per_conversation, monthly_token_budget, integrations",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -86,15 +94,17 @@ export async function resolveAgent(slug: string): Promise<ResolvedAgent | null> 
     conversation_retention_days: number;
     minutes_saved_per_conversation: number;
     monthly_token_budget: number;
+    integrations: unknown;
   };
 
-  // Get engagement language for fallback
+  // Engagement language (fallback locale) + vertical (prompt profile)
   const { data: engData } = await sb
     .from("engagements")
-    .select("language")
+    .select("language, vertical")
     .eq("id", a.engagement_id)
     .maybeSingle();
-  const language = (engData as { language?: string } | null)?.language ?? "en";
+  const eng = engData as { language?: string | null; vertical?: string | null } | null;
+  const language = eng?.language ?? "en";
 
   // Whitelist tool names at the resolver boundary so we never propagate
   // a garbage value (DB typo, future SQL inject elsewhere) into the
@@ -120,6 +130,11 @@ export async function resolveAgent(slug: string): Promise<ResolvedAgent | null> 
     retentionDays: a.conversation_retention_days ?? 90,
     minutesPerConv: a.minutes_saved_per_conversation ?? 5,
     monthlyTokenBudget: a.monthly_token_budget ?? 2_000_000,
+    integrations:
+      a.integrations && typeof a.integrations === "object" && !Array.isArray(a.integrations)
+        ? (a.integrations as Record<string, unknown>)
+        : {},
+    vertical: eng?.vertical ?? null,
   };
 
   cache.set(slug, { agent, cachedAt: Date.now() });

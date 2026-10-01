@@ -33,25 +33,36 @@ export type DecisionResult =
   | ExecutionFailed
   | EditIntroducesPii;
 
+// Postgres undefined_column / PostgREST "column not in schema cache".
+const MISSING_COLUMN = new Set(["42703", "PGRST204"]);
+
 export async function propose(
   input: NewProposal,
 ): Promise<QueueResult<PendingApproval>> {
   const client = getServiceClient();
   if (!client) return { ok: false, reason: "not_configured" };
-  const { data, error } = await client
-    .from("pending_approvals")
-    .insert({
-      workspace_id: input.workspace_id,
-      proposer_id: input.proposer_id,
-      proposer_type: "agent",
-      action_type: input.action_type,
-      recipient: input.recipient ?? null,
-      proposed_text: input.proposed_text,
-      risk_score: input.risk_score ?? null,
-      risk_flags: input.risk_flags ?? [],
-    })
-    .select("*")
-    .single();
+  const row: Record<string, unknown> = {
+    workspace_id: input.workspace_id,
+    proposer_id: input.proposer_id,
+    proposer_type: "agent",
+    action_type: input.action_type,
+    recipient: input.recipient ?? null,
+    proposed_text: input.proposed_text,
+    risk_score: input.risk_score ?? null,
+    risk_flags: input.risk_flags ?? [],
+  };
+  // Link to the conversation (migration 062). Only sent when known, so
+  // callers without a conversation keep the exact old insert.
+  const link: Record<string, unknown> = {};
+  if (input.session_id) link.session_id = input.session_id;
+  if (input.contact_id) link.contact_id = input.contact_id;
+
+  let res = await client.from("pending_approvals").insert({ ...row, ...link }).select("*").single();
+  if (res.error && Object.keys(link).length > 0 && MISSING_COLUMN.has(res.error.code ?? "")) {
+    // 062 not applied in this environment: the approval matters more than the link.
+    res = await client.from("pending_approvals").insert(row).select("*").single();
+  }
+  const { data, error } = res;
   if (error || !data) {
     return {
       ok: false,

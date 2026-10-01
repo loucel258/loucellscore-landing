@@ -48,3 +48,25 @@ export function daysAgo(iso: string | null | undefined): number | null {
   if (Number.isNaN(d.getTime())) return null;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
+
+/** Hours saved for display: whole hours from 10 up, one decimal below. */
+export function formatHours(hours: number | null | undefined): string {
+  if (hours == null || !Number.isFinite(hours) || hours <= 0) return "0";
+  if (hours >= 10) return Math.round(hours).toLocaleString();
+  return (Math.round(hours * 10) / 10).toString();
+}
+
+/** "3h ago", "2d ago", or a short date past two weeks. */
+export function formatRelative(iso: string | null | undefined, now: number = Date.now()): string {
+  if (!iso) return "never";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "never";
+  const min = Math.floor(Math.max(0, now - t) / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 14) return `${d}d ago`;
+  return formatShortDate(iso);
+}

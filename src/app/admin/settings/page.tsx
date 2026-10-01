@@ -2,7 +2,8 @@ import { Activity, Plug, Check, X } from "lucide-react";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { AuthWall } from "@/components/admin/auth-wall";
 import { getAdminSettings } from "@/lib/admin/settings";
-import { getLatestCronRuns, KNOWN_CRONS } from "@/lib/ops/cron-log";
+import { getLatestCronRuns } from "@/lib/ops/cron-log";
+import { ADMIN_KNOWN_CRONS } from "@/lib/admin/crons";
 import { SettingsForm } from "./settings-form";
 import { CronRunButton } from "./cron-run-button";
 
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const metadata = {
-  title: "Settings — Loucells Core",
+  title: "Settings · Loucells Core",
   robots: { index: false, follow: false },
 };
 
@@ -67,7 +68,7 @@ export default async function SettingsPage() {
       <SettingsForm initial={settings} />
 
       {/* Automation health — read-only */}
-      <section className="mt-5 rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
+      <section className="mt-5 rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
           <Activity className="size-4" /> Automation health
         </h2>
@@ -75,10 +76,10 @@ export default async function SettingsPage() {
           The Vercel crons and when each last ran. Times are recorded as each job finishes.
         </p>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-white/60">
+        <div className="mt-4 overflow-hidden rounded-xl border border-neutral-200">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/60 bg-white/40 text-left text-[11px] uppercase tracking-wide text-neutral-500">
+              <tr className="border-b border-neutral-200 bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-500">
                 <th className="px-3 py-2 font-medium">Job</th>
                 <th className="px-3 py-2 font-medium">Schedule (UTC)</th>
                 <th className="px-3 py-2 font-medium">Last run</th>
@@ -88,10 +89,10 @@ export default async function SettingsPage() {
               </tr>
             </thead>
             <tbody>
-              {KNOWN_CRONS.map(({ job, label, schedule }) => {
+              {ADMIN_KNOWN_CRONS.map(({ job, label, schedule }) => {
                 const run = latestRuns[job];
                 return (
-                  <tr key={job} className="border-b border-white/40 last:border-0">
+                  <tr key={job} className="border-b border-neutral-200 last:border-0">
                     <td className="px-3 py-2.5 font-medium text-neutral-800">{label}</td>
                     <td className="px-3 py-2.5 font-mono text-[11px] text-neutral-500">
                       {schedule}
@@ -136,12 +137,12 @@ export default async function SettingsPage() {
       </section>
 
       {/* Connections — read-only env presence */}
-      <section className="mt-5 rounded-2xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
+      <section className="mt-5 rounded-2xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
           <Plug className="size-4" /> Connections
         </h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Which integrations are wired in this environment. Presence only — secret values are
+          Which integrations are wired in this environment. Presence only. Secret values are
           never read or shown here.
         </p>
 
@@ -149,7 +150,7 @@ export default async function SettingsPage() {
           {connections.map((c) => (
             <div
               key={c.label}
-              className="flex items-center justify-between gap-3 rounded-lg border border-white/60 bg-white/40 px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2"
             >
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-neutral-800">{c.label}</span>

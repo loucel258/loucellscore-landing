@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isPortalAuthed } from "@/lib/portal/auth";
+import { getPortalContext } from "@/lib/portal/context";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
+import { ilikeExactPattern, sameEmail } from "@/lib/portal/email-match";
+import { isPhoneKey } from "@/lib/portal/people";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,18 +20,21 @@ function getClientIp(req: Request): string {
 }
 
 /**
- * PUT — upsert a note for a customer. Identified by (engagement_id, email).
- * Creates the customers row lazily if missing.
+ * PUT: upsert a note for a customer, keyed by (engagement_id, email).
+ * The key is the customer's email (web) or "tel:<E.164>" for a person known
+ * only by text message (customers.email holds that key; the table is the
+ * portal's own notes store). Creates the customers row lazily if missing.
  */
 export async function PUT(
   req: Request,
   { params }: { params: Promise<{ slug: string; email: string }> },
 ): Promise<Response> {
   const { slug, email: emailRaw } = await params;
-  const email = decodeURIComponent(emailRaw).toLowerCase();
+  const email = decodeURIComponent(emailRaw).trim().toLowerCase();
   const ip = getClientIp(req);
 
-  if (!(await isPortalAuthed(slug))) {
+  const ctx = await getPortalContext(slug);
+  if (!ctx.authed) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
   const rl = await rateLimit(`portal_note:${slug}:${ip}`, 30, 30 / 3600);
@@ -52,29 +57,43 @@ export async function PUT(
     return NextResponse.json({ ok: false, error: "service_unavailable" }, { status: 503 });
   }
 
-  const { data: access } = await sb
-    .from("client_portal_access")
-    .select("engagement_id")
-    .eq("client_slug", slug)
-    .maybeSingle();
-  if (!access) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
-  const engagementId = (access as { engagement_id: string }).engagement_id;
+  const engagementId = ctx.engagementId;
 
-  // Verify the customer (email) actually belongs to this engagement before
-  // letting the portal write a note about them.
-  const { data: lead } = await sb
-    .from("leads")
-    .select("name")
-    .eq("email", email)
-    .eq("engagement_id", engagementId)
-    .limit(1)
-    .maybeSingle();
-  if (!lead) {
-    return NextResponse.json({ ok: false, error: "customer_not_found" }, { status: 404 });
+  // Verify the customer belongs to this engagement before letting the
+  // portal write a note about them.
+  let displayName: string | null = null;
+  if (isPhoneKey(email)) {
+    if (ctx.workspaceIds.length === 0) {
+      return NextResponse.json({ ok: false, error: "customer_not_found" }, { status: 404 });
+    }
+    const { data: contactRows } = await sb
+      .from("contacts")
+      .select("name")
+      .in("workspace_id", ctx.workspaceIds)
+      .eq("phone", email.slice(4))
+      .limit(5);
+    const contacts = (contactRows as Array<{ name: string | null }> | null) ?? [];
+    if (contacts.length === 0) {
+      return NextResponse.json({ ok: false, error: "customer_not_found" }, { status: 404 });
+    }
+    displayName = contacts.find((c) => c.name)?.name ?? null;
+  } else {
+    // leads.email keeps the visitor's casing: match case-insensitively and
+    // re-check exactly.
+    const { data: leadRows } = await sb
+      .from("leads")
+      .select("name, email")
+      .ilike("email", ilikeExactPattern(email))
+      .eq("engagement_id", engagementId)
+      .limit(10);
+    const lead = ((leadRows as Array<{ name: string; email: string }>) ?? []).find((l) =>
+      sameEmail(l.email, email),
+    );
+    if (!lead) {
+      return NextResponse.json({ ok: false, error: "customer_not_found" }, { status: 404 });
+    }
+    displayName = lead.name;
   }
-  const displayName = (lead as { name: string }).name;
 
   // Upsert into customers
   const { error } = await sb

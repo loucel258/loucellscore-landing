@@ -6,24 +6,25 @@ import { EmptyPanel } from "@/components/workspace/empty-panel";
 import type { AuditLogRow } from "../types";
 
 export function AuditTab({
-  workspaceId,
+  workspaceIds,
   rows24h,
   rows7d,
   rows30d,
   recent,
 }: {
-  workspaceId: string | null;
+  /** Every agent workspace of the engagement; empty = no agent yet. */
+  workspaceIds: string[];
   rows24h: number;
   rows7d: number;
   rows30d: number;
   recent: AuditLogRow[];
 }) {
-  if (!workspaceId) {
+  if (workspaceIds.length === 0) {
     return (
       <EmptyPanel
         icon={<Shield className="size-5" />}
         title="No agent deployed yet"
-        description="The append-only audit chain logs every decision the agent makes — ALLOW, DENY, escalation, PII block. Every row is hash-chained for tamper detection."
+        description="The append-only audit chain logs every decision the agent makes: ALLOW, DENY, escalation, PII block. Every row is hash-chained for tamper detection."
       />
     );
   }
@@ -71,7 +72,7 @@ export function AuditTab({
       <Panel title="Why we deny" eyebrow="Block-reason distribution">
         {blockedByList.length === 0 ? (
           <p className="text-xs italic text-neutral-500">
-            No DENYs in the recent window — agent is operating fully autonomously.
+            No DENYs in the recent window.
           </p>
         ) : (
           <BarStrip
@@ -104,7 +105,7 @@ export function AuditTab({
               {recent.slice(0, 50).map((r) => {
                 const date = new Date(r.inserted_at);
                 return (
-                  <tr key={r.id} className="hover:bg-white/55">
+                  <tr key={r.id} className="hover:bg-white">
                     <td className="px-2 py-2 tabular-nums text-[10px] text-neutral-500">
                       {date.toLocaleString("en-US", {
                         month: "short",

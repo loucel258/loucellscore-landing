@@ -4,7 +4,9 @@ import { Metric, MetricRow } from "@/components/workspace/metric";
 import { BarStrip } from "@/components/workspace/sparkline";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { formatShortDate, daysAgo } from "@/lib/admin/format";
+import { isCustomerSession } from "@/lib/admin/audit-actors";
 import type { AuditLogRow } from "../types";
+import { MessageText } from "@/components/shell/message-text";
 
 export type TranscriptTurn = {
   role: "user" | "assistant";
@@ -16,15 +18,23 @@ export type TranscriptTurn = {
 export type SessionTranscripts = Record<string, TranscriptTurn[]>;
 
 export function ConversationsTab({
-  workspaceId,
+  workspaceIds,
   audit,
   transcripts,
+  sessions30d,
 }: {
-  workspaceId: string | null;
+  /** Every agent workspace of the engagement; empty = no agent yet. */
+  workspaceIds: string[];
   audit: AuditLogRow[];
   transcripts: SessionTranscripts;
+  /**
+   * Exact 30-day conversation count from lib/metrics (the number shown on
+   * the client Overview and in the portal). `audit` is the newest 500 rows,
+   * so counting sessions from it alone can come up short.
+   */
+  sessions30d?: number;
 }) {
-  if (!workspaceId) {
+  if (workspaceIds.length === 0) {
     return (
       <EmptyPanel
         icon={<MessageSquare className="size-5" />}
@@ -34,9 +44,11 @@ export function ConversationsTab({
     );
   }
 
-  // Group by session
+  // Group by session. Admin config saves, portal decisions and vault reads
+  // share these workspaces but are not conversations.
+  const sessionRows = audit.filter((r) => isCustomerSession(r.user_id));
   const bySession = new Map<string, AuditLogRow[]>();
-  for (const row of audit) {
+  for (const row of sessionRows) {
     if (!row.user_id) continue;
     const list = bySession.get(row.user_id) ?? [];
     list.push(row);
@@ -66,12 +78,12 @@ export function ConversationsTab({
     .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
 
   const totalSessions = sessions.length;
-  const totalAllows = audit.filter((r) => r.decision === "ALLOW").length;
-  const totalDenies = audit.filter((r) => r.decision === "DENY").length;
+  const totalAllows = sessionRows.filter((r) => r.decision === "ALLOW").length;
+  const totalDenies = sessionRows.filter((r) => r.decision === "DENY").length;
   const totalEscalated = sessions.filter((s) => s.escalated).length;
   const resolutionRate = totalSessions > 0 ? ((totalSessions - totalEscalated) / totalSessions) * 100 : 0;
   const escalationRate = totalSessions > 0 ? (totalEscalated / totalSessions) * 100 : 0;
-  const avgMsgs = totalSessions > 0 ? audit.length / totalSessions : 0;
+  const avgMsgs = totalSessions > 0 ? sessionRows.length / totalSessions : 0;
 
   // Decrypted transcripts, grouped into sessions sorted by most recent turn.
   const transcriptSessions = Object.entries(transcripts)
@@ -86,8 +98,8 @@ export function ConversationsTab({
     <div className="space-y-6">
       <MetricRow>
         <Metric
-          label="Sessions (30d)"
-          value={totalSessions}
+          label="Conversations (30d)"
+          value={sessions30d ?? totalSessions}
           tone="accent"
           icon={<MessageSquare className="size-4" />}
         />
@@ -150,7 +162,7 @@ export function ConversationsTab({
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {sessions.slice(0, 25).map((s) => (
-                  <tr key={s.sessionId} className="hover:bg-white/55">
+                  <tr key={s.sessionId} className="hover:bg-white">
                     <td className="px-2 py-2 font-mono text-[10px] text-neutral-700">
                       {s.sessionId.slice(0, 24)}…
                     </td>
@@ -206,9 +218,9 @@ export function ConversationsTab({
             {transcriptSessions.map((s) => (
               <details
                 key={s.sessionId}
-                className="rounded-lg border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10"
+                className="rounded-lg border border-neutral-200 bg-white shadow-sm shadow-slate-900/10"
               >
-                <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-white/55">
+                <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2 text-xs text-neutral-600 hover:bg-white">
                   <span className="font-mono text-[10px] text-neutral-700">
                     {s.sessionId.slice(0, 24)}…
                   </span>
@@ -223,13 +235,13 @@ export function ConversationsTab({
                       className={t.role === "user" ? "flex justify-end" : "flex justify-start"}
                     >
                       <div
-                        className={`max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-xs ${
+                        className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${
                           t.role === "user"
                             ? "bg-cyan-600 text-white"
                             : "bg-neutral-100 text-neutral-800"
                         }`}
                       >
-                        {t.text}
+                        <MessageText text={t.text} />
                         {t.toolSummary && (
                           <div className="mt-1 text-[10px] opacity-70">🔧 {t.toolSummary}</div>
                         )}

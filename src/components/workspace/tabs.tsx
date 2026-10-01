@@ -17,13 +17,16 @@ export function WorkspaceTabs({
   basePath,
   tabs,
   activeKey,
+  ariaLabel = "Workspace tabs",
 }: {
   basePath: string;
   tabs: TabDef[];
   activeKey: string;
+  /** Accessible name for the tab list (pass translated copy in the portal). */
+  ariaLabel?: string;
 }) {
   return (
-    <nav className="mb-6 border-b border-neutral-200" aria-label="Workspace tabs">
+    <nav className="mb-6 border-b border-neutral-200" aria-label={ariaLabel}>
       <ul className="flex flex-wrap items-end gap-1 overflow-x-auto">
         {tabs.map((t) => {
           const active = t.key === activeKey;

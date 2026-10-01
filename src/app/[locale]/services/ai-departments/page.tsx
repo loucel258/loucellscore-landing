@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
-import { SmoothScroll } from "@/components/smooth-scroll";
-import { ScrollProgress } from "@/components/scroll-progress";
-import { Nav } from "@/components/nav";
-import { Footer } from "@/components/sections/footer";
-import { CTA } from "@/components/sections/cta";
 import { ServiceSchema, BreadcrumbSchema } from "@/components/structured-data";
-import { SubpageHero } from "@/components/sections/subpage/hero";
-import { SubpageProblem } from "@/components/sections/subpage/problem";
-import { SubpageServices } from "@/components/sections/subpage/services";
-import { SubpageProcess } from "@/components/sections/subpage/process";
-import { SubpageWhy } from "@/components/sections/subpage/why";
+import { LinePage } from "@/components/site/line-page";
+import { getHomeCopy } from "@/components/home/copy";
+import { Departments } from "@/components/home/departments";
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -54,8 +45,6 @@ export default async function SmvModelsPage({
 
   return (
     <>
-      <SmoothScroll />
-      <ScrollProgress />
       <ServiceSchema
         locale={locale}
         slug="ai-departments"
@@ -70,29 +59,15 @@ export default async function SmvModelsPage({
           { name: data.hero.eyebrow, path: "/services/ai-departments" },
         ]}
       />
-      <Nav locale={locale} dict={dict} />
-      <main className="relative bg-bg">
-        <div className="container-page pt-28 md:pt-32">
-          <Link
-            href={`/${locale}`}
-            className="inline-flex items-center gap-2 text-mono-xs text-text-tertiary transition-colors hover:text-text-secondary"
-          >
-            <ArrowLeft className="size-3.5" strokeWidth={1.5} />
-            {data.backLabel}
-          </Link>
-        </div>
-        <SubpageHero
-          data={data.hero}
-          imageSrc="/hero/05-audit.webp"
-          secondaryGlow="violet"
-        />
-        <SubpageProblem data={data.problem} />
-        <SubpageServices data={data.services} />
-        <SubpageProcess data={data.process} />
-        <SubpageWhy data={data.why} />
-        <CTA dict={dict} />
-        <Footer dict={dict} locale={locale} />
-      </main>
+      <LinePage
+        locale={locale}
+        data={data}
+        image="/home/mob/night.webp"
+        focal="50% 62%"
+        serviceSlugs={["ai-front-desk", "quote-accelerator", "review-manager", "operations-gap-audit"]}
+        secondaryHref="#departments"
+        extra={<Departments copy={getHomeCopy(locale).departments} />}
+      />
     </>
   );
 }

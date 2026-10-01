@@ -59,14 +59,14 @@ function relativeTime(iso: string): string {
 export function ActivityFeed({
   events,
   title = "Recent activity",
-  emptyMessage = "Nothing yet — events will appear here as leads, payments, and kickoffs happen.",
+  emptyMessage = "Nothing yet. Leads, payments and kickoffs show up here as they happen.",
 }: {
   events: ActivityEvent[];
   title?: string;
   emptyMessage?: string;
 }) {
   return (
-    <section className="rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-4">
+    <section className="rounded-xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-4">
       <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
         {title}
       </h2>

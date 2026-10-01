@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getServiceClient } from "@/lib/audit/client";
 
 export const runtime = "nodejs";
@@ -31,6 +32,15 @@ export const dynamic = "force-dynamic";
  * `CRON_SECRET` in `Authorization: Bearer`. We accept either auth path
  * so the same route works for Vercel Cron and a plain curl from ops.
  */
+// Stale window in seconds. Default 90 (matches the doc in migration 015);
+// ops can override with ?stale=<seconds> for manual sweeps.
+const StaleSchema = z
+  .string()
+  .regex(/^\d{1,6}$/)
+  .transform(Number)
+  .pipe(z.number().int().min(30).max(3600))
+  .default(90);
+
 export async function POST(req: Request) {
   const sharedSecret = process.env.HITL_SWEEPER_SECRET;
   const vercelCronSecret = process.env.CRON_SECRET;
@@ -59,11 +69,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // Default stale window 90s (matches the doc in migration 015). Caller
-  // can override with ?stale=<seconds> for ops-driven manual sweeps.
   const url = new URL(req.url);
   const staleParam = url.searchParams.get("stale");
-  const stale = staleParam ? Math.max(30, Math.min(3600, parseInt(staleParam, 10))) : 90;
+  const staleParsed = StaleSchema.safeParse(staleParam === null || staleParam === "" ? undefined : staleParam);
+  if (!staleParsed.success) {
+    return NextResponse.json(
+      { ok: false, error: "invalid_stale", detail: "stale must be an integer between 30 and 3600" },
+      { status: 400 },
+    );
+  }
+  const stale = staleParsed.data;
 
   const { data, error } = await client.rpc("hitl_sweep_orphans", {
     p_stale_seconds: stale,

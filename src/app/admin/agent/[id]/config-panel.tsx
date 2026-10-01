@@ -12,7 +12,9 @@ import {
   KeyRound,
   Rocket,
   AlertTriangle,
+  Wallet,
 } from "lucide-react";
+import { useConfirmTap } from "@/components/admin/use-confirm-tap";
 
 type AgentConfig = {
   id: string;
@@ -29,10 +31,19 @@ type AgentConfig = {
   notes: string | null;
   engagementId: string;
   clientName: string;
+  monthlyRetainerCents: number;
+  retainerActive: boolean;
+  minutesSavedPerConversation: number;
+  /** Saved portal slug for this engagement (client_portal_access), if any. */
+  portalSlug: string | null;
+  /** integrations.booking.link_url: what request_booking shares. */
+  bookingLinkUrl: string | null;
+  /** Loucells' own site agents fall back to the house Cal.com link. */
+  isHouseAgent: boolean;
 };
 
 const ALL_TOOLS = [
-  { id: "request_booking", label: "Request booking (Cal.com link)" },
+  { id: "request_booking", label: "Request booking (shares the booking link)" },
   { id: "escalate_to_human", label: "Escalate to human (HITL queue)" },
   { id: "request_human_approval", label: "Request human approval (quotes/refunds/reviews → portal)" },
 ];
@@ -46,6 +57,9 @@ const STATUS_FLOW: Array<{ key: string; label: string }> = [
   { key: "archived", label: "Archived" },
 ];
 
+// Transitions that take the agent off the air need a second tap.
+const RISKY_STATUSES = new Set(["paused", "archived"]);
+
 export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: string }) {
   const router = useRouter();
   const [name, setName] = useState(agent.name);
@@ -56,9 +70,13 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
   const [greeting, setGreeting] = useState(agent.greetingMessage ?? "");
   const [brandColor, setBrandColor] = useState(agent.brandColor ?? "#0891b2");
   const [tools, setTools] = useState<string[]>(agent.toolsEnabled);
+  const [bookingLink, setBookingLink] = useState(agent.bookingLinkUrl ?? "");
   const [budget, setBudget] = useState(agent.monthlyTokenBudget);
   const [maxTokens, setMaxTokens] = useState(agent.maxTokensPerMessage);
   const [notes, setNotes] = useState(agent.notes ?? "");
+  const [retainerUsd, setRetainerUsd] = useState(Math.round(agent.monthlyRetainerCents) / 100);
+  const [retainerActive, setRetainerActive] = useState(agent.retainerActive);
+  const [minutesSaved, setMinutesSaved] = useState(agent.minutesSavedPerConversation);
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -66,6 +84,12 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
   const [passcode, setPasscode] = useState<string | null>(null);
   const [passcodeBusy, setPasscodeBusy] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [portalSlug, setPortalSlug] = useState<string | null>(agent.portalSlug);
+  const confirm = useConfirmTap();
+
+  // The slug is the client's embed identifier: editable only while
+  // designing, or to assign the first one. The API enforces the same rule.
+  const slugEditable = agent.status === "designing" || !agent.slug;
 
   const goLiveReady = slug.length >= 2 && origins.length > 0 && persona.trim().length > 0;
 
@@ -102,7 +126,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          slug: slug || null,
+          slug: slugEditable ? slug || null : undefined,
           allowedOrigins: origins,
           systemPrompt: persona || null,
           greetingMessage: greeting || null,
@@ -111,6 +135,13 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
           monthlyTokenBudget: budget,
           maxTokensPerMessage: maxTokens,
           notes: notes || null,
+          monthlyRetainerCents: Math.max(0, Math.round((Number.isFinite(retainerUsd) ? retainerUsd : 0) * 100)),
+          retainerActive,
+          minutesSavedPerConversation: Math.max(0, Math.round(Number.isFinite(minutesSaved) ? minutesSaved : 0)),
+          // Only sent when it changed, so ordinary saves don't rewrite integrations.
+          ...(bookingLink.trim() !== (agent.bookingLinkUrl ?? "")
+            ? { integrations: { booking: { link_url: bookingLink.trim() } } }
+            : {}),
         }),
       });
       const body = await res.json();
@@ -118,7 +149,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
         setSaveMsg({ ok: true, text: body.changed.length > 0 ? `Saved: ${body.changed.join(", ")}` : "Nothing to save" });
         router.refresh();
       } else {
-        setSaveMsg({ ok: false, text: `${body.error}${body.detail ? ` — ${body.detail}` : ""}` });
+        setSaveMsg({ ok: false, text: `${body.error}${body.detail ? `: ${body.detail}` : ""}` });
       }
     } catch {
       setSaveMsg({ ok: false, text: "Network error" });
@@ -140,7 +171,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
       if (body.ok) {
         router.refresh();
       } else {
-        setSaveMsg({ ok: false, text: `${body.error}${body.detail ? ` — ${body.detail}` : ""}` });
+        setSaveMsg({ ok: false, text: `${body.error}${body.detail ? `: ${body.detail}` : ""}` });
       }
     } catch {
       setSaveMsg({ ok: false, text: "Network error" });
@@ -151,22 +182,33 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
 
   async function rotatePasscode() {
     setPasscodeBusy(true);
+    setSaveMsg(null);
     try {
-      // Try rotate first; if no portal row exists yet, create one using
-      // the agent slug as the portal slug.
+      // Rotation is scoped by engagement, never by slug alone: agent slugs
+      // and portal slugs are separate namespaces.
       let res = await fetch("/api/admin/portal-access/rotate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientSlug: slug }),
+        // With several portals on one engagement, name the one shown here.
+        body: JSON.stringify({
+          engagementId: agent.engagementId,
+          ...(portalSlug ? { clientSlug: portalSlug } : {}),
+        }),
       });
       let body = await res.json();
       if (!body.ok && body.error === "not_found") {
+        // No portal for this engagement yet: create one, addressed by the
+        // agent's SAVED slug (never unsaved form state).
+        if (!agent.slug) {
+          setSaveMsg({ ok: false, text: "Save a slug first. The new portal uses it as its address." });
+          return;
+        }
         res = await fetch("/api/admin/portal-access/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             engagementId: agent.engagementId,
-            clientSlug: slug,
+            clientSlug: agent.slug,
             displayName: agent.clientName,
           }),
         });
@@ -174,8 +216,9 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
       }
       if (body.ok) {
         setPasscode(body.passcode);
+        if (typeof body.clientSlug === "string") setPortalSlug(body.clientSlug);
       } else {
-        setSaveMsg({ ok: false, text: `Passcode: ${body.error}` });
+        setSaveMsg({ ok: false, text: `Passcode: ${body.detail ?? body.error}` });
       }
     } catch {
       setSaveMsg({ ok: false, text: "Network error rotating passcode" });
@@ -184,8 +227,9 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
     }
   }
 
-  const snippet = slug
-    ? `<script src="${baseUrl}/agent.js" data-agent="${slug}" defer></script>`
+  // Built from the saved slug: an unsaved edit would hand out a broken snippet.
+  const snippet = agent.slug
+    ? `<script src="${baseUrl}/agent.js" data-agent="${agent.slug}" defer></script>`
     : null;
 
   const inputCls =
@@ -193,7 +237,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
   const labelCls = "mb-1 block text-[10px] font-semibold uppercase tracking-wider text-neutral-500";
 
   return (
-    <section className="mt-6 rounded-xl border border-white/60 bg-white/55 shadow-sm shadow-slate-900/10 p-5">
+    <section className="mt-6 rounded-xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
           <Settings2 className="size-3.5" /> Configuration
@@ -216,11 +260,19 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
             <div>
               <label className={labelCls}>Public slug</label>
               <input
-                className={inputCls}
+                className={`${inputCls} ${slugEditable ? "" : "cursor-not-allowed bg-neutral-50 text-neutral-500"}`}
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                readOnly={!slugEditable}
+                onChange={(e) => {
+                  if (slugEditable) setSlug(e.target.value.toLowerCase());
+                }}
                 placeholder="acme-medspa"
               />
+              {!slugEditable && (
+                <p className="mt-1 text-[10px] text-neutral-500">
+                  Locked after designing. The client&apos;s embed code uses it.
+                </p>
+              )}
             </div>
           </div>
 
@@ -340,7 +392,67 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
                   </label>
                 ))}
               </div>
+              {tools.includes("request_booking") && (
+                <div className="mt-2">
+                  <label className={labelCls}>Booking link (https)</label>
+                  <input
+                    type="url"
+                    className={inputCls}
+                    value={bookingLink}
+                    onChange={(e) => setBookingLink(e.target.value)}
+                    placeholder={agent.isHouseAgent ? "Empty = Loucells Core Cal.com" : "https://the-client-booking-page.com"}
+                  />
+                  {!agent.isHouseAgent && !bookingLink.trim() && (
+                    <p className="mt-1 text-[10px] text-amber-700">
+                      Without a link the agent won&apos;t offer booking. Use the client&apos;s own booking page.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 p-3">
+            <h3 className={labelCls}>
+              <Wallet className="mr-1 inline size-3" /> Billing
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Retainer $/month</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  className={inputCls}
+                  value={retainerUsd}
+                  onChange={(e) => setRetainerUsd(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Minutes saved / conversation</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={240}
+                  step={1}
+                  className={inputCls}
+                  value={minutesSaved}
+                  onChange={(e) => setMinutesSaved(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-xs text-neutral-700">
+              <input
+                type="checkbox"
+                checked={retainerActive}
+                onChange={(e) => setRetainerActive(e.target.checked)}
+                className="size-3.5 accent-cyan-600"
+              />
+              Retainer active (counts toward MRR)
+            </label>
+            <p className="mt-1 text-[10px] text-neutral-500">
+              Saved with the configuration. Turning it on or off stamps the start or cancel date.
+            </p>
           </div>
         </div>
 
@@ -358,7 +470,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
               placeholder="You are the AI assistant for…"
             />
             <p className="mt-1 text-[10px] text-neutral-500">
-              Wrapped in the non-negotiable Trust Stack safety base — the persona
+              Wrapped in the Trust Stack safety base. The persona
               cannot override governance rules.
             </p>
           </div>
@@ -402,22 +514,30 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
           {STATUS_FLOW.map((s) => {
             const isCurrent = s.key === agent.status;
             const isLiveBlocked = s.key === "live" && !goLiveReady;
+            const confirmKey = `status:${s.key}`;
+            const isArmed = confirm.armed === confirmKey;
             return (
               <button
                 key={s.key}
                 type="button"
                 disabled={isCurrent || statusBusy !== null || isLiveBlocked}
-                onClick={() => setStatus(s.key)}
+                onClick={() =>
+                  RISKY_STATUSES.has(s.key)
+                    ? confirm.tap(confirmKey, () => setStatus(s.key))
+                    : setStatus(s.key)
+                }
                 title={isLiveBlocked ? "Needs slug + origins + persona before go-live" : undefined}
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   isCurrent
                     ? "bg-cyan-600 text-white"
                     : isLiveBlocked
                       ? "cursor-not-allowed bg-neutral-100 text-neutral-400"
-                      : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                      : isArmed
+                        ? "bg-rose-600 text-white hover:bg-rose-700"
+                        : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
                 }`}
               >
-                {statusBusy === s.key ? "…" : s.label}
+                {statusBusy === s.key ? "…" : isArmed ? `${s.label}? Confirm` : s.label}
               </button>
             );
           })}
@@ -449,14 +569,14 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
               <button
                 type="button"
                 onClick={() => copy(snippet, "snippet")}
-                className="absolute right-2 top-2 rounded-md bg-white/10 p-1.5 text-white hover:bg-white/20"
+                className="absolute right-2 top-2 rounded-md bg-white/10 p-1.5 text-white hover:bg-neutral-50/60"
                 aria-label="Copy snippet"
               >
                 {copied === "snippet" ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
               </button>
             </div>
           ) : (
-            <p className="text-xs italic text-neutral-400">Set a slug first</p>
+            <p className="text-xs italic text-neutral-400">Save a slug first</p>
           )}
         </div>
         <div>
@@ -466,7 +586,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
           {passcode ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
-                New passcode — shown once, store it now
+                New passcode. Shown once, save it now
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <code className="text-sm font-bold tracking-widest text-emerald-900">{passcode}</code>
@@ -480,18 +600,40 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
                 </button>
               </div>
             </div>
+          ) : portalSlug ? (
+            <div>
+              <button
+                type="button"
+                onClick={() => confirm.tap("rotate", rotatePasscode)}
+                disabled={passcodeBusy}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 ${
+                  confirm.armed === "rotate" ? "bg-rose-600 hover:bg-rose-700" : "bg-neutral-900 hover:bg-neutral-700"
+                }`}
+              >
+                {passcodeBusy ? "Working…" : confirm.armed === "rotate" ? "Confirm?" : "Rotate portal passcode"}
+              </button>
+              {confirm.armed === "rotate" && (
+                <p className="mt-1.5 text-[11px] text-rose-700">
+                  The client&apos;s current passcode stops working. Tap again to continue.
+                </p>
+              )}
+            </div>
           ) : (
             <button
               type="button"
               onClick={rotatePasscode}
-              disabled={passcodeBusy || !slug}
+              disabled={passcodeBusy || !agent.slug}
               className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-700 disabled:opacity-50"
             >
-              {passcodeBusy ? "Working…" : "Generate / rotate portal passcode"}
+              {passcodeBusy ? "Working…" : "Create portal access"}
             </button>
           )}
           <p className="mt-1.5 text-[10px] text-neutral-500">
-            Portal: {baseUrl}/portal/{slug || "<slug>"}
+            {portalSlug
+              ? `Portal: ${baseUrl}/portal/${portalSlug}`
+              : agent.slug
+                ? `No portal yet. It will live at ${baseUrl}/portal/${agent.slug}`
+                : "No portal yet. Save a slug first."}
           </p>
         </div>
       </div>

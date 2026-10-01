@@ -24,6 +24,8 @@ export type MirrorAppointmentData = {
   startTime?: string;
   endTime?: string;
   rescheduledFromId?: string | null;
+  /** Price at booking time in cents (the app's totalAmount snapshot). */
+  totalAmount?: number | null;
   client?: { name?: string; phone?: string; smsOptIn?: boolean };
 };
 
@@ -91,18 +93,26 @@ export async function upsertMirrorAppointment(
   // booked_by is deliberately absent: fresh mirror rows take the DB default
   // ('external') and conflict updates must never clobber an attribution set
   // elsewhere. Adding it to this payload would corrupt ROI Tier 1 counts.
-  const { error: apptErr } = await sb.from("appointments").upsert(
-    {
-      workspace_id: workspaceId,
-      contact_id: contactId,
-      external_id: data.id,
-      start_at: data.startTime,
-      end_at: data.endTime,
-      status,
-      updated_at: now,
-    },
-    { onConflict: "workspace_id,external_id" },
-  );
+  const row: Record<string, unknown> = {
+    workspace_id: workspaceId,
+    contact_id: contactId,
+    external_id: data.id,
+    start_at: data.startTime,
+    end_at: data.endTime,
+    status,
+    updated_at: now,
+  };
+  // The app's own price snapshot (cents) is what ROI attribution should
+  // count; only sane integers are stored.
+  if (typeof data.totalAmount === "number" && Number.isInteger(data.totalAmount) && data.totalAmount >= 0) {
+    row.price_cents = data.totalAmount;
+  }
+  let { error: apptErr } = await sb.from("appointments").upsert(row, { onConflict: "workspace_id,external_id" });
+  if (apptErr && "price_cents" in row && (apptErr.code === "42703" || apptErr.code === "PGRST204")) {
+    // Migration 065 not applied yet: keep mirroring without the price.
+    delete row.price_cents;
+    ({ error: apptErr } = await sb.from("appointments").upsert(row, { onConflict: "workspace_id,external_id" }));
+  }
   if (apptErr) return { ok: false, error: "appointment_failed" };
 
   return { ok: true };

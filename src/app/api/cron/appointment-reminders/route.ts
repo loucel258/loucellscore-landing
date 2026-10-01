@@ -8,7 +8,7 @@ import {
   runRemindersFromMirror,
   type ReminderRunResult,
 } from "@/lib/reminders/appointment-reminders";
-import { getExternalBookingBackend } from "@/lib/integration/agent-client";
+import { resolveBookingBackend } from "@/lib/integration/agent-client";
 import { logCronRun } from "@/lib/ops/cron-log";
 
 export const runtime = "nodejs";
@@ -57,10 +57,24 @@ async function handle(req: Request): Promise<Response> {
   const results: ReminderRunResult[] = [];
   for (const agent of agents ?? []) {
     const a = agent as { workspace_id: string; name: string; integrations: unknown };
-    // External-backend workspaces remind off the mirror (and gate on consent);
-    // everyone else keeps the Google Calendar path unchanged.
-    const backend = await getExternalBookingBackend(a.workspace_id);
-    if (backend) {
+    // External-backend workspaces remind off the mirror; everyone else
+    // keeps the Google Calendar path. Both are consent/quiet-hours gated.
+    // If we can't tell (vault unreadable), skip this agent rather than fall
+    // back to the calendar path and double-text off a second source.
+    const backend = await resolveBookingBackend(a.workspace_id, a.integrations);
+    if (backend.mode === "external_unavailable") {
+      results.push({
+        workspaceId: a.workspace_id,
+        scanned: 0,
+        sent: 0,
+        skippedNoPhone: 0,
+        skippedAlreadySent: 0,
+        failed: 0,
+        error: `booking_backend_unavailable:${backend.reason}`,
+      });
+      continue;
+    }
+    if (backend.mode === "external") {
       const settings = parseExternalReminderSettings(a);
       if (!settings) continue;
       results.push(await runRemindersFromMirror(sb, settings));
@@ -73,9 +87,12 @@ async function handle(req: Request): Promise<Response> {
 
   const sent = results.reduce((n, r) => n + r.sent, 0);
   const failed = results.reduce((n, r) => n + r.failed, 0);
+  // A workspace we had to skip because its booking backend was unreadable
+  // is a real failure (its customers got no reminder), so surface it.
+  const errored = results.filter((r) => r.error?.startsWith("booking_backend_unavailable")).length;
   await logCronRun({
     job: "appointment-reminders",
-    status: failed > 0 ? "error" : "ok",
+    status: failed > 0 || errored > 0 ? "error" : "ok",
     summary: `${results.length} agent(s), ${sent} sent, ${failed} failed`,
   });
   return NextResponse.json({
@@ -85,6 +102,7 @@ async function handle(req: Request): Promise<Response> {
       sent,
       skippedNoPhone: results.reduce((n, r) => n + r.skippedNoPhone, 0),
       skippedAlreadySent: results.reduce((n, r) => n + r.skippedAlreadySent, 0),
+      skippedNoConsent: results.reduce((n, r) => n + (r.skippedNoConsent ?? 0), 0),
       failed,
     },
     results,

@@ -1,6 +1,7 @@
 import "server-only";
 import { getServiceClient } from "@/lib/audit/client";
 import type { PortalLang } from "./strings";
+import { DEFAULT_TIME_ZONE, pickTimeZone } from "./time";
 
 /**
  * Resolve the portal display language for a given client slug.
@@ -41,4 +42,19 @@ export async function resolvePortalLang(slug: string): Promise<PortalLang> {
 
   const lang = (eng as { language: string } | null)?.language;
   return lang === "es" ? "es" : "en";
+}
+
+/**
+ * The client's timezone for displaying dates: the first agent of the
+ * engagement with `integrations.calendar.timezone` set, else
+ * America/New_York (see ./time.ts).
+ */
+export async function resolvePortalTimeZone(engagementId: string): Promise<string> {
+  const sb = getServiceClient();
+  if (!sb) return DEFAULT_TIME_ZONE;
+  const { data } = await sb
+    .from("client_agents")
+    .select("integrations")
+    .eq("engagement_id", engagementId);
+  return pickTimeZone((data as Array<{ integrations: unknown }> | null) ?? []);
 }

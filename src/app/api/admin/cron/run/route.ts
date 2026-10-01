@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminAuthed } from "@/lib/admin/auth";
-import { KNOWN_CRONS } from "@/lib/ops/cron-log";
+import { ADMIN_KNOWN_CRONS } from "@/lib/admin/crons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 /**
  * Manually triggers one of the Vercel crons from the Automation health panel,
  * so the operator doesn't have to wait for the daily schedule. Admin-auth
- * gated, job restricted to the KNOWN_CRONS allowlist (no arbitrary paths).
+ * gated, job restricted to the ADMIN_KNOWN_CRONS allowlist (no arbitrary paths).
  * Server-side it re-invokes the cron's own route with the CRON_SECRET, so the
  * job runs through exactly the same code path Vercel uses.
  */
@@ -27,7 +27,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
-  if (!KNOWN_CRONS.some((c) => c.job === job)) {
+  if (!ADMIN_KNOWN_CRONS.some((c) => c.job === job)) {
     return NextResponse.json({ ok: false, error: "unknown_job" }, { status: 400 });
   }
 

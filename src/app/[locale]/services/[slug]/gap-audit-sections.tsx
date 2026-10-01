@@ -1,17 +1,15 @@
 import { FileText, ShieldAlert } from "lucide-react";
 import type { Locale } from "@/i18n/config";
-import { Reveal } from "@/components/motion/reveal";
-import { TiltCard } from "@/components/motion/tilt-card";
-import { Cluster3D } from "@/components/hero/cluster-3d";
 import { LensExplorer, TimelineTrack, CreditSplit, type Lens } from "./gap-audit-client";
 
 /* ────────────────────────────────────────────────────────────
- * Operations Gap Audit — slug-specific showcase sections.
- * The other 9 services keep the generic template; this page is
- * the entry product, so it sells the diagnostic as an instrument:
- * 3 lenses (the moat), the 7-day track, the two documents the
- * client keeps, and the 50% credit mechanic (percent only — the
- * landing never shows dollar amounts).
+ * Operations Gap Audit — slug-specific showcase sections, in the
+ * "Night shift" system. The other services keep the generic
+ * template; this page is the entry product, so it shows the
+ * diagnostic itself: 3 lenses, the 7-day track, the two documents
+ * the client keeps, and the 50% credit (percent only, the site
+ * never shows dollar amounts). Sample findings are labeled as
+ * examples.
  * ──────────────────────────────────────────────────────────── */
 
 const LENSES: Record<Locale, Lens[]> = {
@@ -19,209 +17,171 @@ const LENSES: Record<Locale, Lens[]> = {
     {
       id: "workflow",
       index: "01",
-      accent: "#22D3EE",
+      accent: "#146b62",
       name: "Workflow",
-      question: "Where does a lead physically travel through your operation — and at which handoff does it fall?",
+      question: "How does a lead actually move through your business, and at which handoff does it get dropped?",
       examine: [
-        "Every entry point: web forms, calls, SMS, social DMs, walk-ins",
-        "Hand-offs between people, tools, and inboxes",
-        "After-hours and weekend coverage vs your actual demand curve",
+        "Every way customers reach you: web forms, calls, SMS, social media messages, walk-ins",
+        "Handoffs between people, tools and inboxes",
+        "Who covers nights and weekends, compared with when customers actually write",
       ],
-      evidence: "90-day CRM export, call logs, form submissions — read-only access, nothing changes in your systems",
-      finding: "“14 of 22 after-hours calls reviewed had no callback note in the CRM. That cohort books at roughly half the rate of business-hours callers.”",
+      evidence: "A 90-day export from your CRM, call logs and form submissions. Read-only access, so nothing changes in your systems.",
+      finding: "“14 of the 22 after-hours calls we reviewed had no callback note in the CRM. Those callers booked at about half the rate of daytime callers.”",
     },
     {
       id: "conversation",
       index: "02",
-      accent: "#A78BFA",
+      accent: "#a4460f",
       name: "Conversation",
-      question: "What actually gets said to your customers — by whom, how fast, in what tone, on every channel?",
+      question: "What do your customers actually hear from you, from whom, how fast and in what tone?",
       examine: [
-        "Response time per channel vs what your vertical's buyers tolerate",
-        "Consistency: does Tuesday-morning you sound like Saturday-afternoon staff?",
-        "Review responses, quote follow-ups, and the messages that never went out",
+        "Reply time on each channel, compared with what customers in your trade put up with",
+        "Consistency between you on a Tuesday morning and your staff on a Saturday afternoon",
+        "Review replies, quote follow-ups and the messages that never went out",
       ],
-      evidence: "75-150 real message samples scored across 4 dimensions — the lens most audits skip entirely",
-      finding: "“Of 11 negative reviews in the last 12 months, 7 received owner replies that disputed the customer's account. 3 escalated into public back-and-forth.”",
+      evidence: "75 to 150 real messages, scored on four points. Most audits never look at this.",
+      finding: "“Of 11 negative reviews in the past 12 months, 7 got owner replies that argued with the customer. 3 turned into a public back-and-forth.”",
     },
     {
       id: "security",
       index: "03",
-      accent: "#FB7185",
+      accent: "#9b2c1b",
       name: "Security",
-      question: "Where is customer data sitting unprotected — and who still has the keys?",
+      question: "Where is customer data sitting unprotected, and who still has access to it?",
       examine: [
-        "Where PII lives: shared sheets, inboxes, exported lists, personal phones",
-        "Access roster: every person, every system, including the ones who left",
-        "Vertical exposure: HIPAA-adjacent for medspas, PCI for restaurants, Reg BI for wealth",
+        "Where personal data lives: shared sheets, inboxes, exported lists, personal phones",
+        "Who has access to what, including people who no longer work for you",
+        "Rules that apply to your trade: HIPAA-adjacent for medspas, PCI for restaurants, Reg BI for wealth firms",
       ],
-      evidence: "Access lists + permission exports, mapped against who actually works there today",
-      finding: "“Your customer list — 840 names, phones, and service histories — lives in a sheet shared with 12 people. One of them left in October. They can download it right now.”",
+      evidence: "Access lists and permission exports, checked against who works there today.",
+      finding: "“Your customer list, with 840 names, phone numbers and service histories, is in a sheet shared with 12 people. One of them left in October and can still download it.”",
     },
   ],
   es: [
     {
       id: "workflow",
       index: "01",
-      accent: "#22D3EE",
-      name: "Workflow",
-      question: "¿Por dónde viaja físicamente un lead dentro de tu operación — y en qué handoff se cae?",
+      accent: "#146b62",
+      name: "Flujo de trabajo",
+      question: "¿Cómo se mueve de verdad un cliente dentro de tu negocio, y en qué paso se pierde?",
       examine: [
-        "Cada punto de entrada: forms web, llamadas, SMS, DMs de social, walk-ins",
-        "Los handoffs entre personas, herramientas e inboxes",
-        "Cobertura after-hours y fines de semana vs tu curva real de demanda",
+        "Cada forma en que te contactan: formularios, llamadas, SMS, mensajes en redes, visitas en persona",
+        "Los pasos entre personas, herramientas y bandejas de entrada",
+        "Quién cubre noches y fines de semana, comparado con cuándo escriben de verdad tus clientes",
       ],
-      evidence: "Export de CRM de 90 días, call logs, submissions — acceso solo-lectura, nada cambia en tus sistemas",
-      finding: "“14 de 22 llamadas after-hours revisadas no tenían nota de callback en el CRM. Ese grupo agenda a la mitad de la tasa de quienes llaman en horario.”",
+      evidence: "Una exportación de 90 días de tu CRM, registros de llamadas y formularios recibidos. Acceso de solo lectura, así que nada cambia en tus sistemas.",
+      finding: "“14 de las 22 llamadas fuera de horario que revisamos no tenían nota de devolución en el CRM. Esas personas agendaron a cerca de la mitad del ritmo de quienes llamaron de día.”",
     },
     {
       id: "conversation",
       index: "02",
-      accent: "#A78BFA",
+      accent: "#a4460f",
       name: "Conversación",
-      question: "¿Qué se le dice realmente a tus clientes — quién, qué tan rápido, en qué tono, en cada canal?",
+      question: "¿Qué escuchan realmente tus clientes, de quién, qué tan rápido y con qué tono?",
       examine: [
-        "Tiempo de respuesta por canal vs lo que toleran los compradores de tu vertical",
-        "Consistencia: ¿el tú de martes a la mañana suena igual que tu staff un sábado a la tarde?",
-        "Respuestas a reseñas, follow-ups de cotizaciones, y los mensajes que nunca salieron",
+        "El tiempo de respuesta en cada canal, comparado con lo que toleran los clientes de tu oficio",
+        "Si suenas igual tú un martes en la mañana que tu equipo un sábado en la tarde",
+        "Respuestas a reseñas, seguimiento de cotizaciones y los mensajes que nunca salieron",
       ],
-      evidence: "75-150 muestras de mensajes reales calificadas en 4 dimensiones — el lente que la mayoría de las auditorías ni mira",
-      finding: "“De 11 reseñas negativas en los últimos 12 meses, 7 recibieron respuestas del dueño disputando la versión del cliente. 3 escalaron a ida y vuelta público.”",
+      evidence: "De 75 a 150 mensajes reales, calificados en cuatro puntos. La mayoría de las auditorías no revisa esto.",
+      finding: "“De 11 reseñas negativas en los últimos 12 meses, 7 recibieron respuestas del dueño discutiendo con el cliente. 3 terminaron en una discusión pública.”",
     },
     {
       id: "security",
       index: "03",
-      accent: "#FB7185",
+      accent: "#9b2c1b",
       name: "Seguridad",
-      question: "¿Dónde están los datos de tus clientes sin protección — y quién sigue teniendo las llaves?",
+      question: "¿Dónde están los datos de tus clientes sin protección, y quién sigue teniendo acceso?",
       examine: [
-        "Dónde vive el PII: sheets compartidos, inboxes, listas exportadas, teléfonos personales",
-        "Roster de acceso: cada persona, cada sistema, incluidos los que ya se fueron",
-        "Exposición por vertical: HIPAA-adjacent en medspas, PCI en restaurantes, Reg BI en wealth",
+        "Dónde viven los datos personales: hojas compartidas, correos, listas exportadas, teléfonos personales",
+        "Quién tiene acceso a qué, incluidas las personas que ya no trabajan contigo",
+        "Reglas que aplican a tu oficio: cercano a HIPAA en medspas, PCI en restaurantes, Reg BI en firmas de inversión",
       ],
-      evidence: "Listas de acceso + exports de permisos, mapeados contra quién trabaja ahí hoy",
-      finding: "“Tu lista de clientes — 840 nombres, teléfonos e historiales — vive en un sheet compartido con 12 personas. Una se fue en octubre. Puede descargarla ahora mismo.”",
+      evidence: "Listas de acceso y permisos exportados, comparados con quién trabaja ahí hoy.",
+      finding: "“Tu lista de clientes, con 840 nombres, teléfonos e historiales, está en una hoja compartida con 12 personas. Una de ellas se fue en octubre y todavía la puede descargar.”",
     },
   ],
 };
 
 const TIMELINE: Record<Locale, { day: string; title: string; detail: string }[]> = {
   en: [
-    { day: "Day 0", title: "Sign + schedule", detail: "SOW signed, kickoff on the calendar." },
-    { day: "Day 1", title: "Kickoff call", detail: "60-90 min. Your operation, in your words." },
-    { day: "Day 2", title: "Read-only access", detail: "CRM, call logs, reviews. We look, never touch." },
-    { day: "Days 3-4", title: "Three-lens analysis", detail: "Heads-down. All three lenses run in parallel." },
-    { day: "Days 5-6", title: "Synthesis", detail: "Findings become the two documents." },
-    { day: "Day 7", title: "Walkthrough", detail: "30 min. Every finding defended, every number explained." },
+    { day: "Day 0", title: "Sign and schedule", detail: "The agreement is signed and the kickoff is on the calendar." },
+    { day: "Day 1", title: "Kickoff call", detail: "60 to 90 minutes. You walk us through your business." },
+    { day: "Day 2", title: "Read-only access", detail: "CRM, call logs, reviews. We look and don't touch." },
+    { day: "Days 3-4", title: "The three lenses", detail: "We run all three reviews at the same time." },
+    { day: "Days 5-6", title: "Writing it up", detail: "The findings become the two documents." },
+    { day: "Day 7", title: "Walkthrough", detail: "30 minutes. We explain every finding and every number." },
   ],
   es: [
-    { day: "Día 0", title: "Firma + agenda", detail: "SOW firmado, kickoff en el calendario." },
-    { day: "Día 1", title: "Kickoff call", detail: "60-90 min. Tu operación, en tus palabras." },
-    { day: "Día 2", title: "Acceso solo-lectura", detail: "CRM, call logs, reseñas. Miramos, nunca tocamos." },
-    { day: "Días 3-4", title: "Análisis de 3 lentes", detail: "Heads-down. Los tres lentes corren en paralelo." },
-    { day: "Días 5-6", title: "Síntesis", detail: "Los hallazgos se vuelven los dos documentos." },
-    { day: "Día 7", title: "Walkthrough", detail: "30 min. Cada hallazgo defendido, cada número explicado." },
+    { day: "Día 0", title: "Firma y agenda", detail: "Se firma el acuerdo y queda agendada la reunión inicial." },
+    { day: "Día 1", title: "Reunión inicial", detail: "De 60 a 90 minutos. Nos explicas cómo funciona tu negocio." },
+    { day: "Día 2", title: "Acceso de solo lectura", detail: "CRM, registros de llamadas, reseñas. Miramos sin tocar." },
+    { day: "Días 3-4", title: "Los tres lentes", detail: "Hacemos las tres revisiones al mismo tiempo." },
+    { day: "Días 5-6", title: "Redacción", detail: "Los hallazgos se convierten en los dos documentos." },
+    { day: "Día 7", title: "Presentación", detail: "30 minutos. Te explicamos cada hallazgo y cada número." },
   ],
 };
 
 const COPY = {
   en: {
-    lensEyebrow: "// the instrument",
-    lensTitle: "Three lenses. Most audits use one.",
-    lensSub: "Generic audits count leads and stop. This one also examines what gets said to your customers and where their data sits — the two places operations bleed quietly.",
-    evidenceLabel: "Evidence we pull",
-    findingLabel: "Sample finding — the level of specificity you get",
-    timelineEyebrow: "// seven days",
-    timelineTitle: "Signed to delivered in one week.",
-    docsEyebrow: "// what you keep",
-    docsTitle: "Two documents. Yours, unconditionally.",
-    docsSub: "Hand them to your in-house team, act on them yourself, or move forward with us. The diagnostic stands on its own — that's what makes it honest.",
+    lensLabel: "How we look",
+    lensTitle: "Three lenses: workflow, conversation and security.",
+    lensSub: "Most audits count leads and stop there. This one also looks at what your customers hear from you and where their data sits.",
+    evidenceLabel: "What we review",
+    findingLabel: "Example finding",
+    timelineLabel: "Seven days",
+    timelineTitle: "From signed to delivered in one week.",
+    docsLabel: "What you keep",
+    docsTitle: "Two documents that are yours either way.",
+    docsSub: "Give them to your team, act on them yourself, or build with us. The audit is useful on its own, whatever you decide next.",
     gapMapPages: "3-5 pages",
     gapMapTitle: "The Gap Map",
-    gapMapDesc: "Every gap found, what it costs you per month, and the prioritized fix — specific enough that any competent builder could execute it.",
+    gapMapDesc: "Every gap we found, what it costs you each month and the fix we'd do first. Specific enough that any capable developer could carry it out.",
     snapshotPages: "1-2 pages",
     snapshotTitle: "Trust Stack Risk Snapshot",
-    snapshotDesc: "Security findings in two registers: plain language for you, technical detail for your attorney, CPA, or whoever advises you.",
-    creditEyebrow: "// the mechanic",
-    creditTitle: "We don't sell free audits.",
-    creditSub: "A 100% credit would make this a sales pitch with a refundable fee. Half the fee credits forward; the other half bought real diagnostic work you keep either way.",
-    creditLeft: "credits toward your build",
+    snapshotDesc: "The security findings, written twice: in plain language for you, and with technical detail for your attorney, CPA or advisor.",
+    creditLabel: "The credit",
+    creditTitle: "Half the fee counts toward a build.",
+    creditSub: "If you sign a build within 30 days, 50% of the audit fee is credited toward it. The other 50% pays for the diagnostic work, which you keep either way.",
+    creditLeft: "credited toward your build",
     creditRight: "pays for the diagnostic",
-    creditChip: "credit window: 30 days from delivery",
-    heroImageAlt: "A wireframe dome with a glowing central aperture examining the structure within",
-    heroImageCaption: "// diagnostic-unit · 3 lenses · 7 days",
+    creditChip: "Credit window: 30 days after delivery",
   },
   es: {
-    lensEyebrow: "// el instrumento",
-    lensTitle: "Tres lentes. La mayoría de las auditorías usa uno.",
-    lensSub: "Las auditorías genéricas cuentan leads y paran ahí. Esta también examina qué se les dice a tus clientes y dónde viven sus datos — los dos lugares donde una operación sangra en silencio.",
-    evidenceLabel: "Evidencia que extraemos",
-    findingLabel: "Hallazgo de muestra — el nivel de especificidad que recibes",
-    timelineEyebrow: "// siete días",
-    timelineTitle: "De firmado a entregado en una semana.",
-    docsEyebrow: "// lo que te queda",
-    docsTitle: "Dos documentos. Tuyos, sin condiciones.",
-    docsSub: "Dáselos a tu equipo in-house, actúa por tu cuenta, o avanza con nosotros. El diagnóstico vale por sí mismo — eso es lo que lo hace honesto.",
+    lensLabel: "Cómo revisamos",
+    lensTitle: "Tres lentes: flujo de trabajo, conversación y seguridad.",
+    lensSub: "La mayoría de las auditorías cuenta clientes y ahí se queda. Esta también revisa lo que escuchan tus clientes y dónde están sus datos.",
+    evidenceLabel: "Qué revisamos",
+    findingLabel: "Hallazgo de ejemplo",
+    timelineLabel: "Siete días",
+    timelineTitle: "De la firma a la entrega en una semana.",
+    docsLabel: "Con qué te quedas",
+    docsTitle: "Dos documentos que son tuyos, pase lo que pase.",
+    docsSub: "Dáselos a tu equipo, úsalos por tu cuenta o constrúyelo con nosotros. La auditoría sirve por sí sola, decidas lo que decidas.",
     gapMapPages: "3-5 páginas",
     gapMapTitle: "El Gap Map",
-    gapMapDesc: "Cada gap encontrado, cuánto te cuesta por mes, y el fix priorizado — tan específico que cualquier builder competente podría ejecutarlo.",
+    gapMapDesc: "Cada problema que encontramos, cuánto te cuesta al mes y lo primero que arreglaríamos. Lo bastante específico para que cualquier desarrollador capaz lo pueda hacer.",
     snapshotPages: "1-2 páginas",
     snapshotTitle: "Trust Stack Risk Snapshot",
-    snapshotDesc: "Hallazgos de seguridad en dos registros: lenguaje claro para ti, detalle técnico para tu abogado, CPA, o quien te asesore.",
-    creditEyebrow: "// la mecánica",
-    creditTitle: "No vendemos auditorías gratis.",
-    creditSub: "Un crédito del 100% convertiría esto en un pitch de ventas con fee reembolsable. La mitad del fee se acredita hacia adelante; la otra mitad compró trabajo diagnóstico real que te queda de todas formas.",
-    creditLeft: "se acredita a tu build",
+    snapshotDesc: "Los hallazgos de seguridad, escritos dos veces: en lenguaje claro para ti y con detalle técnico para tu abogado, contador o asesor.",
+    creditLabel: "El crédito",
+    creditTitle: "La mitad del pago cuenta para un proyecto.",
+    creditSub: "Si contratas un proyecto dentro de 30 días, el 50% de lo que pagaste por la auditoría se descuenta. El otro 50% paga el trabajo de diagnóstico, que te quedas de todas formas.",
+    creditLeft: "se descuenta de tu proyecto",
     creditRight: "paga el diagnóstico",
-    creditChip: "ventana del crédito: 30 días desde la entrega",
-    heroImageAlt: "Una cúpula wireframe con una apertura central brillante examinando la estructura interior",
-    heroImageCaption: "// unidad-diagnóstico · 3 lentes · 7 días",
+    creditChip: "Plazo del crédito: 30 días después de la entrega",
   },
 } as const;
 
-/**
- * Hero visual — the orphaned cube render finally earns its place,
- * floating like the main hero: no card, no border. Cluster3D gives it
- * idle float + cursor tilt + glare; the radial mask dissolves the
- * image's rectangular edges into the page background. Arcs off — the
- * cube has its own orbiting rings and circuit glow.
- */
-export function GapAuditHeroVisual({ locale }: { locale: Locale }) {
-  const t = COPY[locale];
+function Head({ label, title, sub }: { label: string; title: string; sub?: string }) {
   return (
-    <Reveal preset="fade" delay={0.2} className="relative">
-      {/* Oversized: scales beyond its column on larger screens so the
-          examining-eye dome reads as the centerpiece. */}
-      <div className="relative aspect-[16/11] w-full md:scale-[1.18] lg:scale-[1.28]">
-        {/* breathing glow behind the dome's core */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_45%_at_50%_48%,rgba(34,211,238,0.18),transparent_70%)]"
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            // Radial mask — no opaque plateau: fades from the very center
-            // and is fully transparent well before the rectangle edge, so
-            // there's no visible "pasted image" boundary. The dome melts
-            // into the page (softer than the main hero on purpose).
-            maskImage:
-              "radial-gradient(ellipse 60% 60% at 50% 48%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 28%, rgba(0,0,0,0.3) 52%, transparent 74%)",
-            WebkitMaskImage:
-              "radial-gradient(ellipse 60% 60% at 50% 48%, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 28%, rgba(0,0,0,0.3) 52%, transparent 74%)",
-          }}
-        >
-          <Cluster3D
-            imageSrc="/hero/gap-audit-hero.webp"
-            glareIntensity={0.14}
-            showArcs={false}
-          />
-        </div>
-        <span className="pointer-events-none absolute bottom-1 left-1 font-mono text-[0.62rem] uppercase tracking-[0.2em] text-cyan-glow/70">
-          {t.heroImageCaption}
-        </span>
+    <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end">
+      <div className="min-w-0">
+        <p className="lc-label text-dawn-deep">{label}</p>
+        <h2 className="lc-h2 mt-5 max-w-[16ch]">{title}</h2>
       </div>
-    </Reveal>
+      {sub && <p className="lc-lead max-w-[34rem] text-ink-2">{sub}</p>}
+    </div>
   );
 }
 
@@ -230,120 +190,58 @@ export function GapAuditSections({ locale }: { locale: Locale }) {
 
   return (
     <>
-      {/* ── The 3 lenses ── */}
-      <section className="flex flex-col gap-8">
-        <Reveal className="flex flex-col gap-3">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-accent">
-            {t.lensEyebrow}
-          </span>
-          <h2 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">
-            {t.lensTitle}
-          </h2>
-          <p className="max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-            {t.lensSub}
-          </p>
-        </Reveal>
-        <Reveal preset="fade" delay={0.15}>
-          <LensExplorer
-            lenses={LENSES[locale]}
-            evidenceLabel={t.evidenceLabel}
-            findingLabel={t.findingLabel}
-          />
-        </Reveal>
-      </section>
-
-      {/* ── 7-day track ── */}
-      <section className="flex flex-col gap-10">
-        <Reveal className="flex flex-col gap-3">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-accent">
-            {t.timelineEyebrow}
-          </span>
-          <h2 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">
-            {t.timelineTitle}
-          </h2>
-        </Reveal>
-        <TimelineTrack items={TIMELINE[locale]} />
-      </section>
-
-      {/* ── The two documents ── */}
-      <section className="flex flex-col gap-8">
-        <Reveal className="flex flex-col gap-3">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-accent">
-            {t.docsEyebrow}
-          </span>
-          <h2 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">
-            {t.docsTitle}
-          </h2>
-          <p className="max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-            {t.docsSub}
-          </p>
-        </Reveal>
-        <div className="grid gap-5 md:grid-cols-2">
-          <Reveal preset="fadeUp" delay={0.05}>
-            <TiltCard className="h-full">
-              <div className="relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-cyan/25 bg-card/70 p-7 md:p-8">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -left-16 -top-16 size-48 rounded-full bg-cyan/10 blur-3xl"
-                />
-                <div className="flex items-center justify-between">
-                  <FileText className="size-5 text-cyan-glow" />
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
-                    {t.gapMapPages}
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold tracking-tight">
-                  {t.gapMapTitle}
-                </h3>
-                <p className="text-sm leading-relaxed text-foreground/80">
-                  {t.gapMapDesc}
-                </p>
-              </div>
-            </TiltCard>
-          </Reveal>
-          <Reveal preset="fadeUp" delay={0.15}>
-            <TiltCard className="h-full">
-              <div className="relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-violet/25 bg-card/70 p-7 md:p-8">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-violet/10 blur-3xl"
-                />
-                <div className="flex items-center justify-between">
-                  <ShieldAlert className="size-5 text-violet-glow" />
-                  <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
-                    {t.snapshotPages}
-                  </span>
-                </div>
-                <h3 className="text-xl font-semibold tracking-tight">
-                  {t.snapshotTitle}
-                </h3>
-                <p className="text-sm leading-relaxed text-foreground/80">
-                  {t.snapshotDesc}
-                </p>
-              </div>
-            </TiltCard>
-          </Reveal>
+      <section data-nav-theme="light" className="bg-paper-2 py-20 text-ink md:py-32">
+        <div className="lc-wrap">
+          <Head label={t.lensLabel} title={t.lensTitle} sub={t.lensSub} />
+          <div className="mt-12 md:mt-16">
+            <LensExplorer lenses={LENSES[locale]} evidenceLabel={t.evidenceLabel} findingLabel={t.findingLabel} />
+          </div>
         </div>
       </section>
 
-      {/* ── Credit mechanic ── */}
-      <section className="flex flex-col gap-8">
-        <Reveal className="flex flex-col gap-3">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-accent">
-            {t.creditEyebrow}
-          </span>
-          <h2 className="text-balance text-2xl font-semibold tracking-tight md:text-3xl">
-            {t.creditTitle}
-          </h2>
-          <p className="max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-            {t.creditSub}
-          </p>
-        </Reveal>
-        <CreditSplit
-          leftLabel={t.creditLeft}
-          rightLabel={t.creditRight}
-          windowChip={t.creditChip}
-        />
+      <section data-nav-theme="light" className="bg-paper py-20 text-ink md:py-32">
+        <div className="lc-wrap">
+          <Head label={t.timelineLabel} title={t.timelineTitle} />
+          <div className="mt-12 md:mt-16">
+            <TimelineTrack items={TIMELINE[locale]} />
+          </div>
+        </div>
+      </section>
+
+      <section data-nav-theme="dark" className="bg-night py-20 text-bone md:py-32">
+        <div className="lc-wrap">
+          <div className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end">
+            <div className="min-w-0">
+              <p className="lc-label text-dawn">{t.docsLabel}</p>
+              <h2 className="lc-h2 mt-5 max-w-[16ch]">{t.docsTitle}</h2>
+            </div>
+            <p className="lc-lead max-w-[34rem] text-bone-2">{t.docsSub}</p>
+          </div>
+          <div className="mt-12 grid gap-4 md:mt-16 md:grid-cols-2">
+            {[
+              { Icon: FileText, pages: t.gapMapPages, title: t.gapMapTitle, desc: t.gapMapDesc },
+              { Icon: ShieldAlert, pages: t.snapshotPages, title: t.snapshotTitle, desc: t.snapshotDesc },
+            ].map(({ Icon, pages, title, desc }) => (
+              <article key={title} className="flex flex-col gap-4 rounded-[1.75rem] bg-paper p-7 text-ink md:p-9">
+                <div className="flex items-center justify-between">
+                  <Icon className="size-5 text-dawn-deep" strokeWidth={1.5} />
+                  <span className="lc-label text-ink-3">{pages}</span>
+                </div>
+                <h3 className="font-serif text-[2rem] leading-none">{title}</h3>
+                <p className="text-[15.5px] leading-relaxed text-ink-2">{desc}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section data-nav-theme="light" className="bg-paper py-20 text-ink md:py-32">
+        <div className="lc-wrap">
+          <Head label={t.creditLabel} title={t.creditTitle} sub={t.creditSub} />
+          <div className="mt-12 md:mt-16">
+            <CreditSplit leftLabel={t.creditLeft} rightLabel={t.creditRight} windowChip={t.creditChip} />
+          </div>
+        </div>
       </section>
     </>
   );

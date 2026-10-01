@@ -1,7 +1,10 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listEvents } from "@/lib/calendar/google-calendar";
-import { sendSms, toE164US, maskPhone } from "@/lib/notify/twilio";
+import { toE164US, maskPhone } from "@/lib/notify/twilio";
+import { sendProactiveGated } from "@/lib/notify/proactive";
+import { readSendWindow, type SendWindow } from "@/lib/booking/gates";
+import { DEFAULT_TIMEZONE, parseIntegrations } from "@/lib/agent-runtime/config";
 
 /**
  * Front Desk — Phase 1: 24h appointment reminders.
@@ -14,6 +17,11 @@ import { sendSms, toE164US, maskPhone } from "@/lib/notify/twilio";
  * The customer's phone is parsed from the event text (summary/description/
  * location) — the salon logs the phone in the appointment. Events without a
  * parseable phone are skipped and counted (surfaced for follow-up).
+ *
+ * Every send goes through sendProactiveGated (lib/notify/proactive.ts): the
+ * parsed phone must belong to a known contact with transactional consent,
+ * not opted out, inside the send window. A phone that isn't a consented
+ * contact is skipped (skippedNoConsent), never texted.
  */
 
 export type ReminderAgentSettings = {
@@ -24,6 +32,8 @@ export type ReminderAgentSettings = {
   leadHours: number;
   fromNumber: string;
   locale: "es" | "en";
+  /** Allowed local send window (integrations.quiet_hours, default 8am-9pm). */
+  window?: SendWindow;
 };
 
 export type ReminderRunResult = {
@@ -33,7 +43,7 @@ export type ReminderRunResult = {
   skippedNoPhone: number;
   skippedAlreadySent: number;
   failed: number;
-  skippedNoConsent?: number; // mirror path: opted out / no transactional consent
+  skippedNoConsent?: number; // gate said no: opted out / no consent / quiet hours / unknown contact
   error?: string;
 };
 
@@ -43,24 +53,12 @@ export function parseAgentReminderSettings(agent: {
   name: string;
   integrations: unknown;
 }): ReminderAgentSettings | null {
-  const integ = (agent.integrations ?? {}) as Record<string, unknown>;
-  const calendar = (integ.calendar ?? {}) as Record<string, unknown>;
-  const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
-
-  if (reminders.enabled !== true) return null;
-  const calendarId = typeof calendar.calendar_id === "string" ? calendar.calendar_id : "";
-  const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
-  if (!calendarId || !fromNumber) return null;
-
-  return {
-    workspaceId: agent.workspace_id,
-    salonName: agent.name,
-    calendarId,
-    timezone: typeof calendar.timezone === "string" ? calendar.timezone : "America/New_York",
-    leadHours: typeof reminders.lead_hours === "number" ? reminders.lead_hours : 24,
-    fromNumber,
-    locale: integ.locale === "en" ? "en" : "es",
-  };
+  const base = parseExternalReminderSettings(agent);
+  if (!base) return null;
+  // The Google Calendar path also needs the calendar id.
+  const calendarId = parseIntegrations(agent.integrations).calendar.calendar_id ?? "";
+  if (!calendarId) return null;
+  return { ...base, calendarId };
 }
 
 const PHONE_RE = /(\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/;
@@ -118,6 +116,7 @@ export async function runRemindersForAgent(
     skippedNoPhone: 0,
     skippedAlreadySent: 0,
     failed: 0,
+    skippedNoConsent: 0,
   };
 
   // Daily cron (Vercel Hobby allows daily crons only). Use a 24h-wide band
@@ -172,25 +171,41 @@ export async function runRemindersForAgent(
     }
     const claimId = (claimed[0] as { id: string }).id;
 
-    const sms = await sendSms({
+    const sent = await sendProactiveGated(sb, {
       workspaceId: s.workspaceId,
       to: phone,
-      from: s.fromNumber,
-      body: formatReminder(s, ev.startIso),
+      kind: "transactional",
+      timezone: s.timezone,
+      window: s.window,
       actor: `front_desk:${s.workspaceId}`,
+      smsFrom: s.fromNumber,
+      smsBody: formatReminder(s, ev.startIso),
     });
-
-    if (sms.ok) {
-      await sb.from("appointment_reminders_sent").update({ provider_sid: sms.sid }).eq("id", claimId);
-      res.sent++;
-    } else {
-      // Roll back the claim so a transient failure retries next run.
-      await sb.from("appointment_reminders_sent").delete().eq("id", claimId);
-      res.failed++;
-    }
+    await settleClaim(sb, claimId, sent, res);
   }
 
   return res;
+}
+
+/**
+ * Finish a claimed ledger row after a gated send: keep it (with the SID) on
+ * success, delete it otherwise so a later run can retry (a transient failure,
+ * or a gate that may open: consent granted, inside the window).
+ */
+async function settleClaim(
+  sb: SupabaseClient,
+  claimId: string,
+  sent: Awaited<ReturnType<typeof sendProactiveGated>>,
+  res: ReminderRunResult,
+): Promise<void> {
+  if (sent.status === "sent") {
+    await sb.from("appointment_reminders_sent").update({ provider_sid: sent.sid }).eq("id", claimId);
+    res.sent++;
+    return;
+  }
+  await sb.from("appointment_reminders_sent").delete().eq("id", claimId);
+  if (sent.status === "blocked") res.skippedNoConsent = (res.skippedNoConsent ?? 0) + 1;
+  else res.failed++;
 }
 
 // ── External-backend workspaces: remind off the mirror, not Google Calendar ─────
@@ -201,22 +216,22 @@ export function parseExternalReminderSettings(agent: {
   name: string;
   integrations: unknown;
 }): ReminderAgentSettings | null {
-  const integ = (agent.integrations ?? {}) as Record<string, unknown>;
-  const calendar = (integ.calendar ?? {}) as Record<string, unknown>;
-  const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
-
-  if (reminders.enabled !== true) return null;
-  const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
+  // Shared AgentConfig parser (lib/agent-runtime/config): one reading of
+  // timezone / sender / locale for every channel.
+  const integ = parseIntegrations(agent.integrations);
+  if (!integ.reminders.enabled) return null;
+  const fromNumber = integ.reminders.from_number ?? "";
   if (!fromNumber) return null;
 
   return {
     workspaceId: agent.workspace_id,
     salonName: agent.name,
     calendarId: "", // unused for the mirror path
-    timezone: typeof calendar.timezone === "string" ? calendar.timezone : "America/New_York",
-    leadHours: typeof reminders.lead_hours === "number" ? reminders.lead_hours : 24,
+    timezone: integ.booking.timezone ?? integ.calendar.timezone ?? DEFAULT_TIMEZONE,
+    leadHours: integ.reminders.lead_hours,
     fromNumber,
     locale: integ.locale === "en" ? "en" : "es",
+    window: readSendWindow(agent.integrations),
   };
 }
 
@@ -305,21 +320,19 @@ export async function runRemindersFromMirror(
     }
     const claimId = (claimed[0] as { id: string }).id;
 
-    const sms = await sendSms({
+    // The pre-filter above uses the joined row; the gate re-checks the
+    // contact fresh and adds quiet hours.
+    const sent = await sendProactiveGated(sb, {
       workspaceId: s.workspaceId,
-      to: phone,
-      from: s.fromNumber,
-      body: formatReminder(s, row.start_at),
+      to: c.phone,
+      kind: "transactional",
+      timezone: s.timezone,
+      window: s.window,
       actor: `front_desk:${s.workspaceId}`,
+      smsFrom: s.fromNumber,
+      smsBody: formatReminder(s, row.start_at),
     });
-
-    if (sms.ok) {
-      await sb.from("appointment_reminders_sent").update({ provider_sid: sms.sid }).eq("id", claimId);
-      res.sent++;
-    } else {
-      await sb.from("appointment_reminders_sent").delete().eq("id", claimId);
-      res.failed++;
-    }
+    await settleClaim(sb, claimId, sent, res);
   }
 
   return res;

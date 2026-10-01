@@ -38,3 +38,12 @@ encrypted transcripts → leads).
 | 040–041 | Decouple audit_chain_head + audit_logs from legacy clients FK |
 | 042 | Monthly token budgets: `monthly_token_budget` column, `agent_usage_monthly` table, `increment_agent_usage` RPC (applied 2026-06-10) |
 | 043 | RLS policies for `loucels_dashboard_read` on 17 tables — closes the F11 loose end that made admin reads return zero rows (applied 2026-06-10) |
+| 044–058 | Not tracked here at the time (CRM, vault app-layer crypto, front desk, external booking mirror, admin settings, audit truncate guard, ROI attribution). Session notes say 044, 045, 050, 053 and 058 were applied; confirm the rest before relying on them |
+| 059 | ✅ `admin_workspace_metrics(since)` RPC: one aggregate per workspace, operator actors excluded; service_role only (anon gets 42501). Applied 2026-10-01 |
+| 060 | ✅ `escalations` table (pipeline writes the row first, then alerts; admin read role can select, anon gets 42501). Applied 2026-10-01, verified |
+| 061 | ✅ Partial unique index `messages_log (workspace_id, provider_sid)` for inbound SMS dedupe. Applied 2026-10-01 |
+| 062 | ✅ `pending_approvals.session_id` + `contact_id` (link approval → conversation). Applied 2026-10-01 |
+| 063 | ✅ `client_portal_access.sessions_valid_after` (rotate/revoke ends open portal sessions). Applied 2026-10-01 |
+| 064 | ✅ `grant execute` on `admin_workspace_metrics` to `loucels_dashboard_read` (admin pages use the RPC instead of paging). Applied 2026-10-01, verified with the read role |
+| 065 | ✅ `appointments.price_cents` (booking price from the external app), `vault_presence()` (presence only, no secrets), read grants for `loucels_dashboard_read` on front-desk tables. Applied 2026-10-01, verified with the read role |
+| 066 | ✅ `client_reports` (weekly reports: drafted by cron, sent only on admin approval). Applied 2026-10-01, verified |

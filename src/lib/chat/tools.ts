@@ -1,12 +1,15 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
-import { siteConfig } from "@/lib/site-config";
+import type { BookingLink } from "@/lib/agents/booking-config";
 import type { BookingPayload, EscalationPayload, ApprovalRequestPayload } from "./types";
 
+// Tenant-neutral on purpose: this tool is offered to every agent that has a
+// booking link configured (salons, clinics, Loucells' own site), so the
+// description must not carry any one business's sales copy.
 export const REQUEST_BOOKING_TOOL: Anthropic.Tool = {
   name: "request_booking",
   description:
-    "Call when the visitor signals real intent to talk (asks pricing, scope, timeline, 'how do we start', or describes a clear fit). Gathers their name, email, and reason, and returns a Cal.com link pre-filled with their info. The agent must then send the link in its reply.",
+    "Share the business's booking link when the visitor wants to book, schedule, or talk to the team. Collect their name, email, and a one-line reason first. Returns the booking link; include it in your reply exactly as returned. Never invent or modify a booking link.",
   input_schema: {
     type: "object",
     properties: {
@@ -18,12 +21,12 @@ export const REQUEST_BOOKING_TOOL: Anthropic.Tool = {
       reason: {
         type: "string",
         description:
-          "One-line summary of what they want to discuss (e.g., 'AI Front Desk for a 4-clinic dental practice in Jupiter').",
+          "One-line summary of what they want to book or discuss, in the visitor's own terms.",
       },
       preferredWindow: {
         type: "string",
         description:
-          "Optional. Time-of-day or day-of-week preference if the visitor mentioned one (e.g., 'mornings ET', 'next week').",
+          "Optional. Time-of-day or day-of-week preference if the visitor mentioned one (e.g., 'mornings', 'next week').",
       },
     },
     required: ["name", "email", "reason"],
@@ -33,31 +36,36 @@ export const REQUEST_BOOKING_TOOL: Anthropic.Tool = {
 /**
  * Handles the request_booking tool call.
  *
- * Returns a Cal.com deep link with **name + notes only** pre-filled. Email is
- * intentionally NOT in the URL — even though Cal.com supports `?email=`, the
- * URL ends up in the visitor's browser history and, more importantly, the
- * visitor may copy the link to share (with an assistant, spouse, etc.). We
- * trade 5 seconds of convenience for not leaking the email if the link is
- * forwarded. The visitor types the email on Cal's form.
+ * The link is the AGENT's own (integrations.booking.link_url, or Loucells
+ * Core's Cal.com only for Loucells' house agents; see
+ * lib/agents/booking-config.ts). There is no global fallback: a tenant
+ * without a configured link never gets this tool offered.
  *
- * Future (when CAL_COM_API_KEY is configured): swap this body to hit Cal.com
- * v2 API and book the slot inside the chat with a server-side state token,
- * so no PII ever lands in any URL. The tool contract above does not change —
- * only this handler.
+ * Prefill (name + notes as query params) only happens when the link opts in
+ * (`prefill: true`, e.g. a Cal.com page). Email is intentionally NEVER put in
+ * the URL: it ends up in browser history and the visitor may forward the
+ * link. Client links get no visitor data at all unless they opt in.
  */
-export function handleRequestBooking(payload: BookingPayload): {
+export function handleRequestBooking(
+  payload: BookingPayload,
+  link: Pick<BookingLink, "url" | "prefill">,
+): {
   bookingLink: string;
   prefilledFor: string;
 } {
-  const base = siteConfig.calUrl;
-  const params = new URLSearchParams({
-    name: payload.name,
-    notes: payload.preferredWindow
-      ? `${payload.reason} — preferred: ${payload.preferredWindow}`
+  if (!link.prefill) {
+    return { bookingLink: link.url, prefilledFor: payload.name };
+  }
+  const url = new URL(link.url);
+  url.searchParams.set("name", payload.name);
+  url.searchParams.set(
+    "notes",
+    payload.preferredWindow
+      ? `${payload.reason} (preferred: ${payload.preferredWindow})`
       : payload.reason,
-  });
+  );
   return {
-    bookingLink: `${base}?${params.toString()}`,
+    bookingLink: url.toString(),
     prefilledFor: payload.name,
   };
 }
@@ -78,7 +86,7 @@ export function handleRequestBooking(payload: BookingPayload): {
 export const ESCALATE_TO_HUMAN_TOOL: Anthropic.Tool = {
   name: "escalate_to_human",
   description:
-    "Call when the visitor's situation crosses a threshold you should not handle alone: out-of-scope question (legal/medical/financial advice the visitor mistakenly asks of you), sensitive topic the visitor surfaces emotionally, frustrated visitor who needs an apology and a person, ambiguous high-stakes question where you'd risk being wrong, or your own uncertainty about whether to proceed. Pauses the conversation, notifies Steven, and tells the visitor a human will follow up. Always prefer this over guessing or stalling. Do NOT call this routinely — only when one of the listed conditions actually fits.",
+    "Call when the visitor's situation crosses a threshold you should not handle alone: out-of-scope question (legal/medical/financial advice the visitor mistakenly asks of you), sensitive topic the visitor surfaces emotionally, frustrated visitor who needs an apology and a person, ambiguous high-stakes question where you'd risk being wrong, or your own uncertainty about whether to proceed. Pauses the conversation, notifies a person on the team, and tells the visitor a human will follow up. Always prefer this over guessing or stalling. Do NOT call this routinely — only when one of the listed conditions actually fits.",
   input_schema: {
     type: "object",
     properties: {
@@ -96,7 +104,7 @@ export const ESCALATE_TO_HUMAN_TOOL: Anthropic.Tool = {
       summary: {
         type: "string",
         description:
-          "One-line summary of what the visitor needs (for Steven's queue). Be specific: 'Wants to discuss billing dispute from a previous engagement' is better than 'frustrated customer'.",
+          "One-line summary of what the visitor needs (for the human follow-up queue). Be specific: 'Wants to discuss billing dispute from a previous engagement' is better than 'frustrated customer'.",
       },
       name: {
         type: "string",
@@ -125,34 +133,70 @@ export type EscalationResult = {
 export function handleEscalateToHuman(
   payload: EscalationPayload,
   locale: "en" | "es",
+  opts: { house?: boolean } = {},
 ): EscalationResult {
   // Tailor the acknowledgement to the escalation category. Each category
   // needs a slightly different tone — frustrated visitor needs warmth;
   // out-of-scope needs honesty; sensitive topic needs gravity.
-  const messages: Record<EscalationPayload["reason"], { en: string; es: string }> = {
-    out_of_scope: {
-      en: "That's outside what I'm built to handle reliably. I've flagged it for Steven directly — he'll reach out within one business day so you get a real answer, not a guess from me.",
-      es: "Eso está fuera de lo que estoy preparado para manejar de forma confiable. Lo flagueé directamente para Steven — te contactará dentro de un día hábil para que tengas una respuesta real, no una suposición de mi parte.",
-    },
-    sensitive_topic: {
-      en: "I want to make sure this gets the attention it deserves. I've notified Steven so a person follows up directly — please don't continue typing sensitive details here; he'll reach out via a secured channel.",
-      es: "Quiero asegurarme de que esto reciba la atención que merece. Le notifiqué a Steven para que una persona haga seguimiento directamente — por favor no sigas tipeando detalles sensibles aquí; te contactará por un canal seguro.",
-    },
-    frustrated_visitor: {
-      en: "I hear you, and I'm not the right channel for this. Steven gets a notification from me right now — he's the founder and will reach out personally to listen properly.",
-      es: "Te escucho, y no soy el canal correcto para esto. Steven recibe una notificación mía ahora — es el founder y te contactará personalmente para escucharte como corresponde.",
-    },
-    ambiguous_high_stakes: {
-      en: "This one I want to get right rather than fast. I've handed it off to Steven — he'll follow up within one business day with a precise answer.",
-      es: "Esta quiero que salga bien antes que rápido. Le pasé el caso a Steven — hará seguimiento dentro de un día hábil con una respuesta precisa.",
-    },
-    agent_uncertain: {
-      en: "Honestly, I'm not confident enough to answer this without checking. Steven was just notified — he'll follow up within one business day with the actual answer.",
-      es: "Honestamente, no tengo suficiente confianza para responder esto sin verificar. Steven acaba de ser notificado — hará seguimiento dentro de un día hábil con la respuesta real.",
-    },
-  };
+  //
+  // House agents (Loucells Core's own site chat) name Steven, who gets the
+  // alert. Client agents speak for the client's business, so they say "the
+  // team" and make no promise on Loucells' timeline.
+  const messages: Record<EscalationPayload["reason"], { en: string; es: string }> = opts.house
+    ? {
+        out_of_scope: {
+          en: "That's outside what I can answer reliably. I've passed it to Steven, and he'll reach out within one business day with a real answer.",
+          es: "Eso está fuera de lo que puedo responder con seguridad. Se lo pasé a Steven y te va a contactar dentro de un día hábil con una respuesta real.",
+        },
+        sensitive_topic: {
+          en: "I want this handled by a person. I've notified Steven. Please don't share more sensitive details here; he'll reach out through a secure channel.",
+          es: "Prefiero que esto lo atienda una persona. Ya le avisé a Steven. Por favor no compartas más datos sensibles aquí; te va a contactar por un canal seguro.",
+        },
+        frustrated_visitor: {
+          en: "I hear you, and this deserves a person. Steven has just been notified and will reach out to you himself.",
+          es: "Te entiendo, y esto merece que lo atienda una persona. Steven ya recibió el aviso y te va a contactar él mismo.",
+        },
+        ambiguous_high_stakes: {
+          en: "I'd rather get this right than answer fast. I've passed it to Steven, and he'll follow up within one business day.",
+          es: "Prefiero responder bien antes que rápido. Se lo pasé a Steven y te va a escribir dentro de un día hábil.",
+        },
+        agent_uncertain: {
+          en: "I'm not sure enough to answer this without checking. Steven has been notified and will follow up within one business day.",
+          es: "No estoy seguro de poder responder esto sin verificar. Steven ya recibió el aviso y te va a escribir dentro de un día hábil.",
+        },
+      }
+    : {
+        out_of_scope: {
+          en: "That's outside what I can answer reliably. I've passed it to the team so a person can get back to you.",
+          es: "Eso está fuera de lo que puedo responder con seguridad. Se lo pasé al equipo para que una persona te responda.",
+        },
+        sensitive_topic: {
+          en: "I want this handled by a person. I've let the team know. Please don't share more sensitive details here.",
+          es: "Prefiero que esto lo atienda una persona. Ya le avisé al equipo. Por favor no compartas más datos sensibles aquí.",
+        },
+        frustrated_visitor: {
+          en: "I hear you, and this deserves a person. I've let the team know so someone can reach out to you.",
+          es: "Te entiendo, y esto merece que lo atienda una persona. Ya le avisé al equipo para que alguien te contacte.",
+        },
+        ambiguous_high_stakes: {
+          en: "I'd rather get this right than answer fast. I've passed it to the team so a person can confirm.",
+          es: "Prefiero responder bien antes que rápido. Se lo pasé al equipo para que una persona lo confirme.",
+        },
+        agent_uncertain: {
+          en: "I'm not sure enough to answer this without checking. I've passed it to the team so a person can confirm.",
+          es: "No estoy seguro de poder responder esto sin verificar. Se lo pasé al equipo para que una persona lo confirme.",
+        },
+      };
 
-  const reply = messages[payload.reason][locale];
+  let reply = messages[payload.reason][locale];
+  // Without contact info nobody can follow up, so ask for it instead of
+  // implying a callback that can't happen.
+  if (!payload.email || !payload.email.includes("@")) {
+    reply +=
+      locale === "es"
+        ? " Para que te puedan responder, déjame tu email o tu teléfono."
+        : " So they can get back to you, please leave your email or phone number.";
+  }
   return { acknowledgement: reply };
 }
 
@@ -222,12 +266,12 @@ export function handleRequestHumanApproval(
 ): ApprovalResult {
   const messages: Record<ApprovalRequestPayload["actionType"], { en: string; es: string }> = {
     send_quote: {
-      en: "I've drafted your quote and sent it for review — every quote gets a human sign-off before it goes out. You'll receive the confirmed version shortly.",
-      es: "Preparé tu cotización y la envié a revisión — toda cotización pasa por aprobación humana antes de salir. Recibirás la versión confirmada en breve.",
+      en: "I've drafted your quote and sent it for review. Every quote gets a human sign-off before it goes out. You'll receive the confirmed version shortly.",
+      es: "Preparé tu cotización y la envié a revisión. Toda cotización pasa por aprobación humana antes de salir. Recibirás la versión confirmada en breve.",
     },
     send_refund: {
-      en: "I've logged your refund request and sent it for approval — refunds always get a human review first. You'll hear back with the confirmation shortly.",
-      es: "Registré tu solicitud de reembolso y la envié a aprobación — los reembolsos siempre pasan por revisión humana primero. Te confirmaremos en breve.",
+      en: "I've logged your refund request and sent it for approval. Refunds always get a human review first. You'll hear back with the confirmation shortly.",
+      es: "Registré tu solicitud de reembolso y la envié a aprobación. Los reembolsos siempre pasan por revisión humana primero. Te confirmaremos en breve.",
     },
     reply_review: {
       en: "I've drafted a response and queued it for the owner's review before anything is posted publicly. It will go out once approved.",

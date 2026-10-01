@@ -1,8 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toE164US, maskPhone } from "@/lib/notify/twilio";
-import { sendProactive, readWhatsAppConfig } from "@/lib/notify/proactive";
-import { canSendProactive } from "./gates";
+import { maskPhone } from "@/lib/notify/twilio";
+import { sendProactiveGated, readWhatsAppConfig } from "@/lib/notify/proactive";
+import { canSendProactive, readSendWindow } from "./gates";
+import { DEFAULT_TIMEZONE, parseIntegrations } from "@/lib/agent-runtime/config";
 
 /**
  * Send a "your appointment is confirmed" SMS when the owner confirms a booking
@@ -31,14 +32,14 @@ export async function sendBookingConfirmation(
   const phone = data.client?.phone?.trim();
   if (!data.id || !phone || !data.startTime) return;
 
-  const integ = (agent.integrations ?? {}) as Record<string, unknown>;
-  const reminders = (integ.reminders ?? {}) as Record<string, unknown>;
-  const calendar = (integ.calendar ?? {}) as Record<string, unknown>;
-  const fromNumber = typeof reminders.from_number === "string" ? reminders.from_number : "";
-  const whatsapp = readWhatsAppConfig(integ);
+  // Shared AgentConfig parser (lib/agent-runtime/config).
+  const integ = parseIntegrations(agent.integrations);
+  const fromNumber = integ.sms.from_number ?? integ.reminders.from_number ?? "";
+  const whatsapp = readWhatsAppConfig(agent.integrations);
   const waReady = Boolean(whatsapp?.from_number && whatsapp?.templates?.confirmation);
   if (!fromNumber && !waReady) return; // no sender configured on either channel
-  const timezone = typeof calendar.timezone === "string" ? calendar.timezone : "America/New_York";
+  const timezone = integ.booking.timezone ?? integ.calendar.timezone ?? DEFAULT_TIMEZONE;
+  const window = readSendWindow(agent.integrations);
 
   // Authoritative consent/opt-out from the mirror contact.
   const { data: contactRow } = await sb
@@ -53,7 +54,8 @@ export async function sendBookingConfirmation(
     consent_transactional: boolean;
     consent_marketing: boolean;
   };
-  if (!canSendProactive(contact, "transactional", timezone).allowed) return;
+  // Cheap pre-check before claiming; sendProactiveGated re-checks below.
+  if (!canSendProactive(contact, "transactional", timezone, new Date(), window).allowed) return;
 
   // Idempotency — one confirmation per appointment id.
   const { data: claimed, error: claimErr } = await sb
@@ -90,10 +92,12 @@ export async function sendBookingConfirmation(
 
   // Prefer WhatsApp (approved "confirmation" template) when configured, else SMS.
   // The WhatsApp template must use {{1}} = salon name, {{2}} = date/time.
-  const to = toE164US(phone) ?? phone;
-  const { result: sent } = await sendProactive({
+  const sent = await sendProactiveGated(sb, {
     workspaceId: ws,
-    to,
+    to: phone,
+    kind: "transactional",
+    timezone,
+    window,
     actor: "front_desk:confirmation",
     whatsapp,
     templateKey: "confirmation",
@@ -102,7 +106,7 @@ export async function sendBookingConfirmation(
     smsBody: body,
   });
 
-  if (sent.ok) {
+  if (sent.status === "sent") {
     await sb.from("appointment_reminders_sent").update({ provider_sid: sent.sid }).eq("id", claimId);
   } else {
     // Roll back the claim so a retry (re-confirm) can resend.
