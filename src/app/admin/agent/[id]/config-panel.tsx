@@ -77,6 +77,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
   const [retainerUsd, setRetainerUsd] = useState(Math.round(agent.monthlyRetainerCents) / 100);
   const [retainerActive, setRetainerActive] = useState(agent.retainerActive);
   const [minutesSaved, setMinutesSaved] = useState(agent.minutesSavedPerConversation);
+  const [versionNote, setVersionNote] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -138,6 +139,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
           monthlyRetainerCents: Math.max(0, Math.round((Number.isFinite(retainerUsd) ? retainerUsd : 0) * 100)),
           retainerActive,
           minutesSavedPerConversation: Math.max(0, Math.round(Number.isFinite(minutesSaved) ? minutesSaved : 0)),
+          ...(versionNote.trim() ? { versionNote: versionNote.trim() } : {}),
           // Only sent when it changed, so ordinary saves don't rewrite integrations.
           ...(bookingLink.trim() !== (agent.bookingLinkUrl ?? "")
             ? { integrations: { booking: { link_url: bookingLink.trim() } } }
@@ -147,6 +149,7 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
       const body = await res.json();
       if (body.ok) {
         setSaveMsg({ ok: true, text: body.changed.length > 0 ? `Saved: ${body.changed.join(", ")}` : "Nothing to save" });
+        setVersionNote("");
         router.refresh();
       } else {
         setSaveMsg({ ok: false, text: `${body.error}${body.detail ? `: ${body.detail}` : ""}` });
@@ -494,7 +497,15 @@ export function ConfigPanel({ agent, baseUrl }: { agent: AgentConfig; baseUrl: s
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-neutral-100 pt-4">
+      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-4">
+        <input
+          className={`${inputCls} min-w-0 flex-1 sm:max-w-sm`}
+          value={versionNote}
+          maxLength={500}
+          onChange={(e) => setVersionNote(e.target.value)}
+          placeholder="Version note (optional): why this change"
+          aria-label="Version note"
+        />
         <button
           type="button"
           onClick={save}

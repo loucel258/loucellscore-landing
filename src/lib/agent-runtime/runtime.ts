@@ -10,7 +10,8 @@ import { withDeps, type TurnDeps } from "./deps";
 import type { Inbound, TurnOutcome } from "./types";
 import { fallbackReply, oneMoment } from "./copy";
 import { claim } from "./steps/claim";
-import { admit } from "./steps/admit";
+import { admitAfterCrisis, admitBeforeCrisis } from "./steps/admit";
+import { crisisGate } from "./steps/crisis";
 import { screen } from "./steps/screen";
 import { triage } from "./steps/triage";
 import { buildMessages, loadHistory } from "./steps/history";
@@ -25,7 +26,7 @@ import { smsTools } from "./tools/booking";
 /**
  * One agent turn, any channel:
  *
- *   claim → admit → screen → [SMS: confirmPending → triage] → loadHistory
+ *   claim → admit (keywords, limits) → crisis → admit (pause, budget) → screen → [SMS: confirmPending → triage] → loadHistory
  *         → buildPrompt → runLoop → (escalate on cap / deadline / failure)
  *         → record
  *
@@ -50,7 +51,11 @@ export async function runTurnWithContext(
 
 async function turn(ctx: TurnContext): Promise<TurnOutcome> {
   if ((await claim(ctx)) === "duplicate") return { kind: "duplicate" };
-  const gate = (await admit(ctx)) ?? (await screen(ctx));
+  const gate =
+    (await admitBeforeCrisis(ctx)) ??
+    (await crisisGate(ctx)) ??
+    (await admitAfterCrisis(ctx)) ??
+    (await screen(ctx));
   if (gate) return gate;
 
   let step: Step;

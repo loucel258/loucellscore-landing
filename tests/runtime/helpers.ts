@@ -10,6 +10,7 @@ import type {
   EscalationRow,
   RuntimeStore,
   ServiceLite,
+  SmsHistoryRow,
   SmsLogRow,
   StoreError,
   TranscriptRow,
@@ -32,7 +33,8 @@ export function agentFixture(over: Partial<ResolvedAgent> = {}): ResolvedAgent {
     systemPrompt: "Friendly salon front desk.",
     allowedOrigins: ["https://client.example"],
     toolsEnabled: [],
-    greetingMessage: null,
+    // Discloses the AI, so web replies in unrelated tests stay verbatim (disclosure.test.ts covers the rest).
+    greetingMessage: "Hi, I'm the virtual assistant.",
     brandColor: null,
     maxTokens: 1024,
     language: "es",
@@ -103,6 +105,11 @@ export type MemoryStore = RuntimeStore & {
   optedOut: string[];
   /** contacts.metadata by contact id. */
   metadata: Map<string, Record<string, unknown>>;
+  /**
+   * true (default): every contact counts as already written to, so SMS replies
+   * stay verbatim. false: only real outbound rows count (disclosure tests).
+   */
+  introduced: boolean;
 };
 
 export function memoryStore(): MemoryStore {
@@ -118,6 +125,7 @@ export function memoryStore(): MemoryStore {
     services: [{ id: "svc_gel", name: "Gel", duration_min: 60, price_cents: 4500 }],
     optedOut: [],
     metadata: new Map(),
+    introduced: true,
     async isPaused(_eng, key) {
       return store.paused.has(key);
     },
@@ -149,11 +157,14 @@ export function memoryStore(): MemoryStore {
       store.messages.push({ id: crypto.randomUUID(), ...row });
     },
     async smsHistory({ contactId, excludeId, limit }) {
-      return store.messages
+      const rows: SmsHistoryRow[] = store.messages
         .filter((m) => m.contactId === contactId && m.id !== excludeId)
         .reverse()
         .slice(0, limit)
         .map((m) => ({ id: m.id, direction: m.direction, body: m.body, status: m.status ?? null }));
+      // An empty-bodied outbound row: counts as "already written to", never reaches the model.
+      if (store.introduced) rows.push({ id: "introduced", direction: "outbound", body: null, status: "sent" });
+      return rows;
     },
     async listServices() {
       return store.services;

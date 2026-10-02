@@ -8,6 +8,8 @@ import { isE164, isSupportedTimeZone } from "@/lib/admin/validators";
 import { safeHttpsUrl } from "@/lib/agents/booking-config";
 import { toAgentConfig } from "@/lib/agent-runtime/config";
 import { checkReadiness } from "@/lib/agent-runtime/readiness";
+import { getVersion, recordConfigVersion } from "@/lib/admin/config-versions-db";
+import { diffSnapshots, restoreInputFromSnapshot, snapshotFromRow } from "@/lib/admin/config-versions";
 import {
   TIME_ZONE_ERROR,
   mergeBookingHours,
@@ -36,6 +38,12 @@ export const dynamic = "force-dynamic";
  *     touching its other keys, and written only when they change
  *   - resolver cache invalidation so changes apply immediately
  *   - an audit entry per config change (governance-first, also for us)
+ *   - a config version (migration 070) whenever something that shapes the
+ *     agent's behavior really changed: snapshot after the change, approved_by
+ *     "admin", optional versionNote. { restoreVersion: n } puts an agent back
+ *     to that snapshot through THIS same path (same schema, slug lock and
+ *     readiness rules) and writes a new version; history is never rewritten.
+ *     Without the table the change goes ahead unversioned.
  */
 
 const KNOWN_TOOLS = ["request_booking", "escalate_to_human", "request_human_approval"] as const;
@@ -61,6 +69,9 @@ const InputSchema = z.object({
   monthlyTokenBudget: z.number().int().min(0).max(1_000_000_000).optional(),
   maxTokensPerMessage: z.number().int().min(256).max(8192).optional(),
   notes: z.string().max(4000).nullable().optional(),
+  // Config versions (migration 070)
+  versionNote: z.string().max(500).nullable().optional(),
+  restoreVersion: z.number().int().min(1).optional(),
   // Billing (client_agents, migrations 024 + 034)
   monthlyRetainerCents: z.number().int().min(0).max(100_000_000).optional(),
   retainerActive: z.boolean().optional(),
@@ -147,7 +158,70 @@ type AgentRow = {
   agent_type: string | null;
   channels: string[] | null;
   tools_enabled: string[] | null;
+  greeting_message: string | null;
+  max_tokens_per_message: number | null;
 };
+
+/**
+ * Can this agent be live with the config as it would be after the update?
+ * One copy of the go-live gate: used when the status moves to live, and when
+ * a restore would change a live agent (a restore can never break a live one).
+ */
+async function liveBlockers(
+  sb: NonNullable<ReturnType<typeof getServiceClient>>,
+  agent: AgentRow,
+  update: Record<string, unknown>,
+): Promise<string | null> {
+  // `in`, not ??: an update that sets the persona to null must count as empty.
+  const slugAfter = ("slug" in update ? update.slug : agent.slug) as string | null;
+  const originsAfter = ("allowed_origins" in update ? update.allowed_origins : agent.allowed_origins) as string[];
+  const personaAfter = ("system_prompt" in update ? update.system_prompt : agent.system_prompt) as string | null;
+  const missing: string[] = [];
+  if (!slugAfter) missing.push("slug");
+  if (originsAfter.length === 0) missing.push("allowed_origins");
+  if (!personaAfter || personaAfter.trim().length === 0) missing.push("system_prompt");
+  if (missing.length > 0) return `missing: ${missing.join(", ")}`;
+
+  // Channel-aware readiness (same rules the runtime relies on). A missing
+  // booking link isn't a blocker: the tool just isn't offered, and the
+  // panel already warns about it.
+  const channels = (agent.channels ?? []).flatMap((c) =>
+    c === "chat_widget" ? (["web"] as const) : c === "sms" ? (["sms"] as const) : [],
+  );
+  const cfg = toAgentConfig({
+    id: agent.id,
+    slug: slugAfter,
+    workspaceId: agent.workspace_id,
+    engagementId: agent.engagement_id,
+    name: agent.name,
+    agentType: agent.agent_type,
+    status: "live",
+    systemPrompt: personaAfter,
+    allowedOrigins: originsAfter,
+    toolsEnabled: (update.tools_enabled ?? agent.tools_enabled ?? []) as string[],
+    greetingMessage: null,
+    maxTokens: 1024,
+    language: "en",
+    monthlyTokenBudget: 0,
+    vertical: null,
+    integrations: update.integrations ?? agent.integrations,
+  });
+  if (!cfg || channels.length === 0) return null;
+  let twilioCredential = false;
+  if (channels.includes("sms")) {
+    const { data: twilio } = await sb
+      .from("vault_credentials")
+      .select("id")
+      .eq("workspace_id", agent.workspace_id)
+      .eq("provider", "twilio")
+      .not("account_identifier", "is", null)
+      .not("access_token_enc", "is", null)
+      .maybeSingle();
+    twilioCredential = !!twilio;
+  }
+  const blockers = checkReadiness(cfg, { channels, twilioCredential }).missing.filter((m) => m.key !== "booking_link");
+  return blockers.length > 0 ? blockers.map((m) => `${m.channel}: ${m.message}`).join(" ") : null;
+}
 
 export async function POST(
   req: Request,
@@ -173,13 +247,39 @@ export async function POST(
 
   const { data: existing } = await sb
     .from("client_agents")
-    .select("id, slug, workspace_id, engagement_id, name, agent_type, channels, tools_enabled, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at, integrations, monthly_retainer_cents, retainer_active, minutes_saved_per_conversation")
+    .select("id, slug, workspace_id, engagement_id, name, agent_type, channels, tools_enabled, greeting_message, max_tokens_per_message, status, system_prompt, allowed_origins, shadow_mode_started_at, uat_started_at, live_started_at, archived_at, integrations, monthly_retainer_cents, retainer_active, minutes_saved_per_conversation")
     .eq("id", id)
     .maybeSingle();
   if (!existing) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
   const agent = existing as AgentRow;
+
+  // Restore: the snapshot becomes an ordinary update payload and goes through
+  // the same schema as a manual edit. Only the note rides along.
+  let restoredFrom: number | null = null;
+  if (input.restoreVersion !== undefined) {
+    const found = await getVersion(sb, id, input.restoreVersion);
+    if (!found.available) {
+      return NextResponse.json({ ok: false, error: "versions_unavailable" }, { status: 503 });
+    }
+    if (!found.row) {
+      return NextResponse.json({ ok: false, error: "version_not_found" }, { status: 404 });
+    }
+    const parsed = InputSchema.safeParse({
+      ...restoreInputFromSnapshot(found.row.snapshot),
+      versionNote: input.versionNote ?? null,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { ok: false, error: "restore_invalid", detail: parsed.error.issues[0]?.message },
+        { status: 422 },
+      );
+    }
+    input = parsed.data;
+    restoredFrom = found.row.version;
+  }
+  const before = snapshotFromRow(agent);
 
   const update: Record<string, unknown> = {};
   const changed: string[] = [];
@@ -357,70 +457,9 @@ export async function POST(
   // Status transition with go-live gate + lifecycle timestamps.
   if (input.status !== undefined && input.status !== agent.status) {
     if (input.status === "live") {
-      const slugAfter = (update.slug ?? agent.slug) as string | null;
-      const originsAfter = (update.allowed_origins ?? agent.allowed_origins) as string[];
-      const personaAfter = (update.system_prompt ?? agent.system_prompt) as string | null;
-      const missing: string[] = [];
-      if (!slugAfter) missing.push("slug");
-      if (originsAfter.length === 0) missing.push("allowed_origins");
-      if (!personaAfter || personaAfter.trim().length === 0) missing.push("system_prompt");
-      if (missing.length > 0) {
-        return NextResponse.json(
-          { ok: false, error: "go_live_blocked", detail: `missing: ${missing.join(", ")}` },
-          { status: 422 },
-        );
-      }
-
-      // Channel-aware readiness (same rules the runtime relies on). A missing
-      // booking link isn't a blocker: the tool just isn't offered, and the
-      // panel already warns about it.
-      const channels = (agent.channels ?? []).flatMap((c) =>
-        c === "chat_widget" ? (["web"] as const) : c === "sms" ? (["sms"] as const) : [],
-      );
-      const cfg = toAgentConfig({
-        id: agent.id,
-        slug: slugAfter,
-        workspaceId: agent.workspace_id,
-        engagementId: agent.engagement_id,
-        name: agent.name,
-        agentType: agent.agent_type,
-        status: "live",
-        systemPrompt: personaAfter,
-        allowedOrigins: originsAfter,
-        toolsEnabled: (update.tools_enabled ?? agent.tools_enabled ?? []) as string[],
-        greetingMessage: null,
-        maxTokens: 1024,
-        language: "en",
-        monthlyTokenBudget: 0,
-        vertical: null,
-        integrations: update.integrations ?? agent.integrations,
-      });
-      if (cfg && channels.length > 0) {
-        let twilioCredential = false;
-        if (channels.includes("sms")) {
-          const { data: twilio } = await sb
-            .from("vault_credentials")
-            .select("id")
-            .eq("workspace_id", agent.workspace_id)
-            .eq("provider", "twilio")
-            .not("account_identifier", "is", null)
-            .not("access_token_enc", "is", null)
-            .maybeSingle();
-          twilioCredential = !!twilio;
-        }
-        const blockers = checkReadiness(cfg, { channels, twilioCredential }).missing.filter(
-          (m) => m.key !== "booking_link",
-        );
-        if (blockers.length > 0) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error: "go_live_blocked",
-              detail: blockers.map((m) => `${m.channel}: ${m.message}`).join(" "),
-            },
-            { status: 422 },
-          );
-        }
+      const blocked = await liveBlockers(sb, agent, update);
+      if (blocked) {
+        return NextResponse.json({ ok: false, error: "go_live_blocked", detail: blocked }, { status: 422 });
       }
     }
     update.status = input.status;
@@ -437,6 +476,15 @@ export async function POST(
     }
     if (input.status === "archived" && !agent.archived_at) {
       update.archived_at = nowIso;
+    }
+  }
+
+  // A restore can never leave a live agent unable to be live (no persona, no
+  // origins, SMS without its sender): same gate as going live.
+  if (restoredFrom !== null && agent.status === "live" && Object.keys(update).length > 0) {
+    const blocked = await liveBlockers(sb, agent, update);
+    if (blocked) {
+      return NextResponse.json({ ok: false, error: "restore_blocked", detail: blocked }, { status: 422 });
     }
   }
 
@@ -461,6 +509,22 @@ export async function POST(
   if (agent.slug) invalidateAgentCache(agent.slug);
   if (typeof update.slug === "string") invalidateAgentCache(update.slug);
 
+  // Version history (migration 070): the config as it stands after this
+  // change, when something versioned really moved. Never blocks the change.
+  const after = snapshotFromRow({ ...agent, ...(update as Partial<AgentRow>) });
+  const note = restoredFrom !== null
+    ? `Restored from version ${restoredFrom}${input.versionNote ? `. ${input.versionNote}` : ""}`
+    : (input.versionNote ?? null);
+  const version = await recordConfigVersion(sb, {
+    agentId: id,
+    workspaceId: agent.workspace_id,
+    before,
+    after,
+    approvedBy: "admin",
+    note,
+  });
+  const versionedFields = diffSnapshots(before, after).map((d) => d.field);
+
   // Config changes are part of the same trust story we sell — log them.
   try {
     await writeAuditEntry({
@@ -472,12 +536,15 @@ export async function POST(
       source: "rbac",
       decision: "ALLOW",
       blocked_by: null,
-      reason: `agent_config_update:${changed.join(",")}`,
+      reason:
+        restoredFrom !== null
+          ? `agent_config_restore:v${restoredFrom}${version ? `->v${version}` : ""}:${versionedFields.join(",")}`
+          : `agent_config_update:${changed.join(",")}`,
       sanitized_prompt_hash: "",
     });
   } catch {
     // Audit failure must not block the config change itself.
   }
 
-  return NextResponse.json({ ok: true, changed });
+  return NextResponse.json({ ok: true, changed, ...(version ? { version } : {}), ...(restoredFrom !== null ? { restoredFrom } : {}) });
 }

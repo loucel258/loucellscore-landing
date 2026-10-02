@@ -91,6 +91,7 @@ describe("POST /api/admin/agents/[id]/update: business hours", () => {
     expect(body).toEqual({
       ok: true,
       changed: ["integrations.booking.business_hours", "integrations.booking.timezone"],
+      version: 1,
     });
 
     const integ = writtenIntegrations(state.sb);

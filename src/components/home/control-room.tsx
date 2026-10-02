@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { KeyRound, Lock, Pause, Play, ShieldCheck, EyeOff, ScrollText } from "lucide-react";
+import { KeyRound, Lock, Pause, Play, ShieldCheck, EyeOff, ScrollText, UserCheck, Fingerprint, History, LifeBuoy, TimerReset } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HomeCopy } from "./copy";
 
@@ -281,7 +281,7 @@ export function ControlRoom({ copy }: { copy: Ctrl }) {
         {/* Facts */}
         <ul className="mt-20 grid gap-8 border-t border-rule pt-10 md:grid-cols-3">
           {copy.facts.map((f, i) => {
-            const Icon = [EyeOff, ShieldCheck, ScrollText][i] ?? ShieldCheck;
+            const Icon = [EyeOff, UserCheck, Fingerprint, History, LifeBuoy, TimerReset][i] ?? ShieldCheck;
             return (
               <li key={f.title}>
                 <Icon className="size-5 text-dawn-deep" strokeWidth={1.5} />

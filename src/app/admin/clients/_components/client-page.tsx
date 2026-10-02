@@ -58,6 +58,7 @@ import { Panel } from "@/components/workspace/panel";
 import { ServiceUnavailable } from "@/components/workspace/service-unavailable";
 import { AddNote, AddTask, LifecycleSelect, TaskToggle } from "@/app/admin/crm/[accountId]/account-actions";
 import { ConfigPanel } from "@/app/admin/agent/[id]/config-panel";
+import { VersionsPanel } from "@/app/admin/agent/[id]/versions-panel";
 import { IntegrationsPanel } from "@/app/admin/agent/[id]/integrations-panel";
 import { HoursPanel } from "@/app/admin/agent/[id]/hours-panel";
 import { readHoursConfig, timeZoneOptions } from "@/lib/admin/business-hours";
@@ -774,6 +775,7 @@ async function SetupTab({
                   timeZoneGroups={timeZoneOptions(hoursCfg.timezone ?? hoursCfg.calendarTimezone)}
                 />
                 <IntegrationsPanel agentId={a.id} integrations={a.integrations} />
+                <VersionsPanel agentId={a.id} />
               </>
             )}
           </section>

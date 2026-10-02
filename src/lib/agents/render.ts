@@ -73,7 +73,7 @@ export function capAtBoundary(text: string, max: number): string {
   return `${cut.replace(/[\s,;:-]+$/, "")}...`;
 }
 
-export function renderForChannel(text: string, channel: Channel): string {
+export function renderForChannel(text: string, channel: Channel, maxChars: number = SMS_MAX_CHARS): string {
   if (channel !== "sms") return text;
-  return capAtBoundary(stripMarkdown(text), SMS_MAX_CHARS);
+  return capAtBoundary(stripMarkdown(text), maxChars);
 }

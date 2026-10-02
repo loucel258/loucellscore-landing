@@ -9,7 +9,8 @@ import { dropPendingAction } from "./confirm";
 /**
  * admit: may this turn run at all? In order:
  *   SMS keywords + opt-out (always honored, even when rate limited)
- *   → rate limits (cost / abuse) → owner take-over pause → monthly budget.
+ *   → rate limits (cost / abuse) → [crisis protocol] → owner take-over
+ *   pause → monthly budget.
  * Every refusal leaves a DENY audit row.
  */
 
@@ -22,7 +23,21 @@ const SMS_CONTACT = { capacity: 6, refillPerSec: 6 / 600 };
 const SMS_AGENT = { capacity: 60, refillPerSec: 1 / 30 };
 
 export async function admit(ctx: TurnContext): Promise<TurnOutcome | null> {
-  return (await smsKeywords(ctx)) ?? (await rateLimits(ctx)) ?? (await takeoverPause(ctx)) ?? (await budget(ctx));
+  return (await admitBeforeCrisis(ctx)) ?? (await admitAfterCrisis(ctx));
+}
+
+/**
+ * Keywords / opt-out and rate limits. The crisis protocol (steps/crisis.ts)
+ * runs between the two halves: STOP always wins over it, and it still
+ * answers when the owner has taken over or the budget is spent.
+ */
+export async function admitBeforeCrisis(ctx: TurnContext): Promise<TurnOutcome | null> {
+  return (await smsKeywords(ctx)) ?? (await rateLimits(ctx));
+}
+
+/** Owner take-over pause and monthly budget. */
+export async function admitAfterCrisis(ctx: TurnContext): Promise<TurnOutcome | null> {
+  return (await takeoverPause(ctx)) ?? (await budget(ctx));
 }
 
 async function smsKeywords(ctx: TurnContext): Promise<TurnOutcome | null> {
