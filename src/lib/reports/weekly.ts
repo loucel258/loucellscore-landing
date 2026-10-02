@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_TIMEZONE, parseIntegrations, type BusinessHours } from "@/lib/agent-runtime/config";
 import { loadConversationStats } from "@/lib/conversation-stats";
 import { loadServiceStatus, type AgentServiceStatus, type StatusAgentRow } from "@/lib/service-status";
+import { loadLatestVerifications } from "@/lib/audit/verification";
 import { agentBookings, loadValueSummary } from "@/lib/value";
 import { boundedClient } from "./bounded";
 import { lastFullWeek, type ReportPeriod } from "./period";
@@ -72,7 +73,7 @@ export async function buildWeeklyReport(
   const period = lastFullWeek(now, timeZone);
   const workspaceIds = [...new Set(engagement.agents.map((a) => a.workspace_id))];
 
-  const [value, conv, statuses] = await Promise.all([
+  const [value, conv, statuses, verifications] = await Promise.all([
     loadValueSummary(sb, { workspaceIds, engagementId: engagement.id }, { since: period.start, until: period.end }),
     // The stats loader only takes a start; the bounded client caps it at
     // the end of the week so Monday-morning activity isn't counted.
@@ -82,7 +83,19 @@ export async function buildWeeklyReport(
       period.start,
     ),
     engagement.agents.length ? loadServiceStatus(sb, engagement.agents, now) : Promise.resolve([] as AgentServiceStatus[]),
+    loadLatestVerifications(sb, workspaceIds),
   ]);
+  // One line for the client even with several agents: ok only if every
+  // workspace verified ok; rows summed; fingerprint of the busiest chain.
+  const checks = [...verifications.values()];
+  const audit = checks.length
+    ? {
+        ok: checks.every((c) => c.ok),
+        rows: checks.reduce((n, c) => n + c.rowsChecked, 0),
+        headHash: [...checks].sort((a, b) => b.rowsChecked - a.rowsChecked)[0]?.headHash ?? null,
+        verifiedAt: checks.map((c) => c.verifiedAt).sort()[0] ?? "",
+      }
+    : null;
 
   const data: WeeklyReportData = {
     version: 1,
@@ -107,6 +120,7 @@ export async function buildWeeklyReport(
     noShowRate: value.noShowRate,
     notActive: notActiveChannels(statuses),
     portalUrl: portalUrl(engagement.portalSlug, process.env.NEXT_PUBLIC_APP_URL),
+    audit,
   };
 
   return { ...renderWeeklyReport(data), data, period };

@@ -28,6 +28,14 @@
     {
       "path": "/api/cron/weekly-reports",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/audit-verify",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/retention-purge",
+      "schedule": "0 7 * * *"
     }
   ]
 }

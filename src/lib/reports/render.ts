@@ -38,6 +38,8 @@ export type WeeklyReportData = {
   /** Channels switched on or saved but not working yet. */
   notActive: ReportChannel[];
   portalUrl: string | null;
+  /** Latest daily audit-chain check across the client's workspaces (migration 068). */
+  audit?: { ok: boolean; rows: number; headHash: string | null; verifiedAt: string } | null;
 };
 
 export type RenderedReport = { subject: string; html: string; text: string };
@@ -63,6 +65,8 @@ type Strings = {
   rule: string;
   unpriced: (n: number) => string;
   notActive: (list: string) => string;
+  auditOk: (rows: number, hash: string) => string;
+  auditBroken: string;
   channel: Record<ReportChannel, string>;
   portalCta: string;
   portalText: (url: string) => string;
@@ -97,6 +101,9 @@ const EN: Strings = {
   unpriced: (n) =>
     `${n} appointment${n === 1 ? " has" : "s have"} no price on file, so ${n === 1 ? "it is" : "they are"} not in the revenue number.`,
   notActive: (list) => `Not active yet: ${list}.`,
+  auditOk: (rows, hash) =>
+    `Audit log verified: ${rows} recorded events, none altered. Chain fingerprint: ${hash}. Keep this email: if history were ever rewritten, it would no longer match this fingerprint.`,
+  auditBroken: "Audit log check: we found a problem and are reviewing it. We'll write to you with details.",
   channel: { web: "web chat", sms: "text messages", reminders: "appointment reminders", booking: "booking" },
   portalCta: "Open your portal",
   portalText: (url) => `See every conversation in your portal: ${url}`,
@@ -131,6 +138,9 @@ const ES: Strings = {
   unpriced: (n) =>
     `${n} ${n === 1 ? "cita no tiene" : "citas no tienen"} precio registrado, así que no ${n === 1 ? "está" : "están"} en los ingresos.`,
   notActive: (list) => `Todavía no activo: ${list}.`,
+  auditOk: (rows, hash) =>
+    `Registro de auditoría verificado: ${rows} eventos registrados, ninguno alterado. Huella de la cadena: ${hash}. Guarda este correo: si alguien reescribiera el historial, ya no coincidiría con esta huella.`,
+  auditBroken: "Revisión del registro de auditoría: encontramos un problema y lo estamos revisando. Te escribiremos con los detalles.",
   channel: { web: "chat en tu sitio web", sms: "mensajes de texto", reminders: "recordatorios de cita", booking: "reservas" },
   portalCta: "Abrir tu portal",
   portalText: (url) => `Mira cada conversación en tu portal: ${url}`,
@@ -210,6 +220,10 @@ export function renderWeeklyReport(d: WeeklyReportData): RenderedReport {
     notes.push(t.unpriced(d.unpricedAppointments));
   }
   if (d.notActive.length > 0) notes.push(t.notActive(d.notActive.map((c) => t.channel[c]).join(", ")));
+  // External anchor: the client keeps the chain fingerprint in their inbox.
+  if (d.audit) {
+    notes.push(d.audit.ok && d.audit.headHash ? t.auditOk(d.audit.rows, d.audit.headHash.slice(0, 16)) : t.auditBroken);
+  }
 
   // ── Plain text ─────────────────────────────────────────────────────
   const textLines = [
@@ -244,7 +258,7 @@ export function renderWeeklyReport(d: WeeklyReportData): RenderedReport {
     .join("\n");
   const cta = d.portalUrl
     ? `<tr><td style="padding:8px 24px 4px;">
-<a href="${escapeHtml(d.portalUrl)}" style="${font}display:inline-block;background:#0891b2;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 16px;border-radius:8px;">${escapeHtml(t.portalCta)}</a>
+<a href="${escapeHtml(d.portalUrl)}" style="${font}display:inline-block;background:#a4460f;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 16px;border-radius:8px;">${escapeHtml(t.portalCta)}</a>
 </td></tr>`
     : "";
 
@@ -260,7 +274,7 @@ export function renderWeeklyReport(d: WeeklyReportData): RenderedReport {
 <tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;">
 <tr><td style="padding:24px 24px 4px;">
-<p style="${font}margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#0891b2;">${escapeHtml(t.eyebrow)}</p>
+<p style="${font}margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#a4460f;">${escapeHtml(t.eyebrow)}</p>
 <h1 style="${font}margin:0 0 12px;font-size:20px;line-height:1.3;color:#0f172a;">${escapeHtml(d.clientName)}</h1>
 <p style="${font}margin:0 0 8px;font-size:14px;line-height:1.5;color:#334155;">${escapeHtml(t.greeting)}</p>
 <p style="${font}margin:0 0 8px;font-size:14px;line-height:1.5;color:#334155;">${escapeHtml(intro)}</p>

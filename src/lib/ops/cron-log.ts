@@ -47,6 +47,9 @@ export const KNOWN_CRONS: Array<{ job: string; label: string; schedule: string }
   { job: "appointment-reminders", label: "Appointment reminders", schedule: "0 15 * * *" },
   { job: "review-requests", label: "Review requests", schedule: "0 16 * * *" },
   { job: "business-pulse", label: "Business Pulse", schedule: "0 1 * * *" },
+  { job: "weekly-reports", label: "Weekly client reports (drafts only)", schedule: "0 13 * * 1" },
+  { job: "audit-verify", label: "Audit chain verification", schedule: "0 6 * * *" },
+  { job: "retention-purge", label: "Retention purge (expired conversations)", schedule: "0 7 * * *" },
 ];
 
 /** Latest run per job, for the Automation health panel. */
