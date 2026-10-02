@@ -29,6 +29,7 @@ import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { MessageText } from "@/components/shell/message-text";
 import { TagBar } from "./tag-bar";
 import { TakeoverPanel, type TakeoverLabels } from "./takeover-panel";
+import { can } from "@/lib/portal/roles";
 import { ExportMenu } from "../export-menu";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export default async function InboxPage({
   if (visible.length === 0 && !selected) {
     return (
       <div className="space-y-6">
-        <Header lang={lang} count={0} slug={slug} />
+        <Header lang={lang} count={0} slug={slug} canExport={can(ctx.actor.role, "export")} />
         <Panel>
           <EmptyPanel
             icon={<Inbox className="size-5" />}
@@ -113,7 +114,7 @@ export default async function InboxPage({
   return (
     <div className="space-y-4">
       <div className={explicit ? "hidden lg:block" : ""}>
-        <Header lang={lang} count={visible.length} slug={slug} />
+        <Header lang={lang} count={visible.length} slug={slug} canExport={can(ctx.actor.role, "export")} />
       </div>
 
       {/* Filters */}
@@ -237,7 +238,7 @@ export default async function InboxPage({
   );
 }
 
-function Header({ lang, count, slug }: { lang: PortalLang; count: number; slug: string }) {
+function Header({ lang, count, slug, canExport }: { lang: PortalLang; count: number; slug: string; canExport: boolean }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-3">
       <div>
@@ -246,7 +247,7 @@ function Header({ lang, count, slug }: { lang: PortalLang; count: number; slug: 
           {count > 0 ? tn(lang, "inbox.count", count) : t(lang, "inbox.desc")}
         </p>
       </div>
-      <ExportMenu slug={slug} type="conversations" lang={lang} />
+      <ExportMenu slug={slug} type="conversations" lang={lang} canExport={canExport} />
     </header>
   );
 }

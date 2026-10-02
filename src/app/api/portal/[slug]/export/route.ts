@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/audit/client";
 import { writeAuditEntry } from "@/lib/audit/writer";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { getPortalContext } from "@/lib/portal/context";
+import { actorAuditId, actorAuditRole, can } from "@/lib/portal/roles";
 import { bookingsCsv, conversationsCsv, exportFilename, parseExportParams } from "@/lib/portal/csv";
 import { loadBookingExport, loadConversationExport } from "@/lib/portal/export-data";
 
@@ -22,6 +23,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const ctx = await getPortalContext(slug);
   if (!ctx.authed) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  // Owner only: the export is the whole customer list. Enforced here, not
+  // just by hiding the button.
+  if (!can(ctx.actor.role, "export")) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
 
   const parsed = parseExportParams(new URL(req.url).searchParams);
   if (!parsed) return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
@@ -62,8 +68,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
     const audit = await writeAuditEntry({
       request_id: crypto.randomUUID(),
       workspace_id: workspaceId,
-      user_id: `portal:${slug}`,
-      role: "client_portal",
+      user_id: actorAuditId(slug, ctx.actor),
+      role: actorAuditRole(ctx.actor),
       ip_address: null,
       source: "portal",
       sanitized_prompt_hash: "",

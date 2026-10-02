@@ -23,7 +23,8 @@ export type NeedsYouItem = {
     | "quiet"
     | "silent"
     | "budget"
-    | "reports";
+    | "reports"
+    | "verification";
   tone: NeedsYouTone;
   title: string;
   detail?: string;
@@ -38,6 +39,17 @@ export type ApprovalInput = {
   status: string;
   created_at: string;
   approving_at?: string | null;
+};
+
+/**
+ * A workspace whose latest audit-chain verification is not clean (migration
+ * 068): "failed" = the check found a mismatch or could not run, "stale" =
+ * clean but older than VERIFICATION_STALE_HOURS. Healthy ones are not listed.
+ */
+export type VerificationFlagInput = {
+  workspaceId: string;
+  state: "failed" | "stale";
+  verifiedAt: string | null;
 };
 
 /** Escalation rows are read defensively: the table may not exist yet. */
@@ -154,6 +166,8 @@ export function buildNeedsYou(input: {
   reportsWaiting?: number | null;
   /** Active retainers with no logged payment in 35+ days (lib/admin/retainer-payments). */
   retainersOverdue?: RetainerOverdue[];
+  /** Workspaces whose latest audit verification failed or is out of date. */
+  verificationFlags?: VerificationFlagInput[];
 }): NeedsYouItem[] {
   const { now, clientsByWorkspace: clients } = input;
   const items: NeedsYouItem[] = [];
@@ -171,6 +185,30 @@ export function buildNeedsYou(input: {
       href: hrefFor(g.ref, "approvals"),
       at: g.oldest,
     });
+  }
+
+  // Audit chain verification (migration 068). A failure is the product's
+  // core promise broken for that client: it goes with the critical items.
+  const flags = (input.verificationFlags ?? []).filter((f) => !isDemoWorkspace(f.workspaceId));
+  for (const state of ["failed", "stale"] as const) {
+    const rows = flags.filter((f) => f.state === state).map((f) => ({ workspace_id: f.workspaceId, verifiedAt: f.verifiedAt }));
+    for (const g of byClient(rows, clients, (r) => r.verifiedAt)) {
+      items.push({
+        id: `verify:${state}:${g.key}`,
+        kind: "verification",
+        tone: state === "failed" ? "critical" : "attention",
+        title:
+          state === "failed"
+            ? `${g.ref.name}: audit log verification failed`
+            : `${g.ref.name}: audit log not verified recently`,
+        detail:
+          state === "failed"
+            ? "The daily check found altered rows or could not run. Look into it before the next client report."
+            : "The daily verification is out of date. Check that the audit-verify cron is running in Settings.",
+        href: hrefFor(g.ref, "overview"),
+        at: g.oldest,
+      });
+    }
   }
 
   const openEscalations = (input.escalations ?? []).filter((e) => isOpenEscalation(e) && !isDemoWorkspace(e.workspace_id));

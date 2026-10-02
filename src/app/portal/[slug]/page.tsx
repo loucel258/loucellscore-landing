@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, Calendar, Activity, AlertTriangle, Pause, Shi
 import { getServiceClient } from "@/lib/audit/client";
 import { ServiceUnavailable } from "@/components/workspace/service-unavailable";
 import { requirePortalContext } from "@/lib/portal/context";
+import { can } from "@/lib/portal/roles";
 import { t, tn, type PortalLang } from "@/lib/portal/strings";
 import { escalationReasonLabel, severityLabel } from "@/lib/portal/labels";
 import { formatTime, formatWhen } from "@/lib/portal/time";
@@ -168,7 +169,7 @@ export default async function PortalHomePage({
                   )}
                 </div>
                 {pending.map((p) => (
-                  <ApprovalCard key={p.id} approval={p} slug={slug} labels={approvalLabels} />
+                  <ApprovalCard key={p.id} approval={p} slug={slug} labels={approvalLabels} canDecide={can(ctx.actor.role, "decide_approvals")} />
                 ))}
               </div>
             )}

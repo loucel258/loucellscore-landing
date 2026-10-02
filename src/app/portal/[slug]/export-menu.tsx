@@ -7,7 +7,19 @@ import { t, type PortalLang } from "@/lib/portal/strings";
  * route (the session cookie goes with them), so it works without client
  * JavaScript and on phones.
  */
-export function ExportMenu({ slug, type, lang }: { slug: string; type: ExportType; lang: PortalLang }) {
+export function ExportMenu({
+  slug,
+  type,
+  lang,
+  canExport = true,
+}: {
+  slug: string;
+  type: ExportType;
+  lang: PortalLang;
+  /** Owner only. The export route enforces it too; this just hides the button. */
+  canExport?: boolean;
+}) {
+  if (!canExport) return null;
   return (
     <details className="relative">
       <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-full bg-white px-3 text-xs font-semibold text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-50 [&::-webkit-details-marker]:hidden">

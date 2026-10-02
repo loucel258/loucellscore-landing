@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Target,
+  Users,
 } from "lucide-react";
 import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
 import { isAdminAuthed } from "@/lib/admin/auth";
@@ -69,6 +70,10 @@ import { loadClientMeasures, type ClientMeasures } from "@/lib/admin/client-meas
 import { isoDateIn, loadBaselineRow, primaryAgent, toFormMetrics } from "@/lib/admin/baseline";
 import { reportClock } from "@/lib/reports/weekly";
 import { SetupChecklist, type ChecklistAgent } from "./setup-checklist";
+import { PortalTeamPanel } from "./portal-team-panel";
+import { loadPortalTeam } from "@/lib/admin/portal-team";
+import { loadLatestVerifications } from "@/lib/audit/verification";
+import { verificationRows, type VerificationRow } from "@/lib/admin/audit-verification";
 import { GuaranteePanel, PaymentsPanel, ValuePanel, WorkingPanel } from "./measures-panels";
 import { BaselineForm } from "./baseline-form";
 
@@ -181,6 +186,16 @@ export async function ClientPage({
 
   const activePortal = d.portals.find(usablePortal) ?? null;
   const measures = tab === "overview" ? await loadClientMeasures(sb, d) : null;
+  // Daily audit-chain verification per agent workspace (migration 068). No
+  // rows until the table exists and the cron has run.
+  const verification =
+    tab === "overview"
+      ? verificationRows(
+          d.agents.filter((a) => !a.archived_at && a.status !== "archived"),
+          await loadLatestVerifications(sb, d.workspaceIds).catch(() => new Map()),
+          d.now,
+        )
+      : [];
   const href = (t: ClientTab, extra: { open?: SetupSection | null; anchor?: string } = {}) =>
     clientHref(scope, { tab: t, ...extra });
 
@@ -242,7 +257,13 @@ export async function ClientPage({
 
       <div className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
         {tab === "overview" && measures && (
-          <OverviewTab d={d} m={measures} setupHref={href("setup")} baselineHref={href("setup", { anchor: "baseline" })} />
+          <OverviewTab
+            d={d}
+            m={measures}
+            verification={verification}
+            setupHref={href("setup")}
+            baselineHref={href("setup", { anchor: "baseline" })}
+          />
         )}
 
         {tab === "conversations" && <ConversationsSection sb={sb} d={d} />}
@@ -283,11 +304,13 @@ export async function ClientPage({
 function OverviewTab({
   d,
   m,
+  verification,
   setupHref,
   baselineHref,
 }: {
   d: ClientDetail;
   m: ClientMeasures;
+  verification: VerificationRow[];
   setupHref: string;
   baselineHref: string;
 }) {
@@ -312,6 +335,26 @@ function OverviewTab({
           </span>
           <ChevronRight className="size-4 shrink-0 text-neutral-400" />
         </Link>
+      )}
+
+      {verification.length > 0 && (
+        <Panel title="Audit log verification" icon={<ShieldCheck className="size-4" />}>
+          <ul className="divide-y divide-neutral-100 text-sm">
+            {verification.map((v) => (
+              <li key={v.workspaceId} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+                <span className="font-medium text-neutral-800">{v.agentName}</span>
+                <span
+                  className={`text-xs ${
+                    v.state === "failed" ? "font-semibold text-rose-700" : v.state === "stale" ? "text-amber-800" : "text-emerald-700"
+                  }`}
+                >
+                  {v.text}
+                  {v.fingerprint && <code className="ml-2 rounded bg-neutral-100 px-1 py-0.5 text-[11px] text-neutral-600">{v.fingerprint}</code>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       )}
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -630,7 +673,8 @@ async function SetupTab({
     ...d.agents.filter((a) => a.id !== focusAgent && isArchived(a)),
   ];
 
-  const [costs, audit, baseline] = await Promise.all([
+  const usablePortals = d.portals.filter(usablePortal);
+  const [costs, audit, baseline, teams] = await Promise.all([
     open === "costs"
       ? Promise.all([
           getCostBreakdown(sb, d.workspaceIds, "30d"),
@@ -639,6 +683,7 @@ async function SetupTab({
       : Promise.resolve(null),
     open === "audit" ? loadAuditLog(sb, d) : Promise.resolve(null),
     loadBaselineRow(sb, d.workspaceIds),
+    Promise.all(usablePortals.map(async (p) => ({ portal: p, team: await loadPortalTeam(sb, p.id) }))),
   ]);
 
   // Toggle links keep the scroll position; the section opens in place.
@@ -734,6 +779,36 @@ async function SetupTab({
           </section>
         );
       })}
+
+      {teams.map(({ portal, team }) => (
+        <section key={portal.id} id={`portal-team-${portal.client_slug}`} className="scroll-mt-40">
+          <header className="border-b border-neutral-200 pb-2">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-900">
+              <Users className="size-4 text-neutral-500" /> Portal access
+            </h2>
+            <p className="mt-0.5 truncate text-[11px] text-neutral-500">
+              {portal.display_name} · <code className="rounded bg-neutral-100 px-1 py-0.5">{url}/portal/{portal.client_slug}</code>
+            </p>
+          </header>
+          <div className="mt-3">
+            <PortalTeamPanel
+              engagementId={portal.engagement_id}
+              clientSlug={portal.client_slug}
+              portalUrl={`${url}/portal/${portal.client_slug}`}
+              unavailable={team.members === null}
+              sharedEnabled={team.sharedEnabled}
+              members={(team.members ?? []).map((m) => ({
+                id: m.id,
+                name: m.name?.trim() || m.email,
+                email: m.email,
+                role: m.role,
+                active: m.active,
+                lastLogin: m.last_login_at ? formatRelative(m.last_login_at, d.now) : null,
+              }))}
+            />
+          </div>
+        </section>
+      ))}
 
       <section id="baseline" className="scroll-mt-40">
         <BaselineSection d={d} scope={scope} baseline={baseline} />

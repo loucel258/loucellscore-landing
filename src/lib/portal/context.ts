@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getServiceClient } from "@/lib/audit/client";
 import { getPortalSession } from "./auth";
+import type { PortalActor } from "./roles";
 import type { PortalLang } from "./strings";
 import { pickTimeZone } from "./time";
 
@@ -50,6 +51,8 @@ export type PortalContext =
       slug: string;
       engagementId: string;
       displayName: string;
+      /** Who is signed in: a person, or "Shared access" (role owner). */
+      actor: PortalActor;
       accessCreatedAt: string;
       engagement: PortalEngagement | null;
       agents: PortalAgent[];
@@ -93,6 +96,7 @@ export const getPortalContext = cache(async (slug: string): Promise<PortalContex
     slug,
     engagementId: access.engagement_id,
     displayName: access.display_name,
+    actor: session.actor,
     accessCreatedAt: access.created_at,
     engagement,
     agents,

@@ -2,7 +2,7 @@
  * audit_logs.user_id carries the chat session id for customer traffic, but
  * the same column also holds operator and system actors that write into a
  * client's workspace: admin config saves ("admin"), portal decisions
- * ("portal:<slug>"), Front Desk vault reads ("front_desk:<slug>",
+ * ("portal:<slug>", or "portal:<slug>:<portalUserId>" for a signed-in person), Front Desk vault reads ("front_desk:<slug>",
  * "front_desk_reviews:<ws>"), booking backend reads ("system:booking"),
  * webhook guards ("webhook_<source>"). None of those are conversations, so
  * session and conversation counts must skip them.

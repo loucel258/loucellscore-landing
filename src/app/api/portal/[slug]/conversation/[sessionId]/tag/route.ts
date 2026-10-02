@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isPortalAuthed } from "@/lib/portal/auth";
+import { getPortalSession } from "@/lib/portal/auth";
+import { actorAuditId, can } from "@/lib/portal/roles";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 
@@ -30,7 +31,9 @@ function getClientIp(req: Request): string {
 }
 
 async function guard(req: Request, slug: string, sessionId: string) {
-  if (!(await isPortalAuthed(slug))) return { error: "unauthorized" as const, status: 401 };
+  const session = await getPortalSession(slug);
+  if (!session) return { error: "unauthorized" as const, status: 401 };
+  if (!can(session.actor.role, "tag_conversations")) return { error: "forbidden" as const, status: 403 };
   const ip = getClientIp(req);
   const rl = await rateLimit(`portal_tag:${slug}:${ip}`, 60, 60 / 3600);
   if (!rl.allowed) return { error: "rate_limited" as const, status: 429 };
@@ -51,7 +54,7 @@ async function guard(req: Request, slug: string, sessionId: string) {
     .limit(1)
     .maybeSingle();
   if (!msg) return { error: "session_not_found" as const, status: 404 };
-  return { sb, engagementId } as const;
+  return { sb, engagementId, actor: session.actor } as const;
 }
 
 export async function POST(
@@ -73,7 +76,7 @@ export async function POST(
     engagement_id: g.engagementId,
     session_id: sessionId,
     tag: body.tag,
-    applied_by: `portal:${slug}`,
+    applied_by: actorAuditId(slug, g.actor),
   });
   // Treat 23505 (already tagged) as success — idempotent
   if (error && (error as { code?: string }).code !== "23505") {

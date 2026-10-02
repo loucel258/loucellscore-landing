@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isPortalAuthed } from "@/lib/portal/auth";
+import { getPortalSession } from "@/lib/portal/auth";
+import { actorAuditId, actorAuditRole, can } from "@/lib/portal/roles";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { encryptMessage } from "@/lib/portal/encrypt";
@@ -40,9 +41,14 @@ export async function POST(
   const { slug, sessionId } = await params;
   const ip = getClientIp(req);
 
-  if (!(await isPortalAuthed(slug))) {
+  const session = await getPortalSession(slug);
+  if (!session) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+  if (!can(session.actor.role, "take_over")) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+  const { actor } = session;
 
   const rl = await rateLimit(`portal_takeover:${slug}:${ip}`, 30, 30 / 3600);
   if (!rl.allowed) {
@@ -138,7 +144,7 @@ export async function POST(
       {
         session_id: sessionId,
         engagement_id: engagementId,
-        paused_by: `portal:${slug}`,
+        paused_by: actorAuditId(slug, actor),
         paused_at: new Date().toISOString(),
         reason: "owner_take_over",
       },
@@ -149,14 +155,16 @@ export async function POST(
   await writeAuditEntry({
     request_id: crypto.randomUUID(),
     workspace_id: workspaceId,
-    user_id: sessionId,
-    role: "client_portal",
+    // The person who sent it ("portal:<slug>:<id>"), not the visitor's
+    // session id; the session is named in the reason.
+    user_id: actorAuditId(slug, actor),
+    role: actorAuditRole(actor),
     ip_address: null,
     source: "portal",
     sanitized_prompt_hash: "",
     decision: "ALLOW",
     blocked_by: null,
-    reason: "take_over_message:emailed",
+    reason: `take_over_message:emailed session=${sessionId}`,
   });
 
   return NextResponse.json({ ok: true, emailDelivered: true, delivery: "emailed" });
@@ -171,8 +179,12 @@ export async function DELETE(
 ): Promise<Response> {
   const { slug, sessionId } = await params;
 
-  if (!(await isPortalAuthed(slug))) {
+  const session = await getPortalSession(slug);
+  if (!session) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+  if (!can(session.actor.role, "take_over")) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
   const sb = getServiceClient();

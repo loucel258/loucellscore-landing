@@ -60,4 +60,7 @@ export type ApprovalLabels = {
   piiOther: string;
   /** "Open conversation" */
   openConversation?: string;
+  /** Staff see an approval but cannot decide it: "Only the owner can approve". */
+  ownerOnly: string;
+  ownerOnlyHint: string;
 };

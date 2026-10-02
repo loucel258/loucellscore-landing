@@ -23,6 +23,8 @@ import {
 } from "./needs-you";
 import { isMissingColumnError } from "./db-errors";
 import { loadPaymentDates, overdueRetainers, retainerClients } from "./retainer-payments";
+import { loadLatestVerifications } from "@/lib/audit/verification";
+import { verificationFlags } from "./audit-verification";
 
 /**
  * Data for /admin/dashboard ("Today"): the few numbers that matter, what
@@ -175,6 +177,13 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
     return run && run.status === "error" ? [{ job, label, ranAt: run.ran_at, summary: run.summary }] : [];
   });
 
+  // Audit chain verification per workspace (migration 068). Empty until the
+  // table exists and the daily cron has run: then nothing is flagged.
+  const verifications = await loadLatestVerifications(
+    sb,
+    [...new Set(base.agents.map((a) => a.workspace_id))].filter((ws) => !isDemoWorkspace(ws)),
+  ).catch(() => new Map());
+
   const needsYou = buildNeedsYou({
     now,
     dueTasks,
@@ -187,6 +196,7 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
     escalations,
     ...agentNeedsYou(signals, byWorkspace),
     reportsWaiting: signals.reportsWaiting,
+    verificationFlags: verificationFlags([...verifications.values()], now),
     retainersOverdue: overdueRetainers({ clients: retainers, payments: paymentDates, now }),
   });
 

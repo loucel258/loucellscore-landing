@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, Pencil, Mail, AlertTriangle, Loader2, MessageSquare } from "lucide-react";
+import { CheckCircle2, XCircle, Pencil, Mail, AlertTriangle, Loader2, MessageSquare, Lock } from "lucide-react";
 
 import type { ApprovalCardData, ApprovalLabels } from "@/lib/portal/approval-types";
 
@@ -18,10 +18,14 @@ export function ApprovalCard({
   approval,
   slug,
   labels,
+  canDecide = true,
 }: {
   approval: ApprovalCardData;
   slug: string;
   labels: ApprovalLabels;
+  /** False for staff: they see the approval but only the owner decides it.
+   *  The approve and reject routes enforce this too. */
+  canDecide?: boolean;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit" | "reject">("view");
@@ -260,7 +264,15 @@ export function ApprovalCard({
       </div>
 
       <footer className="border-t border-neutral-100 bg-white px-5 py-3">
-        {mode === "view" && (
+        {!canDecide && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-neutral-700">
+              <Lock className="size-4 text-neutral-500" /> {labels.ownerOnly}
+            </p>
+            <p className="text-[11px] text-neutral-500">{labels.ownerOnlyHint}</p>
+          </div>
+        )}
+        {canDecide && mode === "view" && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -301,7 +313,7 @@ export function ApprovalCard({
           </div>
         )}
 
-        {mode === "edit" && (
+        {canDecide && mode === "edit" && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -324,7 +336,7 @@ export function ApprovalCard({
           </div>
         )}
 
-        {mode === "reject" && (
+        {canDecide && mode === "reject" && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPortalContext } from "@/lib/portal/context";
+import { writeAuditEntry } from "@/lib/audit/writer";
+import { actorAuditId, actorAuditRole, can } from "@/lib/portal/roles";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { ilikeExactPattern, sameEmail } from "@/lib/portal/email-match";
@@ -39,6 +41,9 @@ export async function PUT(
   const ctx = await getPortalContext(slug);
   if (!ctx.authed) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+  if (!can(ctx.actor.role, "write_notes")) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
   const rl = await rateLimit(`portal_note:${slug}:${ip}`, 30, 30 / 3600);
   if (!rl.allowed) {
@@ -104,6 +109,27 @@ export async function PUT(
     // Never echo raw DB errors to the client (leaks schema/internals).
     console.error("[portal/note] save failed:", saved.error?.code ?? "unknown");
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 500 });
+  }
+
+  // Who wrote it. Field name only: the note text never goes to the audit log.
+  const noteWorkspace = ctx.workspaceIds[0];
+  if (noteWorkspace) {
+    try {
+      await writeAuditEntry({
+        request_id: crypto.randomUUID(),
+        workspace_id: noteWorkspace,
+        user_id: actorAuditId(slug, ctx.actor),
+        role: actorAuditRole(ctx.actor),
+        ip_address: null,
+        source: "portal",
+        sanitized_prompt_hash: "",
+        decision: "ALLOW",
+        blocked_by: null,
+        reason: "portal_customer_note_saved fields=note",
+      });
+    } catch {
+      // The note is saved; a failed audit write must not report it as lost.
+    }
   }
 
   return NextResponse.json({ ok: true });

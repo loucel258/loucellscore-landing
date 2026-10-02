@@ -51,6 +51,9 @@ export default async function PortalLoginPage({
       <PortalLoginForm
         slug={slug}
         labels={{
+          email: t(lang, "login.email"),
+          emailPlaceholder: t(lang, "login.email_placeholder"),
+          emailHint: t(lang, "login.email_hint"),
           passcode: t(lang, "login.passcode"),
           placeholder: t(lang, "login.placeholder"),
           submit: t(lang, "login.submit"),

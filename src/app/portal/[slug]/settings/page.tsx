@@ -1,7 +1,8 @@
-import { CreditCard, Mail, User, Shield, Globe, Bot, Plug, Gauge, CheckCircle2, CircleDashed } from "lucide-react";
+import { CreditCard, Mail, User, Shield, ShieldCheck, Globe, Bot, Plug, Gauge, CheckCircle2, CircleDashed, Users } from "lucide-react";
 import { getServiceClient } from "@/lib/audit/client";
 import { ServiceUnavailable } from "@/components/workspace/service-unavailable";
 import { requirePortalContext, type AuthedPortalContext, type PortalAgent } from "@/lib/portal/context";
+import { loadPortalAccess } from "@/lib/portal/auth";
 import { t, type PortalLang } from "@/lib/portal/strings";
 import { agentStatusLabel, agentTypeLabel, connectionLabel } from "@/lib/portal/labels";
 import { loadServiceStatus, type AgentServiceStatus } from "@/lib/service-status";
@@ -13,14 +14,19 @@ import { readBookingConfig } from "@/lib/agents/booking-config";
 import { Panel, PanelGrid } from "@/components/workspace/panel";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { WorkspaceTabs } from "@/components/workspace/tabs";
+import { can } from "@/lib/portal/roles";
+import { listTeam } from "@/lib/portal/team";
+import { loadPortalVerifications, summarizeVerifications, verificationLine } from "@/lib/portal/verification-badge";
+import type { LatestVerification } from "@/lib/audit/verification";
 import { LanguageSwitcher } from "./language-switcher";
+import { TeamPanel, type TeamLabels } from "./team-panel";
 import { EmbedSnippet, type EmbedLabels } from "./embed-snippet";
 import { ServiceStatusList } from "../service-status";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type TabKey = "plan" | "agent" | "language";
+type TabKey = "plan" | "agent" | "team" | "language";
 
 export default async function PortalSettingsPage({
   params,
@@ -31,13 +37,27 @@ export default async function PortalSettingsPage({
 }) {
   const { slug } = await params;
   const { tab } = await searchParams;
-  // Old ?tab=activity (system history) links fall back to Plan.
-  const activeTab: TabKey = tab === "agent" ? "agent" : tab === "language" ? "language" : "plan";
-
   const ctx = await requirePortalContext(slug);
   const sb = getServiceClient();
   if (!sb) return <ServiceUnavailable />;
   const { lang } = ctx;
+
+  // Plan and Team are the owner's. Staff get Your agent and Language; a
+  // staff member who opens a link to Plan or Team lands on Your agent.
+  const isOwner = can(ctx.actor.role, "view_plan");
+  const canTeam = can(ctx.actor.role, "manage_team");
+  // Old ?tab=activity (system history) links fall back to Plan (Your agent for staff).
+  const activeTab: TabKey =
+    tab === "language"
+      ? "language"
+      : tab === "agent"
+        ? "agent"
+        : tab === "team" && canTeam
+          ? "team"
+          : isOwner
+            ? "plan"
+            : "agent";
+  const verifications = activeTab === "agent" ? await loadPortalVerifications(ctx.workspaceIds) : [];
 
   return (
     <div className="space-y-6">
@@ -51,14 +71,16 @@ export default async function PortalSettingsPage({
         activeKey={activeTab}
         ariaLabel={t(lang, "settings.title")}
         tabs={[
-          { key: "plan", label: t(lang, "settings.tab_billing"), icon: <CreditCard className="size-4" /> },
+          ...(isOwner ? [{ key: "plan", label: t(lang, "settings.tab_billing"), icon: <CreditCard className="size-4" /> }] : []),
           { key: "agent", label: t(lang, "settings.tab_agent"), icon: <Bot className="size-4" /> },
+          ...(canTeam ? [{ key: "team", label: t(lang, "settings.tab_team"), icon: <Users className="size-4" /> }] : []),
           { key: "language", label: t(lang, "settings.tab_language"), icon: <Globe className="size-4" /> },
         ]}
       />
 
       {activeTab === "plan" && <PlanTab ctx={ctx} />}
-      {activeTab === "agent" && <AgentTab ctx={ctx} sb={sb} />}
+      {activeTab === "agent" && <AgentTab ctx={ctx} sb={sb} verifications={verifications} />}
+      {activeTab === "team" && <TeamTab ctx={ctx} sb={sb} />}
       {activeTab === "language" && <LanguageTab slug={slug} current={lang} />}
     </div>
   );
@@ -169,7 +191,15 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 // ── Your agent ────────────────────────────────────────────────────────
 
-async function AgentTab({ ctx, sb }: { ctx: AuthedPortalContext; sb: NonNullable<ReturnType<typeof getServiceClient>> }) {
+async function AgentTab({
+  ctx,
+  sb,
+  verifications,
+}: {
+  ctx: AuthedPortalContext;
+  sb: NonNullable<ReturnType<typeof getServiceClient>>;
+  verifications: LatestVerification[];
+}) {
   const { lang } = ctx;
   const agents = ctx.agents.filter((a) => a.status !== "archived");
   if (agents.length === 0) {
@@ -219,6 +249,7 @@ async function AgentTab({ ctx, sb }: { ctx: AuthedPortalContext; sb: NonNullable
             channels: a.channels,
             vaultProviders: vault.filter((v) => v.workspace_id === a.workspace_id),
           })}
+          verification={verifications.find((v) => v.workspaceId === a.workspace_id) ?? null}
           snippet={a.slug && hasWebChannel(a.channels) ? `<script src="${baseUrl}/agent.js" data-agent="${a.slug}" defer></script>` : null}
           embedLabels={embedLabels}
         />
@@ -235,6 +266,7 @@ function AgentCard({
   connections,
   snippet,
   embedLabels,
+  verification,
 }: {
   agent: PortalAgent;
   ctx: AuthedPortalContext;
@@ -242,8 +274,15 @@ function AgentCard({
   connections: Connection[];
   snippet: string | null;
   embedLabels: EmbedLabels;
+  verification: LatestVerification | null;
 }) {
   const { lang, tz } = ctx;
+  const nowMs = new Date().getTime();
+  // Proof the audit log was not altered, with the chain fingerprint. Nothing
+  // when no verification has been recorded for this agent yet.
+  const proof = verification
+    ? verificationLine(lang, summarizeVerifications([verification], nowMs), { now: nowMs, tz })
+    : null;
   const isLive = a.status === "live";
   const rows = status
     ? serviceRows(status, {
@@ -279,6 +318,23 @@ function AgentCard({
       <div className="space-y-5">
         {isLive && a.live_started_at && (
           <p className="text-xs text-neutral-600">{t(lang, "settings.agent_live_since", { date: formatDate(a.live_started_at, lang, tz) })}</p>
+        )}
+
+        {proof && (
+          <div
+            className={`rounded-xl border px-3 py-2.5 text-xs ${
+              proof.tone === "failed"
+                ? "border-rose-200 bg-rose-50 text-rose-800"
+                : proof.tone === "stale"
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-900"
+            }`}
+          >
+            <p className="inline-flex items-center gap-1.5 font-medium">
+              <ShieldCheck className="size-3.5" aria-hidden /> {proof.text}
+            </p>
+            {proof.fingerprint && <p className="mt-0.5 font-mono text-[11px] opacity-80">{proof.fingerprint}</p>}
+          </div>
         )}
 
         {rows.length > 0 && (
@@ -326,6 +382,87 @@ function AgentCard({
           </div>
         )}
       </div>
+    </Panel>
+  );
+}
+
+// ── Team ──────────────────────────────────────────────────────────────
+
+async function TeamTab({ ctx, sb }: { ctx: AuthedPortalContext; sb: NonNullable<ReturnType<typeof getServiceClient>> }) {
+  const { lang, tz, slug } = ctx;
+  const access = await loadPortalAccess(slug);
+  const members = access ? await listTeam(sb, access.id) : null;
+
+  if (members === null) {
+    // Migration 069 is not applied yet: the team cannot be managed.
+    return (
+      <Panel title={t(lang, "team.title")} icon={<Users className="size-4" />}>
+        <p className="text-sm text-neutral-600">{t(lang, "team.unavailable")}</p>
+      </Panel>
+    );
+  }
+
+  const labels: TeamLabels = {
+    members: t(lang, "team.members"),
+    lastSignIn: t(lang, "team.col_last"),
+    never: t(lang, "team.never"),
+    inactive: t(lang, "team.inactive"),
+    you: t(lang, "team.you"),
+    empty: t(lang, "team.empty"),
+    addTitle: t(lang, "team.add_title"),
+    name: t(lang, "team.name"),
+    email: t(lang, "team.email"),
+    role: t(lang, "team.role"),
+    roleOwnerDesc: t(lang, "team.role_owner_desc"),
+    roleStaffDesc: t(lang, "team.role_staff_desc"),
+    roleOwner: t(lang, "role.owner"),
+    roleStaff: t(lang, "role.staff"),
+    add: t(lang, "team.add"),
+    adding: t(lang, "team.adding"),
+    passcodeTitle: t(lang, "team.passcode_title", { name: "{name}" }),
+    passcodeOnce: t(lang, "team.passcode_once", { name: "{name}" }),
+    copy: t(lang, "team.copy"),
+    copied: t(lang, "team.copied"),
+    copyAria: t(lang, "team.copy_aria"),
+    dismiss: t(lang, "team.dismiss"),
+    reset: t(lang, "team.reset"),
+    resetConfirm: t(lang, "team.reset_confirm"),
+    deactivate: t(lang, "team.deactivate"),
+    deactivateConfirm: t(lang, "team.deactivate_confirm"),
+    confirm: t(lang, "team.confirm"),
+    cancel: t(lang, "team.cancel"),
+    working: t(lang, "team.working"),
+    errors: {
+      already_exists: t(lang, "team.err_exists"),
+      last_owner: t(lang, "team.err_last_owner"),
+      cannot_deactivate_self: t(lang, "team.err_self"),
+      bad_request: t(lang, "team.err_invalid"),
+      rate_limited: t(lang, "team.err_rate"),
+      forbidden: t(lang, "error.forbidden"),
+      team_unavailable: t(lang, "team.unavailable"),
+      generic: t(lang, "team.err_generic"),
+    },
+  };
+
+  return (
+    <Panel title={t(lang, "team.title")} icon={<Users className="size-4" />}>
+      <p className="mb-5 text-sm text-neutral-600">{t(lang, "team.desc")}</p>
+      <TeamPanel
+        slug={slug}
+        labels={labels}
+        currentUserId={ctx.actor.userId}
+        members={members.map((m) => ({
+          id: m.id,
+          name: m.name?.trim() || m.email,
+          email: m.email,
+          role: m.role,
+          active: m.active,
+          lastLogin: m.last_login_at ? formatDate(m.last_login_at, lang, tz) : null,
+        }))}
+      />
+      {access?.shared_passcode_enabled !== false && (
+        <p className="mt-5 text-[11px] text-neutral-500">{t(lang, "team.shared_note")}</p>
+      )}
     </Panel>
   );
 }

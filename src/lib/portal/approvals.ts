@@ -57,6 +57,8 @@ export function buildApprovalLabels(lang: PortalLang): ApprovalLabels {
     piiTypes: Object.fromEntries(PII_CODES.map((c) => [c, piiTypeLabel(lang, c)])),
     piiOther: t(lang, "pii.other"),
     openConversation: t(lang, "ra.open_conversation"),
+    ownerOnly: t(lang, "ra.owner_only"),
+    ownerOnlyHint: t(lang, "ra.owner_only_hint"),
   };
 }
 

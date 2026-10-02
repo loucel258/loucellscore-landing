@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isPortalAuthed } from "@/lib/portal/auth";
+import { getPortalSession } from "@/lib/portal/auth";
+import { can } from "@/lib/portal/roles";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { rejectAction } from "@/lib/portal/hitl";
@@ -26,8 +27,14 @@ export async function POST(
   const { slug } = await params;
   const ip = getClientIp(req);
 
-  if (!(await isPortalAuthed(slug))) {
+  const session = await getPortalSession(slug);
+  if (!session) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  }
+  // Staff can see approvals but only the owner decides them. Enforced here,
+  // not just in the UI.
+  if (!can(session.actor.role, "decide_approvals")) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
   const rl = await rateLimit(`portal_hitl_reject:${slug}:${ip}`, 30, 30 / 3600);
@@ -71,6 +78,7 @@ export async function POST(
     approvalId: body.approvalId,
     workspaceIds,
     decider: `portal:${slug}`,
+    actor: session.actor,
     reason: body.reason,
     clientSlug: slug,
   });

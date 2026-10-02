@@ -4,6 +4,7 @@ import { sendInternalAlert, sendEmail } from "@/lib/notify/resend";
 import { writeAuditEntry } from "@/lib/audit/writer";
 import { sanitize } from "@/lib/dlp/sanitizer";
 import { escapeHtml, subjectSafe, textToEmailHtml } from "./html";
+import { actorAuditId, actorDeciderId, type PortalActor } from "./roles";
 
 /**
  * Shared logic for portal-side HITL approve/reject. Both endpoints call
@@ -28,6 +29,10 @@ export type ApproveOptions = {
    *  multiple agents, and the approval may belong to any of them. */
   workspaceIds: string[];
   decider: string;            // 'portal:<slug>' or 'admin:steven'
+  /** The person behind the decision (migration 069). When set, decider_id is
+   *  their portal user id and the audit row names them; shared access keeps
+   *  the 'portal:<slug>' identity. */
+  actor?: PortalActor;
   editedText?: string;
   clientSlug: string;
   /** Customer-facing business name (client_portal_access.display_name).
@@ -39,6 +44,7 @@ export type RejectOptions = {
   approvalId: string;
   workspaceIds: string[];
   decider: string;
+  actor?: PortalActor;
   reason?: string;
   clientSlug: string;
 };
@@ -55,6 +61,17 @@ type ApprovalRow = {
 };
 
 const REAL_HANDLERS = new Set(["send_message", "send_quote"]);
+
+/** pending_approvals.decider_id, audit user_id and audit role for a decision. */
+function decisionIdentity(opts: { decider: string; actor?: PortalActor; clientSlug: string }) {
+  if (!opts.actor) return { deciderId: opts.decider, auditUserId: opts.decider, auditRole: "client_portal", label: opts.decider };
+  return {
+    deciderId: actorDeciderId(opts.clientSlug, opts.actor),
+    auditUserId: actorAuditId(opts.clientSlug, opts.actor),
+    auditRole: opts.actor.role as string,
+    label: `${opts.actor.label} (${opts.actor.role})`,
+  };
+}
 
 export async function approveAction(opts: ApproveOptions): Promise<
   | { ok: true; executedRealtime: boolean }
@@ -76,6 +93,7 @@ export async function approveAction(opts: ApproveOptions): Promise<
   const approval = row as ApprovalRow;
   if (approval.status !== "pending") return { ok: false, reason: "already_decided" };
 
+  const who = decisionIdentity(opts);
   const finalText = opts.editedText?.trim() || approval.proposed_text;
   const isReal = REAL_HANDLERS.has(approval.action_type);
 
@@ -105,7 +123,7 @@ export async function approveAction(opts: ApproveOptions): Promise<
     .from("pending_approvals")
     .update({
       status: "approved",
-      decider_id: opts.decider,
+      decider_id: who.deciderId,
       decision_reason: "approved (executing)",
       edited_text: opts.editedText ?? null,
       decided_at: new Date().toISOString(),
@@ -158,7 +176,7 @@ export async function approveAction(opts: ApproveOptions): Promise<
     await sendInternalAlert({
       subject: `[Action required] ${approval.action_type} approved by client ${opts.clientSlug}`,
       bodyHtml: `
-        <p>Client portal user <strong>${opts.decider}</strong> just approved a <strong>${approval.action_type}</strong> action that requires manual execution.</p>
+        <p>Client portal user <strong>${escapeHtml(who.label)}</strong> just approved a <strong>${approval.action_type}</strong> action that requires manual execution.</p>
         ${refundPolicyLine}
         <p><strong>Recipient:</strong> ${escapeHtml(approval.recipient ?? "—")}</p>
         <p><strong>Risk score:</strong> ${approval.risk_score ?? "—"}</p>
@@ -174,8 +192,8 @@ export async function approveAction(opts: ApproveOptions): Promise<
   await writeAuditEntry({
     request_id: crypto.randomUUID(),
     workspace_id: approval.workspace_id,
-    user_id: opts.decider,
-    role: "client_portal",
+    user_id: who.auditUserId,
+    role: who.auditRole,
     ip_address: null,
     source: "portal",
     sanitized_prompt_hash: "",
@@ -207,13 +225,15 @@ export async function rejectAction(opts: RejectOptions): Promise<
     return { ok: false, reason: "already_decided" };
   }
 
+  const who = decisionIdentity(opts);
+
   // Conditional flip, same race discipline as approveAction: only one
   // decision ever lands on a pending row.
   const { data: claimed } = await sb
     .from("pending_approvals")
     .update({
       status: "rejected",
-      decider_id: opts.decider,
+      decider_id: who.deciderId,
       decision_reason: opts.reason ?? "rejected by client",
       decided_at: new Date().toISOString(),
     })
@@ -225,7 +245,7 @@ export async function rejectAction(opts: RejectOptions): Promise<
   await sendInternalAlert({
     subject: `Client rejected agent action — ${(row as { action_type: string }).action_type}`,
     bodyHtml: `
-      <p>Client <strong>${opts.clientSlug}</strong> rejected a pending action.</p>
+      <p>Client <strong>${escapeHtml(opts.clientSlug)}</strong> rejected a pending action (${escapeHtml(who.label)}).</p>
       <p><strong>Reason given:</strong> ${escapeHtml(opts.reason ?? "(none)")}</p>
       <p style="color:#888;font-size:11px;">Approval id: ${opts.approvalId}</p>
     `,
@@ -234,8 +254,8 @@ export async function rejectAction(opts: RejectOptions): Promise<
   await writeAuditEntry({
     request_id: crypto.randomUUID(),
     workspace_id: (row as { workspace_id: string }).workspace_id,
-    user_id: opts.decider,
-    role: "client_portal",
+    user_id: who.auditUserId,
+    role: who.auditRole,
     ip_address: null,
     source: "portal",
     sanitized_prompt_hash: "",

@@ -9,6 +9,8 @@ import { buildApprovalLabels, loadPendingApprovals } from "@/lib/portal/approval
 import { approvalOutcome, type ApprovalOutcome } from "@/lib/portal/approval-status";
 import { isMissingColumn } from "@/lib/portal/db-errors";
 import { conversationHref } from "@/lib/portal/threads";
+import { can } from "@/lib/portal/roles";
+import { decidedByLabel, loadDeciderNames } from "@/lib/portal/deciders";
 import { formatWhen } from "@/lib/portal/time";
 import { Panel } from "@/components/workspace/panel";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
@@ -26,13 +28,14 @@ type HistoryRow = {
   execution_status: string | null;
   decision_reason: string | null;
   failure_reason: string | null;
+  decider_id?: string | null;
   session_id?: string | null;
   contact_id?: string | null;
 };
 
 // Read server-side to derive the outcome only: decision_reason and
 // failure_reason are internal and never rendered.
-const HISTORY_COLS = "id, action_type, proposed_text, status, decided_at, execution_status, decision_reason, failure_reason";
+const HISTORY_COLS = "id, action_type, proposed_text, status, decided_at, execution_status, decision_reason, failure_reason, decider_id";
 
 const OUTCOME_TONE: Record<ApprovalOutcome, string> = {
   sent: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -80,6 +83,9 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ slug
   const historyRes =
     historyFirst.error && isMissingColumn(historyFirst.error) ? await runHistory(HISTORY_COLS) : historyFirst;
   const history = (historyRes.data as unknown as HistoryRow[] | null) ?? [];
+  // "Approved by Maria": names of the people who decided (migration 069).
+  const deciderNames = await loadDeciderNames(sb, ctx.engagementId, history.map((r) => r.decider_id));
+  const canDecide = can(ctx.actor.role, "decide_approvals");
   const labels = buildApprovalLabels(lang);
 
   return (
@@ -101,7 +107,7 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ slug
       ) : (
         <div className="space-y-4">
           {pending.map((p) => (
-            <ApprovalCard key={p.id} approval={p} slug={slug} labels={labels} />
+            <ApprovalCard key={p.id} approval={p} slug={slug} labels={labels} canDecide={canDecide} />
           ))}
         </div>
       )}
@@ -112,6 +118,7 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ slug
             {history.map((r) => {
               const outcome = approvalOutcome(r);
               const href = conversationHref(slug, r);
+              const decidedBy = decidedByLabel(lang, r.status, r.decider_id, deciderNames);
               return (
                 <li key={r.id} className="flex items-start justify-between gap-3 py-3 text-xs">
                   <div className="min-w-0">
@@ -122,6 +129,7 @@ export default async function ApprovalsPage({ params }: { params: Promise<{ slug
                         {t(lang, `ra.outcome.${outcome}`)}
                       </span>
                       <span className="text-neutral-700">{actionTypeLabel(lang, r.action_type)}</span>
+                      {decidedBy && <span className="font-medium text-neutral-800">· {decidedBy}</span>}
                     </div>
                     <p className="mt-1 line-clamp-1 max-w-xl text-[11px] text-neutral-500">{r.proposed_text}</p>
                     {href && (

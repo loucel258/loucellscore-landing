@@ -7,6 +7,7 @@ import { getPathname } from "@/lib/shell/pathname";
 import { getPortalContext } from "@/lib/portal/context";
 import { countPendingApprovals } from "@/lib/portal/approvals";
 import { t, type PortalLang } from "@/lib/portal/strings";
+import { loadPortalVerifications, summarizeVerifications, verificationLine } from "@/lib/portal/verification-badge";
 import { instrumentSerif } from "@/components/home/fonts";
 import { PortalSignOutButton } from "./sign-out";
 import { LanguageToggle } from "./language-toggle";
@@ -39,7 +40,7 @@ export default async function PortalLayout({
     return <BareLoginShell>{children}</BareLoginShell>;
   }
 
-  const { lang, displayName, engagement, workspaceIds, engagementId } = ctx;
+  const { lang, displayName, engagement, workspaceIds, engagementId, actor, tz } = ctx;
 
   // Badges: pending approvals and conversations the owner took over. Both
   // are head-only counts.
@@ -54,6 +55,13 @@ export default async function PortalLayout({
           .then((r) => r.count ?? 0),
       ])
     : [0, 0];
+
+  // Compact proof line for the footer (nothing when there is no data yet).
+  const nowMs = new Date().getTime();
+  const proof = verificationLine(lang, summarizeVerifications(await loadPortalVerifications(workspaceIds), nowMs), {
+    now: nowMs,
+    tz,
+  });
 
   const base = `/portal/${slug}`;
   const sections: SidebarSection[] = [
@@ -94,6 +102,10 @@ export default async function PortalLayout({
     },
   ];
 
+  const signedInAs = t(lang, "nav.signed_in", {
+    name: actor.userId ? `${actor.name} (${t(lang, `role.${actor.role}`)})` : t(lang, "role.shared"),
+  });
+
   const initials = displayName
     .split(/\s+/)
     .slice(0, 2)
@@ -111,14 +123,14 @@ export default async function PortalLayout({
         }}
         sections={sections}
         homeHref={base}
-        footer={<PortalSidebarFooter slug={slug} lang={lang} />}
+        footer={<PortalSidebarFooter slug={slug} lang={lang} signedInAs={signedInAs} />}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileNav
           brand={{ workspaceName: displayName, subtitle: t(lang, "nav.portal"), initials }}
           sections={sections}
-          footer={<PortalSidebarFooter slug={slug} lang={lang} withLanguage={false} />}
+          footer={<PortalSidebarFooter slug={slug} lang={lang} withLanguage={false} signedInAs={signedInAs} />}
           actions={<PortalLanguageToggle slug={slug} lang={lang} variant="header" />}
           openLabel={t(lang, "nav.open_menu")}
           closeLabel={t(lang, "nav.close_menu")}
@@ -127,7 +139,18 @@ export default async function PortalLayout({
           <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</main>
           <footer className="mx-auto w-full max-w-[1240px] border-t border-neutral-200 px-4 py-5 text-[12px] text-neutral-500 sm:px-6 lg:px-10">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p>{t(lang, "footer.audit")}</p>
+              <div>
+                <p>{t(lang, "footer.audit")}</p>
+                {proof && (
+                  <p
+                    className={`mt-0.5 inline-flex items-center gap-1 ${
+                      proof.tone === "failed" ? "text-rose-700" : proof.tone === "stale" ? "text-amber-800" : "text-emerald-700"
+                    }`}
+                  >
+                    <ShieldCheck className="size-3.5" aria-hidden /> {proof.text}
+                  </p>
+                )}
+              </div>
               <p>Loucells Core · loucellscore.com</p>
             </div>
           </footer>
@@ -149,14 +172,20 @@ function PortalSidebarFooter({
   slug,
   lang,
   withLanguage = true,
+  signedInAs,
 }: {
   slug: string;
   lang: PortalLang;
+  /** "Signed in as Maria (Owner)" or "Shared access". */
+  signedInAs: string;
   /** Mobile shows the toggle in its top bar instead. */
   withLanguage?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-2.5">
+      <p className="truncate text-[11.5px] text-bone-2" title={signedInAs}>
+        {signedInAs}
+      </p>
       <div className="flex items-center justify-between gap-2">
         {withLanguage ? <PortalLanguageToggle slug={slug} lang={lang} variant="sidebar" /> : <span />}
         <PortalSignOutButton slug={slug} label={t(lang, "nav.sign_out")} variant="sidebar" />

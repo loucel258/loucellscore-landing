@@ -263,6 +263,7 @@ export function errorLabels(lang: PortalLang): Record<string, string> {
     network: t(lang, "error.network"),
     rate_limited: t(lang, "error.rate_limited"),
     unauthorized: t(lang, "error.unauthorized"),
+    forbidden: t(lang, "error.forbidden"),
     not_found: notFound,
     session_not_found: notFound,
     customer_not_found: notFound,

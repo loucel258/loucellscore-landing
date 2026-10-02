@@ -11,6 +11,7 @@ import { formatPhone } from "@/lib/portal/threads";
 import { daysAgoIso, formatDate } from "@/lib/portal/time";
 import { Panel } from "@/components/workspace/panel";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
+import { can } from "@/lib/portal/roles";
 import { ExportMenu } from "../export-menu";
 
 export const dynamic = "force-dynamic";
@@ -98,7 +99,7 @@ export default async function CustomersPage({ params }: { params: Promise<{ slug
           <h1 className="text-neutral-900">{t(lang, "customers.title")}</h1>
           <p className="mt-1 text-sm text-neutral-600">{t(lang, "customers.desc")}</p>
         </div>
-        <ExportMenu slug={slug} type="bookings" lang={lang} />
+        <ExportMenu slug={slug} type="bookings" lang={lang} canExport={can(ctx.actor.role, "export")} />
       </header>
 
       {people.length === 0 ? (
