@@ -48,3 +48,5 @@ encrypted transcripts → leads).
 | 065 | ✅ `appointments.price_cents` (booking price from the external app), `vault_presence()` (presence only, no secrets), read grants for `loucels_dashboard_read` on front-desk tables. Applied 2026-10-01, verified with the read role |
 | 066 | ✅ `client_reports` (weekly reports: drafted by cron, sent only on admin approval). Applied 2026-10-01, verified |
 | 067 | ✅ `customers.phone` (text-only customers; legacy "tel:" rows moved) + `retainer_payments` (append-only, admin read role can select, anon 401). Applied 2026-10-02, verified |
+| 068 | ✅ `audit_verifications` (daily chain-check results) + admin read on `audit_chain_head`. Applied 2026-10-02, verified |
+| 069 | ✅ `portal_users` (per-person portal logins, owner/staff) + `client_portal_access.shared_passcode_enabled`. Admin read role sees no passcode columns (403 verified); anon 401. Applied 2026-10-02, verified |
