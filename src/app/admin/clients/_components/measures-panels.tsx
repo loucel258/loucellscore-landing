@@ -4,17 +4,20 @@ import type { ReactNode } from "react";
 import { baselineComparison, formatMetric, guaranteeProgress } from "@/lib/admin/baseline";
 import type { ClientMeasures, ValueWindowView } from "@/lib/admin/client-measures";
 import { formatRelative, formatShortDate, formatUsdFromCents } from "@/lib/admin/format";
+import { formatMonth, formatPaidOn, RETAINER_METHOD_LABEL } from "@/lib/admin/retainer-payments";
 import { formatTokens, isBudgetWarning } from "@/lib/admin/usage";
 import { NO_TRAFFIC_ALERT_DAYS } from "@/lib/service-status";
 import { StateDot } from "@/components/admin/channel-chips";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Panel } from "@/components/workspace/panel";
+import { RetainerPaymentForm } from "./retainer-payment-form";
 
 /**
  * Client page Overview panels that answer "is it working and what is it
  * worth": What's working (per agent, per channel, plus token budget),
  * Value (last 30 days and since go-live), Guarantee (baseline vs now) and
- * Payments (what Stripe recorded). Server components, numbers only from
+ * Payments (logged retainer payments and what Stripe recorded). Server
+ * components, numbers only from
  * lib/admin/client-measures.ts.
  */
 
@@ -321,31 +324,116 @@ export function GuaranteePanel({ m, setupHref }: { m: ClientMeasures; setupHref:
 
 // ── Payments ────────────────────────────────────────────────────────
 
-export function PaymentsPanel({ m }: { m: ClientMeasures }) {
+export type PaymentEngagementOption = { id: string; label: string };
+
+export function PaymentsPanel({
+  m,
+  accountId,
+  engagements,
+  defaultEngagementId,
+}: {
+  m: ClientMeasures;
+  /** null for a legacy client with no CRM account (payments are logged per account). */
+  accountId: string | null;
+  engagements: PaymentEngagementOption[];
+  defaultEngagementId: string | null;
+}) {
   const { lastPaid, failed } = m.payments;
+  const { load, monthlyCents } = m.retainer;
   return (
     <Panel title="Payments" icon={<CreditCard className="size-4" />} tone={failed.length > 0 ? "danger" : "default"}>
-      {failed.map((f) => (
-        <p key={f.ref} className="mb-2 flex items-start gap-1.5 text-sm text-rose-800">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-          Payment failed{f.at ? ` on ${formatShortDate(f.at)}` : ""} ({f.type.replace(/_/g, " ")}, {f.ref})
-        </p>
-      ))}
-      {lastPaid ? (
-        <p className="text-sm text-neutral-800">
-          Last payment: <strong className="font-semibold">{lastPaid.cents != null ? formatUsdFromCents(lastPaid.cents) : "amount not recorded"}</strong> on{" "}
-          {formatShortDate(lastPaid.at)}
-          <span className="block text-[11px] text-neutral-500">
-            {lastPaid.type.replace(/_/g, " ")} · {lastPaid.ref}
-          </span>
-        </p>
-      ) : (
-        failed.length === 0 && <p className="text-sm text-neutral-500">No Stripe payments recorded.</p>
-      )}
-      <p className="mt-3 text-[11px] text-neutral-500">
-        Stripe only records one-off engagement payments today. Monthly retainers are not billed through Stripe yet, so
-        there is no next invoice or overdue status to show.
-      </p>
+      <div className="space-y-4">
+        <section>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Monthly retainer</p>
+          <p className="mt-1 text-sm text-neutral-800">
+            {monthlyCents > 0 ? (
+              <>
+                <strong className="font-semibold">{formatUsdFromCents(monthlyCents)}/mo</strong> active
+              </>
+            ) : (
+              "No active retainer"
+            )}
+            {load.kind === "ok" && (
+              <span className="block text-[11px] text-neutral-500">
+                {load.paidThrough ? `Paid through ${formatMonth(load.paidThrough)}` : "No retainer payment logged yet"}
+              </span>
+            )}
+          </p>
+
+          {load.kind === "missing" && (
+            <p className="mt-2 text-xs text-neutral-500">
+              Logging retainer payments needs migration 067 (retainer_payments). Once it is applied, the form shows up here.
+            </p>
+          )}
+          {load.kind === "error" && (
+            <p className="mt-2 text-xs text-rose-700">Retainer payments could not be read right now.</p>
+          )}
+
+          {load.kind === "ok" && load.recent.length > 0 && (
+            <ul className="mt-3 divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-white text-xs">
+              {load.recent.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-0.5 px-3 py-2">
+                  <span className="min-w-0">
+                    <span className="font-medium text-neutral-900">{formatUsdFromCents(p.amount_cents)}</span>{" "}
+                    <span className="text-neutral-500">
+                      · {methodLabel(p.method)}
+                      {p.period_month ? ` · for ${formatMonth(p.period_month)}` : ""}
+                    </span>
+                    {p.note && <span className="block break-words text-[11px] text-neutral-500">{p.note}</span>}
+                  </span>
+                  <span className="shrink-0 text-neutral-500">{formatPaidOn(p.paid_on)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {load.kind === "ok" &&
+            (accountId && engagements.length > 0 ? (
+              <div className="mt-3">
+                <RetainerPaymentForm
+                  accountId={accountId}
+                  engagements={engagements}
+                  defaultEngagementId={defaultEngagementId ?? engagements[0]!.id}
+                  defaultAmountCents={monthlyCents > 0 ? monthlyCents : null}
+                />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-neutral-500">
+                {accountId
+                  ? "Add an engagement before logging payments."
+                  : "Retainer payments are logged per account. Link this client to a CRM account to log one."}
+              </p>
+            ))}
+        </section>
+
+        <section className="border-t border-neutral-100 pt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">Stripe</p>
+          {failed.map((f) => (
+            <p key={f.ref} className="mt-1 flex items-start gap-1.5 text-sm text-rose-800">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              Payment failed{f.at ? ` on ${formatShortDate(f.at)}` : ""} ({f.type.replace(/_/g, " ")}, {f.ref})
+            </p>
+          ))}
+          {lastPaid ? (
+            <p className="mt-1 text-sm text-neutral-800">
+              Last payment: <strong className="font-semibold">{lastPaid.cents != null ? formatUsdFromCents(lastPaid.cents) : "amount not recorded"}</strong> on{" "}
+              {formatShortDate(lastPaid.at)}
+              <span className="block text-[11px] text-neutral-500">
+                {lastPaid.type.replace(/_/g, " ")} · {lastPaid.ref}
+              </span>
+            </p>
+          ) : (
+            failed.length === 0 && <p className="mt-1 text-sm text-neutral-500">No Stripe payments recorded.</p>
+          )}
+          <p className="mt-2 text-[11px] text-neutral-500">
+            Stripe records one-off engagement payments only. Monthly retainers are paid outside Stripe, so log each one above.
+          </p>
+        </section>
+      </div>
     </Panel>
   );
+}
+
+function methodLabel(method: string): string {
+  return (RETAINER_METHOD_LABEL as Record<string, string>)[method] ?? method.replace(/_/g, " ");
 }

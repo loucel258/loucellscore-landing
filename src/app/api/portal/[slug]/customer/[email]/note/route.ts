@@ -4,7 +4,8 @@ import { getPortalContext } from "@/lib/portal/context";
 import { getServiceClient } from "@/lib/audit/client";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { ilikeExactPattern, sameEmail } from "@/lib/portal/email-match";
-import { isPhoneKey } from "@/lib/portal/people";
+import { saveCustomerNote } from "@/lib/portal/customer-notes";
+import { phoneFromKey } from "@/lib/portal/people";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,10 +21,12 @@ function getClientIp(req: Request): string {
 }
 
 /**
- * PUT: upsert a note for a customer, keyed by (engagement_id, email).
- * The key is the customer's email (web) or "tel:<E.164>" for a person known
- * only by text message (customers.email holds that key; the table is the
- * portal's own notes store). Creates the customers row lazily if missing.
+ * PUT: save the owner's note about a customer. The URL key is the
+ * customer's email (web) or "tel:<E.164>" for a person known only by text
+ * message. Email notes are keyed (engagement_id, email); phone notes are
+ * keyed (engagement_id, phone) with email null (migration 067), falling
+ * back to the old "tel:" key in customers.email until 067 is applied. See
+ * lib/portal/customer-notes.ts. Creates the customers row lazily if missing.
  */
 export async function PUT(
   req: Request,
@@ -62,7 +65,8 @@ export async function PUT(
   // Verify the customer belongs to this engagement before letting the
   // portal write a note about them.
   let displayName: string | null = null;
-  if (isPhoneKey(email)) {
+  const phone = phoneFromKey(email);
+  if (phone) {
     if (ctx.workspaceIds.length === 0) {
       return NextResponse.json({ ok: false, error: "customer_not_found" }, { status: 404 });
     }
@@ -70,7 +74,7 @@ export async function PUT(
       .from("contacts")
       .select("name")
       .in("workspace_id", ctx.workspaceIds)
-      .eq("phone", email.slice(4))
+      .eq("phone", phone)
       .limit(5);
     const contacts = (contactRows as Array<{ name: string | null }> | null) ?? [];
     if (contacts.length === 0) {
@@ -95,24 +99,10 @@ export async function PUT(
     displayName = lead.name;
   }
 
-  // Upsert into customers
-  const { error } = await sb
-    .from("customers")
-    .upsert(
-      {
-        engagement_id: engagementId,
-        email,
-        display_name: displayName,
-        notes: body.note,
-        last_seen_at: new Date().toISOString(),
-      },
-      { onConflict: "engagement_id,email" },
-    );
-
-  if (error) {
+  const saved = await saveCustomerNote(sb, { engagementId, key: email, displayName, note: body.note });
+  if (!saved.ok) {
     // Never echo raw DB errors to the client (leaks schema/internals).
-    // eslint-disable-next-line no-console
-    console.error("[portal/note] save failed:", error.message);
+    console.error("[portal/note] save failed:", saved.error?.code ?? "unknown");
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 500 });
   }
 

@@ -12,7 +12,9 @@ import { cleanName } from "./threads";
  * Names are never used to merge (two "Maria"s are two people).
  *
  * The key doubles as the detail URL segment: the lowercased email, or
- * "tel:<E.164>" for a person known only by phone. Pure, no server imports.
+ * "tel:<E.164>" for a person known only by phone. The notes for a phone
+ * person live in customers.phone (pickCustomerNote below). Pure, no server
+ * imports.
  */
 
 export type LeadRow = {
@@ -60,6 +62,41 @@ export function phoneKey(phone: string): string {
 
 export function isPhoneKey(key: string): boolean {
   return /^tel:\+[1-9]\d{6,14}$/.test(key);
+}
+
+/** The E.164 number inside a "tel:" person key, or null for an email key. */
+export function phoneFromKey(key: string): string | null {
+  return isPhoneKey(key) ? key.slice(4) : null;
+}
+
+/**
+ * Customer notes (the portal's customers table). Since migration 067 a
+ * person known only by text message has a row with customers.phone set and
+ * email null. Before it, that row stored the "tel:<E.164>" key in
+ * customers.email. Rows of both shapes can exist for one person, so the
+ * note shown is the most recently saved one (the phone-column row wins a
+ * tie). Nothing is dropped: an old "tel:" row is still read.
+ */
+export type CustomerNoteRow = {
+  notes: string | null;
+  last_seen_at?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
+
+export function pickCustomerNote(rows: CustomerNoteRow[]): string | null {
+  let best: CustomerNoteRow | null = null;
+  let bestAt = Number.NEGATIVE_INFINITY;
+  for (const r of rows) {
+    const t = r.last_seen_at ? new Date(r.last_seen_at).getTime() : Number.NaN;
+    const at = Number.isFinite(t) ? t : Number.NEGATIVE_INFINITY;
+    const better = !best || at > bestAt || (at === bestAt && !!r.phone && !best.phone);
+    if (better) {
+      best = r;
+      bestAt = at;
+    }
+  }
+  return best?.notes ?? null;
 }
 
 function metadataEmail(metadata: unknown): string | null {

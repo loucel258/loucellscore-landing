@@ -8,7 +8,7 @@ import { loadAgentHealth, loadHealthAgents } from "./health";
 import { countDraftReports } from "./reports";
 import { budgetUse, isBudgetWarning, loadMonthlyUsage } from "./usage";
 import { loadClientsOverview, type ClientsOverview } from "./clients";
-import { indexByWorkspace } from "./client-list";
+import { indexByWorkspace, isDemoWorkspace } from "./client-list";
 import type { ClientScope } from "./client-routes";
 import { getDueTasks } from "./crm";
 import { landingLeadsOrFilter, resolveLandingAgent } from "./landing-leads";
@@ -22,6 +22,7 @@ import {
   type SilentAgentInput,
 } from "./needs-you";
 import { isMissingColumnError } from "./db-errors";
+import { loadPaymentDates, overdueRetainers, retainerClients } from "./retainer-payments";
 
 /**
  * Data for /admin/dashboard ("Today"): the few numbers that matter, what
@@ -118,7 +119,10 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
     }
   }
 
-  const [recentLeads, leadsThis, leadsPrev, approvalsRes, dueTasks, cronRuns, escalations, engEvents, goLives, signals] =
+  // Accounts billing a monthly retainer, for the overdue check.
+  const retainers = retainerClients(rows, base.agents);
+
+  const [recentLeads, leadsThis, leadsPrev, approvalsRes, dueTasks, cronRuns, escalations, engEvents, goLives, signals, paymentDates] =
     await Promise.all([
       sb
         .from("leads")
@@ -151,11 +155,15 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
         .limit(20),
       sb
         .from("client_agents")
-        .select("id, name, engagement_id, live_started_at")
+        .select("id, name, engagement_id, workspace_id, live_started_at")
         .not("live_started_at", "is", null)
         .order("live_started_at", { ascending: false })
-        .limit(10),
+        .limit(20),
       loadAgentSignals(sb, now),
+      loadPaymentDates(
+        sb,
+        retainers.flatMap((r) => r.engagementIds),
+      ).catch(() => null),
     ]);
 
   const byWorkspace = indexByWorkspace(rows);
@@ -179,6 +187,7 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
     escalations,
     ...agentNeedsYou(signals, byWorkspace),
     reportsWaiting: signals.reportsWaiting,
+    retainersOverdue: overdueRetainers({ clients: retainers, payments: paymentDates, now }),
   });
 
   // Client value totals leave out Loucells Core's own site chat.
@@ -199,7 +208,10 @@ export async function loadToday(sb: SupabaseClient): Promise<TodayData> {
     },
     needsYou,
     recentEngagements: (engEvents.data as TodayEngagementEvent[] | null) ?? [],
-    recentGoLives: (goLives.data as TodayAgentEvent[] | null) ?? [],
+    recentGoLives: ((goLives.data as Array<TodayAgentEvent & { workspace_id: string }> | null) ?? [])
+      .filter((a) => !isDemoWorkspace(a.workspace_id))
+      .slice(0, 10)
+      .map((a) => ({ id: a.id, name: a.name, engagement_id: a.engagement_id, live_started_at: a.live_started_at })),
   };
 }
 

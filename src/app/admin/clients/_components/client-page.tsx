@@ -130,6 +130,12 @@ function checklistFor(agent: AgentDetailRow, d: ClientDetail): ChecklistAgent {
   };
 }
 
+/** The engagement a retainer payment most likely belongs to: the one with an active retainer, else the newest. */
+function retainerEngagementId(d: ClientDetail): string | null {
+  const billing = d.agents.find((a) => a.retainer_active && !a.archived_at && a.status !== "archived");
+  return billing?.engagement_id ?? d.engagements[0]?.id ?? null;
+}
+
 /** The agent still being set up: the requested one, else the newest not live. */
 function agentInSetup(d: ClientDetail, focus: string | null): AgentDetailRow | null {
   const open = d.agents.filter((a) => !a.archived_at && a.status !== "archived" && a.status !== "live");
@@ -481,7 +487,15 @@ function OverviewTab({
             )}
           </Panel>
 
-          <PaymentsPanel m={m} />
+          <PaymentsPanel
+            m={m}
+            accountId={d.account?.id ?? null}
+            engagements={d.engagements.map((e) => ({
+              id: e.id,
+              label: `${e.engagement_ref} · ${e.engagement_type.replace(/_/g, " ")}`,
+            }))}
+            defaultEngagementId={retainerEngagementId(d)}
+          />
 
           {d.account && (
             <Panel title="Follow-ups" icon={<CalendarCheck className="size-4" />}>

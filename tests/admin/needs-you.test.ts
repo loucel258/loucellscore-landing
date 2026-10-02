@@ -97,3 +97,55 @@ describe("buildNeedsYou", () => {
     });
   });
 });
+
+describe("buildNeedsYou: demo workspaces", () => {
+  it("never lists Trust Stack demo approvals or escalations", () => {
+    const items = buildNeedsYou({
+      now: NOW,
+      dueTasks: [],
+      approvals: [
+        { id: "d1", workspace_id: "ws_demo_001", status: "pending", created_at: ago(30 * MIN) },
+        { id: "d2", workspace_id: "ws_demo_001", status: "approving", created_at: ago(30 * MIN), approving_at: ago(20 * MIN) },
+        { id: "p1", workspace_id: "ws_a1", status: "pending", created_at: ago(5 * MIN) },
+      ],
+      clientsByWorkspace: clients,
+      quietClients: [],
+      failedCrons: [],
+      escalations: [{ id: "e1", workspace_id: "ws_demo_001", created_at: ago(MIN) }],
+    });
+    expect(items.map((i) => i.id)).toEqual(["pending:account:acc-a"]);
+    expect(items.some((i) => i.title.includes("ws_demo"))).toBe(false);
+  });
+});
+
+describe("buildNeedsYou: overdue retainers", () => {
+  const base = {
+    now: NOW,
+    dueTasks: [],
+    approvals: [],
+    clientsByWorkspace: clients,
+    quietClients: [],
+    failedCrons: [],
+    escalations: null,
+  };
+
+  it("adds a critical item per overdue retainer, linking to the client page", () => {
+    const items = buildNeedsYou({
+      ...base,
+      retainersOverdue: [
+        { key: "acc-a", name: "Naile Studio", scope: { kind: "account", accountId: "acc-a" }, mrrCents: 50_000, lastPaidOn: "2026-08-20" },
+        { key: "acc-c", name: "Sunset Roofing", scope: { kind: "account", accountId: "acc-c" }, mrrCents: 120_050, lastPaidOn: null },
+      ],
+    });
+    expect(items.map((i) => [i.kind, i.tone, i.title, i.href])).toEqual([
+      ["retainer", "critical", "Retainer overdue: Naile Studio, $500/mo, last paid Aug 20", "/admin/clients/acc-a"],
+      ["retainer", "critical", "Retainer overdue: Sunset Roofing, $1,200.50/mo, last paid never", "/admin/clients/acc-c"],
+    ]);
+    for (const i of items) expect(i.title).not.toContain("\u2014");
+  });
+
+  it("shows nothing when there is nothing overdue", () => {
+    expect(buildNeedsYou({ ...base, retainersOverdue: [] })).toEqual([]);
+    expect(buildNeedsYou(base)).toEqual([]);
+  });
+});

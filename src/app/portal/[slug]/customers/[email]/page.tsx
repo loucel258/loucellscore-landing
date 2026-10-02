@@ -7,7 +7,8 @@ import { requirePortalContext } from "@/lib/portal/context";
 import { t, tn } from "@/lib/portal/strings";
 import { appointmentStatusLabel, channelLabel } from "@/lib/portal/labels";
 import { ilikeExactPattern, sameEmail } from "@/lib/portal/email-match";
-import { isPhoneKey } from "@/lib/portal/people";
+import { readCustomerNote } from "@/lib/portal/customer-notes";
+import { isPhoneKey, phoneFromKey } from "@/lib/portal/people";
 import { cleanName, formatPhone, threadHref } from "@/lib/portal/threads";
 import { formatDate, formatDateTime } from "@/lib/portal/time";
 import { Panel, PanelGrid } from "@/components/workspace/panel";
@@ -50,13 +51,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   // record carries the same email. Person known by phone: their contacts.
   let leads: LeadRow[] = [];
   let contacts: ContactRow[] = [];
-  if (isPhoneKey(key)) {
+  const keyPhone = phoneFromKey(key);
+  if (keyPhone) {
     if (ws.length === 0) notFound();
     const { data } = await sb
       .from("contacts")
       .select("id, phone, name, created_at")
       .in("workspace_id", ws)
-      .eq("phone", key.slice(4));
+      .eq("phone", keyPhone);
     contacts = (data as ContactRow[] | null) ?? [];
     if (contacts.length === 0) notFound();
   } else {
@@ -87,8 +89,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   }
 
   const contactIds = contacts.map((c) => c.id);
-  const [noteRes, smsCountRes, apptRes] = await Promise.all([
-    sb.from("customers").select("notes").eq("engagement_id", ctx.engagementId).eq("email", key).maybeSingle(),
+  const [existingNote, smsCountRes, apptRes] = await Promise.all([
+    // Phone people: customers.phone (migration 067), plus any old "tel:" row.
+    readCustomerNote(sb, ctx.engagementId, key).catch(() => null),
     contactIds.length === 0
       ? Promise.resolve({ count: 0 })
       : sb
@@ -106,7 +109,6 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           .order("start_at", { ascending: false })
           .limit(20),
   ]);
-  const existingNote = (noteRes.data as { notes: string | null } | null)?.notes ?? null;
   const smsMessages = smsCountRes.count ?? 0;
   const appts = (apptRes.data as ApptRow[] | null) ?? [];
   const serviceIds = [...new Set(appts.map((a) => a.service_id).filter((s): s is string => !!s))];

@@ -73,7 +73,10 @@ export function fakeSb(
     const run = (): Result => {
       const src = tables[table];
       if (mode === "insert") return { data: null, error: opts.insertError?.[table] ?? null };
-      if (typeof src === "function") return src(call);
+      if (typeof src === "function") {
+        if (mode === "update") updates.push({ table, patch, ops: call.ops });
+        return src(call);
+      }
       let rows = applyFilters(src ?? [], call.ops);
       if (mode === "update") {
         updates.push({ table, patch, ops: call.ops });

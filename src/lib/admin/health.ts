@@ -6,6 +6,7 @@ import {
   type ChannelState,
   type StatusAgentRow,
 } from "@/lib/service-status";
+import { isDemoWorkspace } from "./client-list";
 import { formatRelative } from "./format";
 
 /**
@@ -42,7 +43,7 @@ export async function loadHealthAgents(
   if (engagementIds) q = q.in("engagement_id", engagementIds);
   const { data, error } = await q;
   if (error || !Array.isArray(data)) return [];
-  return (data as HealthAgentRow[]).filter((a) => !isArchivedAgent(a));
+  return (data as HealthAgentRow[]).filter((a) => !isArchivedAgent(a) && !isDemoWorkspace(a.workspace_id));
 }
 
 /** agentId -> service status. Empty on any failure (the page still renders). */

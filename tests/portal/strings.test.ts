@@ -15,9 +15,8 @@ describe("portal strings", () => {
       if (k.endsWith(".one")) expect(keys.has(k.replace(/\.one$/, ".other"))).toBe(true);
     }
     const counted = [
-      "resumen.cta_pending",
       "money.alert_title",
-      "money.alert_desc",
+      "home.takeovers",
       "inbox.count",
       "ra.subtitle_pending",
       "customers.count",
@@ -34,8 +33,8 @@ describe("portal strings", () => {
   });
 
   it("builds correct Spanish plurals (no suffix gluing)", () => {
-    expect(tn("es", "resumen.cta_pending", 3)).toBe("3 aprobaciones pendientes");
-    expect(tn("es", "resumen.cta_pending", 1)).toBe("1 aprobación pendiente");
+    expect(tn("es", "home.takeovers", 3)).toBe("3 conversaciones que estás atendiendo tú");
+    expect(tn("es", "home.takeovers", 1)).toBe("1 conversación que estás atendiendo tú");
     expect(tn("es", "ra.subtitle_pending", 2)).toBe("2 acciones esperando tu visto bueno.");
     expect(tn("es", "inbox.count", 5)).toBe("5 conversaciones en los últimos 30 días.");
     expect(tn("es", "money.alert_title", 4)).toBe("4 aprobaciones esperándote");
@@ -73,6 +72,26 @@ describe("portal strings", () => {
     expect(tn("es", "customers.bookings", 2)).toBe("2 citas");
     expect(t("es", "inbox.sms_readonly")).toBe("Por ahora responde desde tu teléfono.");
     expect(t("en", "inbox.sms_readonly")).toBe("Reply from your phone for now.");
+  });
+
+  it("keeps no copy for retired pages (agents, integrations, analytics, old funnel)", () => {
+    const retired = [
+      "agents.title",
+      "agents.plan",
+      "agent.back",
+      "agent.decisions_title",
+      "integrations.title",
+      "analytics.funnel_title",
+      "resumen.cta_pending.one",
+      "money.clear_title",
+      "nav.your_agents",
+      "settings.tab_activity",
+    ];
+    for (const lang of ["en", "es"] as const) {
+      const keys = new Set(portalStringKeys(lang));
+      expect(retired.filter((k) => keys.has(k))).toEqual([]);
+      expect([...keys].filter((k) => k.startsWith("agent.") || k.startsWith("integrations."))).toEqual([]);
+    }
   });
 
   it("uses neutral Spanish (no voseo)", () => {

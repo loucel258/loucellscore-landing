@@ -7,13 +7,16 @@ import { reportClock } from "@/lib/reports/weekly";
 import { isoDateIn, loadBaselineRow, primaryAgent, type BaselineLoad } from "./baseline";
 import type { AgentDetailRow, ClientDetail } from "./clients";
 import { describeChannels, isArchivedAgent, loadAgentHealth, probeMeasurementReads, type ChannelLine } from "./health";
+import { mrrCents } from "@/lib/metrics";
 import { paymentSummary, type PaymentSummary } from "./payments";
+import { loadRetainerPayments, type RetainerPaymentsLoad } from "./retainer-payments";
 import { budgetUse, loadMonthlyUsage, type BudgetUse } from "./usage";
 
 /**
  * What the client page Overview measures: is each agent working (health +
  * token budget), what value it delivered (last 30 days and since go-live),
- * the guarantee baseline, and what Stripe recorded. Reads only, through
+ * the guarantee baseline, what Stripe recorded and the retainer payments
+ * Steven logged. Reads only, through
  * the shared libs, with the read-only dashboard role.
  */
 
@@ -42,6 +45,8 @@ export type ClientMeasures = {
   timeZone: string;
   today: string;
   payments: PaymentSummary;
+  /** Logged retainer payments (migration 067) and the active monthly retainer. */
+  retainer: { load: RetainerPaymentsLoad; monthlyCents: number };
 };
 
 async function countAppointments(sb: SupabaseClient, ws: string[], since: Date, until: Date): Promise<number | null> {
@@ -99,12 +104,16 @@ export async function loadClientMeasures(sb: SupabaseClient, d: ClientDetail): P
   const liveDate = liveSince ? new Date(liveSince) : null;
   const bookingCalendar = [...health.values()].some((s) => s.booking.mode === "external" || s.booking.mode === "local");
 
-  const [v30, c30, vLive, cLive, appts30] = await Promise.all([
+  const [v30, c30, vLive, cLive, appts30, retainerLoad] = await Promise.all([
     valueFor(since30),
     convFor(since30),
     liveDate ? valueFor(liveDate) : Promise.resolve(null),
     liveDate ? convFor(liveDate) : Promise.resolve(null),
     readable.value && bookingCalendar ? countAppointments(sb, ws, since30, now) : Promise.resolve(null),
+    loadRetainerPayments(
+      sb,
+      d.engagements.map((e) => e.id),
+    ).catch((): RetainerPaymentsLoad => ({ kind: "error" })),
   ]);
 
   return {
@@ -130,5 +139,6 @@ export async function loadClientMeasures(sb: SupabaseClient, d: ClientDetail): P
     timeZone,
     today: isoDateIn(now, timeZone),
     payments: paymentSummary(d.engagements),
+    retainer: { load: retainerLoad, monthlyCents: mrrCents(d.agents) },
   };
 }

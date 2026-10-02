@@ -2,22 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Send, Trash2 } from "lucide-react";
+import { Check, Loader2, RotateCcw, Send, Trash2 } from "lucide-react";
 import { useConfirmTap } from "@/components/admin/use-confirm-tap";
 
 /**
- * "Approve and send" and "Discard" for one weekly report. Both take two
- * taps: sending emails the client, and nothing else in the system sends a
- * report. After either action the page refreshes from the server.
+ * "Approve and send", "Discard" and, for a failed send, "Back to draft"
+ * for one weekly report. Send and discard take two taps: sending emails
+ * the client, and nothing else in the system sends a report. Back to draft
+ * only reopens the report for review; it never sends. After any action the
+ * page refreshes from the server.
  */
 
 const ERRORS: Record<string, string> = {
   not_a_draft: "This report is no longer a draft. Refresh the page.",
   not_discardable: "Only drafts and failed sends can be discarded.",
+  not_failed: "This report is no longer marked failed. Refresh the page.",
   no_recipient: "This report has no valid recipient email.",
   migration_pending: "The reports table is not there yet (migration 066).",
   send_failed: "The email provider rejected the send. The report is marked failed.",
   unauthorized: "Your admin session expired. Sign in again.",
+};
+
+type Action = "send" | "discard" | "retry";
+
+const DONE: Record<Action, string> = {
+  send: "Sent.",
+  discard: "Discarded.",
+  retry: "Back to draft. Review it, then approve and send.",
 };
 
 export function ReportActions({
@@ -31,21 +42,22 @@ export function ReportActions({
 }) {
   const router = useRouter();
   const confirm = useConfirmTap(5000);
-  const [busy, setBusy] = useState<"send" | "discard" | null>(null);
+  const [busy, setBusy] = useState<Action | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
   const canSend = status === "draft" && !!recipient;
   const canDiscard = status === "draft" || status === "failed";
-  if (!canSend && !canDiscard) return null;
+  const canRetry = status === "failed";
+  if (!canSend && !canDiscard && !canRetry) return null;
 
-  async function run(action: "send" | "discard") {
+  async function run(action: Action) {
     setBusy(action);
     setMessage(null);
     try {
       const res = await fetch(`/api/admin/reports/${encodeURIComponent(id)}/${action}`, { method: "POST" });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; reason?: string };
       if (res.ok && data.ok) {
-        setMessage({ tone: "ok", text: action === "send" ? "Sent." : "Discarded." });
+        setMessage({ tone: "ok", text: DONE[action] });
         router.refresh();
       } else {
         const base = ERRORS[data.error ?? ""] ?? "That did not work. Try again.";
@@ -78,6 +90,17 @@ export function ReportActions({
             {sendArmed ? "Tap again to send" : "Approve and send"}
           </button>
         )}
+        {canRetry && (
+          <button
+            type="button"
+            onClick={() => run("retry")}
+            disabled={busy !== null}
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-cyan-200 bg-white px-3.5 text-sm font-medium text-cyan-800 transition-colors hover:border-cyan-300 disabled:opacity-50"
+          >
+            {busy === "retry" ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+            Back to draft
+          </button>
+        )}
         {canDiscard && (
           <button
             type="button"
@@ -96,6 +119,9 @@ export function ReportActions({
       </div>
       {sendArmed && recipient && (
         <p className="text-xs text-rose-700">This emails the report to {recipient} now.</p>
+      )}
+      {canRetry && (
+        <p className="text-xs text-neutral-500">Back to draft sends nothing. It goes out only when you approve it again.</p>
       )}
       {status === "draft" && !recipient && (
         <p className="text-xs text-amber-700">No recipient email on this draft, so it can&apos;t be sent. Discard it and fix the client&apos;s contact email.</p>

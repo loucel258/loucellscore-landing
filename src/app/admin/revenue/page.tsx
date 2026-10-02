@@ -3,7 +3,7 @@ import { getDashboardReadClient } from "@/lib/audit/dashboard-read-client";
 import { isAdminAuthed } from "@/lib/admin/auth";
 import { getWorkspaceMetrics, mrrCents } from "@/lib/metrics";
 import { loadClientBase, metricWindowStart } from "@/lib/admin/clients";
-import { buildClientRows } from "@/lib/admin/client-list";
+import { buildClientRows, isDemoWorkspace } from "@/lib/admin/client-list";
 import { tokensToUsd, formatUsdPrecise } from "@/lib/admin/costs";
 import { formatUsdInt, formatPct } from "@/lib/admin/format";
 import { AuthWall } from "@/components/admin/auth-wall";
@@ -68,7 +68,8 @@ export default async function RevenuePage() {
     loadClientBase(sb),
   ]);
 
-  const agents = (agentsRes.data as AgentRow[]) ?? [];
+  // Trust Stack demo workspaces (ws_demo_*) are never revenue.
+  const agents = ((agentsRes.data as AgentRow[] | null) ?? []).filter((a) => !isDemoWorkspace(a.workspace_id));
   const paidEngagements = ((paidRes.data as EngagementRow[]) ?? []);
 
   // ── KPIs ──────────────────────────────────────────────────────

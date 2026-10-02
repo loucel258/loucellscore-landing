@@ -4,6 +4,7 @@ import {
   buildClientRows,
   buildPipeline,
   indexByWorkspace,
+  isDemoWorkspace,
   isQuiet,
   legacyGroupKey,
   legacySiblings,
@@ -125,6 +126,31 @@ describe("buildClientRows", () => {
     const idx = indexByWorkspace(rows);
     expect(idx.get("ws_naile_2")!.key).toBe("acc-naile");
     expect(idx.get("ws_roof")!.key).toBe("acc-roof");
+  });
+});
+
+describe("demo workspaces", () => {
+  it("recognizes the Trust Stack demo prefix only", () => {
+    expect(isDemoWorkspace("ws_demo_001")).toBe(true);
+    expect(isDemoWorkspace("ws_demo_hitl")).toBe(true);
+    expect(isDemoWorkspace("ws_client_demo_20260606_acme_loucels_landing")).toBe(false);
+    expect(isDemoWorkspace("ws_naile_1")).toBe(false);
+    expect(isDemoWorkspace(null)).toBe(false);
+  });
+
+  it("never counts a demo workspace agent toward a client", () => {
+    const withDemo = [
+      ...agents,
+      agent("demo-bot", "e-naile-2", "ws_demo_001", { monthly_retainer_cents: 77_000, retainer_active: true }),
+    ];
+    const demoMetrics = new Map(metrics).set("ws_demo_001", m(99, 0));
+    const rows = buildClientRows({ accounts, engagements, agents: withDemo, metrics: demoMetrics, now: NOW });
+    const naile = rows.find((r) => r.key === "acc-naile")!;
+    expect(naile.workspaceIds).not.toContain("ws_demo_001");
+    expect(naile.mrrCents).toBe(50_000);
+    expect(naile.conversations30d).toBe(15);
+    expect(naile.liveAgents).toBe(2);
+    expect(indexByWorkspace(rows).has("ws_demo_001")).toBe(false);
   });
 });
 

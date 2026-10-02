@@ -1,4 +1,7 @@
+import { isDemoWorkspace } from "./client-list";
 import { agentAnchor, clientHref, type ClientScope } from "./client-routes";
+import { formatUsdFromCents } from "./format";
+import { formatPaidOn, RETAINER_OVERDUE_DAYS, type RetainerOverdue } from "./retainer-payments";
 
 /**
  * The "Needs you" list on Today. Pure: the page fetches, this decides what
@@ -10,7 +13,17 @@ export type NeedsYouTone = "critical" | "attention";
 
 export type NeedsYouItem = {
   id: string;
-  kind: "stuck_approval" | "escalation" | "cron" | "followup" | "approval" | "quiet" | "silent" | "budget" | "reports";
+  kind:
+    | "stuck_approval"
+    | "escalation"
+    | "cron"
+    | "retainer"
+    | "followup"
+    | "approval"
+    | "quiet"
+    | "silent"
+    | "budget"
+    | "reports";
   tone: NeedsYouTone;
   title: string;
   detail?: string;
@@ -139,11 +152,15 @@ export function buildNeedsYou(input: {
   budgetWarnings?: BudgetWarningInput[];
   /** Weekly client reports waiting for review; null = table not there yet. */
   reportsWaiting?: number | null;
+  /** Active retainers with no logged payment in 35+ days (lib/admin/retainer-payments). */
+  retainersOverdue?: RetainerOverdue[];
 }): NeedsYouItem[] {
   const { now, clientsByWorkspace: clients } = input;
   const items: NeedsYouItem[] = [];
+  // Rows from the Trust Stack demo (ws_demo_*) are not a client's.
+  const approvals = input.approvals.filter((a) => !isDemoWorkspace(a.workspace_id));
 
-  const stuck = input.approvals.filter((a) => isStuckApproving(a, now));
+  const stuck = approvals.filter((a) => isStuckApproving(a, now));
   for (const g of byClient(stuck, clients, (a) => a.approving_at ?? a.created_at)) {
     items.push({
       id: `stuck:${g.key}`,
@@ -156,7 +173,7 @@ export function buildNeedsYou(input: {
     });
   }
 
-  const openEscalations = (input.escalations ?? []).filter(isOpenEscalation);
+  const openEscalations = (input.escalations ?? []).filter((e) => isOpenEscalation(e) && !isDemoWorkspace(e.workspace_id));
   for (const g of byClient(openEscalations, clients, (e) => e.created_at)) {
     items.push({
       id: `esc:${g.key}`,
@@ -178,6 +195,20 @@ export function buildNeedsYou(input: {
       detail: c.summary ?? undefined,
       href: "/admin/settings",
       at: c.ranAt,
+    });
+  }
+
+  for (const r of input.retainersOverdue ?? []) {
+    items.push({
+      id: `retainer:${r.key}`,
+      kind: "retainer",
+      tone: "critical",
+      title: `Retainer overdue: ${r.name}, ${formatUsdFromCents(r.mrrCents)}/mo, last paid ${
+        r.lastPaidOn ? formatPaidOn(r.lastPaidOn, now) : "never"
+      }`,
+      detail: `No payment logged in ${RETAINER_OVERDUE_DAYS} days. If it came in, log it on the client page.`,
+      // The date is in the title already (a calendar date, not an instant).
+      href: clientHref(r.scope),
     });
   }
 
@@ -224,7 +255,7 @@ export function buildNeedsYou(input: {
     });
   }
 
-  const pending = input.approvals.filter((a) => a.status === "pending");
+  const pending = approvals.filter((a) => a.status === "pending");
   for (const g of byClient(pending, clients, (a) => a.created_at)) {
     items.push({
       id: `pending:${g.key}`,

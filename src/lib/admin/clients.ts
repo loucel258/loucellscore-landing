@@ -6,6 +6,7 @@ import { decryptMessage, encryptionAvailable } from "@/lib/portal/encrypt";
 import {
   buildClientRows,
   buildPipeline,
+  isDemoWorkspace,
   isHouseSlug,
   isQuiet,
   legacySiblings,
@@ -50,13 +51,15 @@ export async function loadClientBase(sb: SupabaseClient): Promise<ClientBase> {
     sb
       .from("client_agents")
       .select(
-        "id, engagement_id, workspace_id, slug, status, monthly_retainer_cents, retainer_active, minutes_saved_per_conversation",
+        "id, engagement_id, workspace_id, slug, status, monthly_retainer_cents, retainer_active, retainer_activated_at, minutes_saved_per_conversation",
       ),
   ]);
   return {
     accounts: (accRes.data as AccountInput[] | null) ?? [],
     engagements: (engRes.data as EngagementInput[] | null) ?? [],
-    agents: (agentRes.data as AgentInput[] | null) ?? [],
+    // Demo workspaces (ws_demo_*) are never a client: keep them out of
+    // every list, count and MRR rollup built on this base.
+    agents: ((agentRes.data as AgentInput[] | null) ?? []).filter((a) => !isDemoWorkspace(a.workspace_id)),
   };
 }
 

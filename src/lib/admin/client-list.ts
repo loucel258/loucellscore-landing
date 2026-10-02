@@ -41,6 +41,8 @@ export type AgentInput = {
   status: string;
   monthly_retainer_cents: number | null;
   retainer_active: boolean | null;
+  /** When the retainer was last switched on (the overdue rule's start). */
+  retainer_activated_at?: string | null;
   minutes_saved_per_conversation: number | null;
 };
 
@@ -73,6 +75,17 @@ const DAY_MS = 86_400_000;
 
 export function isHouseSlug(slug: string | null | undefined): boolean {
   return !!slug && slug.startsWith("loucels-landing");
+}
+
+/**
+ * The Trust Stack demo pages (/demo/hitl, /demo/rbac, /demo/dlp) write
+ * under ws_demo_* workspaces. Those rows are not a client: they never show
+ * in "Needs you", the client list, or any count or MRR rollup.
+ */
+export const DEMO_WORKSPACE_PREFIX = "ws_demo_";
+
+export function isDemoWorkspace(workspaceId: string | null | undefined): boolean {
+  return !!workspaceId && workspaceId.startsWith(DEMO_WORKSPACE_PREFIX);
 }
 
 /** Group key for account-less engagements: same name, same client. */
@@ -143,7 +156,8 @@ export function buildClientRows(input: {
   conversations?: Map<string, number>;
   now: number;
 }): ClientRow[] {
-  const { accounts, agents, metrics, now } = input;
+  const { accounts, metrics, now } = input;
+  const agents = input.agents.filter((a) => !isDemoWorkspace(a.workspace_id));
   const engagements = [...input.engagements].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   const accountIds = new Set(accounts.map((a) => a.id));
 

@@ -19,6 +19,8 @@ vi.mock("@/lib/admin/audit", () => ({
 
 import { POST as sendReport } from "@/app/api/admin/reports/[id]/send/route";
 import { POST as discardReport } from "@/app/api/admin/reports/[id]/discard/route";
+import { POST as retryReport } from "@/app/api/admin/reports/[id]/retry/route";
+import { POST as logRetainerPayment } from "@/app/api/admin/clients/[accountId]/retainer-payments/route";
 import { POST as saveBaseline } from "@/app/api/admin/clients/[accountId]/baseline/route";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -130,6 +132,135 @@ describe("POST /api/admin/reports/[id]/discard", () => {
     state.sb = fakeSb({ client_reports: [report("sent")] });
     expect((await discardReport(post(), params({ id: REPORT_ID }))).status).toBe(409);
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/admin/reports/[id]/retry", () => {
+  it("rejects without an admin session or with a bad id", async () => {
+    state.authed = false;
+    expect((await retryReport(post(), params({ id: REPORT_ID }))).status).toBe(401);
+    state.authed = true;
+    expect((await retryReport(post(), params({ id: "nope" }))).status).toBe(400);
+  });
+
+  it("moves a failed report back to draft with one conditional update, clears the error, never sends", async () => {
+    state.sb = fakeSb({ client_reports: [{ ...report("failed"), error: "no_api_key" }] });
+    const res = await retryReport(post(), params({ id: REPORT_ID }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, status: "draft" });
+    expect(state.sb.updates).toHaveLength(1);
+    expect(state.sb.updates[0]!.patch).toMatchObject({ status: "draft", error: null });
+    expect(state.sb.updates[0]!.ops).toContainEqual(["eq", ["status", "failed"]]);
+    expect(audits).toEqual([{ workspaceId: "ws_naile", reason: `client_report_back_to_draft: report ${REPORT_ID}` }]);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("refuses anything that is not failed", async () => {
+    for (const status of ["draft", "approved", "sent", "discarded"]) {
+      state.sb = fakeSb({ client_reports: [report(status)] });
+      const res = await retryReport(post(), params({ id: REPORT_ID }));
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ error: "not_failed" });
+    }
+    expect(audits).toHaveLength(0);
+  });
+
+  it("says the migration is pending when the table is missing", async () => {
+    state.sb = fakeSb({ client_reports: () => ({ data: null, error: { code: "PGRST205" } }) });
+    const res = await retryReport(post(), params({ id: REPORT_ID }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "migration_pending" });
+  });
+});
+
+describe("POST /api/admin/clients/[accountId]/retainer-payments", () => {
+  const ENG_ID = "33333333-3333-4333-8333-333333333333";
+  const OTHER_ENG = "44444444-4444-4444-8444-444444444444";
+  const tables = () => ({
+    engagements: [
+      { id: ENG_ID, account_id: ACCOUNT_ID },
+      { id: OTHER_ENG, account_id: "55555555-5555-4555-8555-555555555555" },
+    ],
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const good = { engagementId: ENG_ID, paidOn: today, amount: "1,250.50", method: "zelle", periodMonth: "2026-09", note: " Sept retainer " };
+
+  it("rejects without an admin session or with a bad account id", async () => {
+    state.authed = false;
+    expect((await logRetainerPayment(post(good), params({ accountId: ACCOUNT_ID }))).status).toBe(401);
+    state.authed = true;
+    expect((await logRetainerPayment(post(good), params({ accountId: "x" }))).status).toBe(400);
+  });
+
+  it("stores cents, the first of the covered month and a trimmed note; audit names fields only", async () => {
+    state.sb = fakeSb(tables());
+    const res = await logRetainerPayment(post(good), params({ accountId: ACCOUNT_ID }));
+    expect(res.status).toBe(200);
+    expect(state.sb.inserts).toHaveLength(1);
+    expect(state.sb.inserts[0]!.table).toBe("retainer_payments");
+    expect(state.sb.inserts[0]!.row).toEqual({
+      engagement_id: ENG_ID,
+      paid_on: today,
+      amount_cents: 125050,
+      method: "zelle",
+      period_month: "2026-09-01",
+      note: "Sept retainer",
+      recorded_by: "admin",
+    });
+    expect(audits).toEqual([
+      { workspaceId: "ws_naile", reason: "retainer_payment_logged: engagement_id, paid_on, amount_cents, method, period_month, note" },
+    ]);
+    expect(audits[0]!.reason).not.toMatch(/1250|125050|Sept/);
+  });
+
+  it("validates each field with a readable message and writes nothing", async () => {
+    state.sb = fakeSb(tables());
+    const tomorrow = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [{ ...good, paidOn: tomorrow }, "Paid on can't be in the future"],
+      [{ ...good, paidOn: "2026-02-30" }, "Paid on must be a real date (YYYY-MM-DD)"],
+      [{ ...good, amount: 0 }, "Amount must be more than $0, in dollars and cents"],
+      [{ ...good, amount: "-5" }, "Amount must be more than $0, in dollars and cents"],
+      [{ ...good, amount: "12.345" }, "Amount must be more than $0, in dollars and cents"],
+      [{ ...good, amount: 2_000_000 }, "Amount is too large"],
+      [{ ...good, method: "venmo" }, "Pick how it was paid"],
+      [{ ...good, periodMonth: "September" }, "The month it covers must look like 2026-09"],
+      [{ ...good, note: "x".repeat(301) }, "Notes are limited to 300 characters"],
+      [{ ...good, engagementId: "nope" }, "Pick the engagement this payment is for"],
+    ];
+    for (const [body, detail] of cases) {
+      const res = await logRetainerPayment(post(body), params({ accountId: ACCOUNT_ID }));
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ error: "bad_request", detail });
+    }
+    expect(state.sb.inserts).toHaveLength(0);
+    expect(audits).toHaveLength(0);
+  });
+
+  it("accepts a plain number and no optional fields", async () => {
+    state.sb = fakeSb(tables());
+    const res = await logRetainerPayment(
+      post({ engagementId: ENG_ID, paidOn: "2026-09-01", amount: 500, method: "check" }),
+      params({ accountId: ACCOUNT_ID }),
+    );
+    expect(res.status).toBe(200);
+    expect(state.sb.inserts[0]!.row).toMatchObject({ amount_cents: 50000, period_month: null, note: null });
+    expect(audits[0]!.reason).toBe("retainer_payment_logged: engagement_id, paid_on, amount_cents, method");
+  });
+
+  it("refuses an engagement of another account", async () => {
+    state.sb = fakeSb(tables());
+    const res = await logRetainerPayment(post({ ...good, engagementId: OTHER_ENG }), params({ accountId: ACCOUNT_ID }));
+    expect(res.status).toBe(404);
+    expect(state.sb.inserts).toHaveLength(0);
+  });
+
+  it("answers 503 with a clear error when the table is missing", async () => {
+    state.sb = fakeSb(tables(), { insertError: { retainer_payments: { code: "42P01" } } });
+    const res = await logRetainerPayment(post(good), params({ accountId: ACCOUNT_ID }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "migration_pending" });
+    expect(audits).toHaveLength(0);
   });
 });
 
