@@ -194,7 +194,7 @@ export function IntegrationsPanel({
           />
         </div>
         <div>
-          <span className={labelCls}>Timezone</span>
+          <span className={labelCls}>Calendar time zone</span>
           <input className={inputCls} value={timezone} onChange={(e) => setTimezone(e.target.value)} />
         </div>
         <div>

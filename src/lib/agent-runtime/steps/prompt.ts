@@ -24,6 +24,8 @@ export type PromptInput = {
   tools: readonly RegisteredTool[];
   /** SMS: the bookable services. */
   services?: readonly ServiceLite[];
+  /** SMS: a stored action still waiting for the customer's YES / NO. */
+  pending?: { summary: string };
 };
 
 export type BuiltPrompt = {
@@ -59,7 +61,7 @@ function webPrompt({ config, locale, tools }: PromptInput): string {
 const SMS_STYLE =
   "FORMAT: plain text only, this is SMS. No markdown: no asterisks, no # headings, no bullet lists, no [text](link) links (write the bare URL). Keep it to 2-3 short sentences, under about 300 characters.";
 
-function smsPrompt({ config, locale, tools, services = [] }: PromptInput): BuiltPrompt {
+function smsPrompt({ config, locale, tools, services = [], pending }: PromptInput): BuiltPrompt {
   const name = config.name;
   const vertical = verticalProfile(config.vertical);
   const sections: string[] = [
@@ -93,7 +95,13 @@ function smsPrompt({ config, locale, tools, services = [] }: PromptInput): Built
   context.push(`Timezone: ${config.timezone}.`);
   sections.push("---", context.join("\n\n"));
 
-  return { system: sections.join("\n\n"), dynamic: `Current local time: ${localNow(config.timezone)}.` };
+  const dynamic = [`Current local time: ${localNow(config.timezone)}.`];
+  if (pending) {
+    dynamic.push(
+      `PENDING CONFIRMATION: the customer was asked "${pending.summary}" and has not replied YES or NO yet. Nothing has changed. A plain YES (SÍ) or NO from them is handled by the system, not by you. If they now ask for something different, help them; calling a booking tool again replaces this pending request. Never say it is done.`,
+    );
+  }
+  return { system: sections.join("\n\n"), dynamic: dynamic.join("\n\n") };
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

@@ -2,7 +2,6 @@ import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { cachedSystem } from "@/lib/ai/claude-client";
 import { modelFor } from "@/lib/ai/models";
-import { usageTokens } from "@/lib/agents/budget";
 import { HOUSE_AGENT_SLUGS } from "@/lib/agents/booking-config";
 import { handleEscalateToHuman } from "@/lib/chat/tools";
 import { sha256Hex } from "@/lib/crypto/hash";
@@ -18,27 +17,46 @@ import { buildMessages, loadHistory } from "./steps/history";
 import { buildPrompt, type BuiltPrompt } from "./steps/prompt";
 import { runLoop, type LoopResult } from "./steps/loop";
 import { record, type ReplyDraft } from "./steps/record";
+import { prepareBooking } from "./steps/booking";
+import { confirmPending } from "./steps/confirm";
 import { webTools } from "./tools/web";
 import { smsTools } from "./tools/booking";
 
 /**
  * One agent turn, any channel:
  *
- *   claim → admit → screen → [triage, SMS] → loadHistory → buildPrompt
- *         → runLoop → (escalate on cap / deadline / failure) → record
+ *   claim → admit → screen → [SMS: confirmPending → triage] → loadHistory
+ *         → buildPrompt → runLoop → (escalate on cap / deadline / failure)
+ *         → record
+ *
+ * confirmPending settles a YES / NO to a stored customer_confirm action
+ * deterministically (pending-action.ts); any other message continues.
  *
  * Adapters (channels/web.ts, channels/sms.ts) build the Inbound and render
  * the TurnOutcome. `overrides` replaces any dependency (tests).
  */
 export async function runTurn(inbound: Inbound, overrides?: Partial<TurnDeps>): Promise<TurnOutcome> {
+  return (await runTurnWithContext(inbound, overrides)).outcome;
+}
+
+/** runTurn, also returning the turn's context (the web adapter reads ctx.historySource). */
+export async function runTurnWithContext(
+  inbound: Inbound,
+  overrides?: Partial<TurnDeps>,
+): Promise<{ outcome: TurnOutcome; ctx: TurnContext }> {
   const ctx = createTurnContext(inbound, withDeps(overrides));
+  return { outcome: await turn(ctx), ctx };
+}
+
+async function turn(ctx: TurnContext): Promise<TurnOutcome> {
   if ((await claim(ctx)) === "duplicate") return { kind: "duplicate" };
   const gate = (await admit(ctx)) ?? (await screen(ctx));
   if (gate) return gate;
 
   let step: Step;
   try {
-    step = await respond(ctx);
+    // SMS: a reply to a pending confirmation is settled here, with no model call.
+    step = (await confirmPending(ctx)) ?? (await respond(ctx));
   } catch (e) {
     return internalFailure(ctx, e);
   }
@@ -74,6 +92,7 @@ export async function respond(ctx: TurnContext): Promise<Step> {
     locale: ctx.locale,
     tools,
     services: ctx.services ?? [],
+    pending: ctx.pendingAction ? { summary: ctx.pendingAction.summary } : undefined,
   });
 
   await ctx.audit({ decision: "ALLOW", reason: "user_message", contentHash: sha256Hex(ctx.inbound.text) });
@@ -95,10 +114,7 @@ export async function respond(ctx: TurnContext): Promise<Step> {
       deadlineAt: ctx.deadlineAt,
     },
     // Spend counts against the monthly budget on every call, cache tokens included.
-    onUsage: async (usage) => {
-      const u = usageTokens(usage);
-      await ctx.deps.recordUsage(ctx.config.workspaceId, u.tokensIn, u.tokensOut, ctx.config.monthlyTokenBudget);
-    },
+    onUsage: (usage) => ctx.meter(usage),
   });
   return interpret(ctx, result);
 }
@@ -106,33 +122,6 @@ export async function respond(ctx: TurnContext): Promise<Step> {
 function systemBlocks(prompt: BuiltPrompt): Anthropic.Messages.TextBlockParam[] {
   const blocks = cachedSystem(prompt.system);
   return prompt.dynamic ? [...blocks, { type: "text", text: prompt.dynamic }] : blocks;
-}
-
-/** SMS: services for the prompt + the booking backend, resolved once per turn. */
-async function prepareBooking(ctx: TurnContext): Promise<void> {
-  const conv = ctx.inbound.conv;
-  if (conv.kind !== "contact") return;
-  const { config } = ctx;
-  if (!ctx.services) ctx.services = (await ctx.deps.store?.listServices(config.workspaceId)) ?? [];
-  // external_unavailable is fail-closed: booking tools answer "unavailable",
-  // never local Postgres.
-  const backend = await ctx.deps.resolveBookingBackend(config.workspaceId, config.integrationsRaw);
-  if (backend.mode === "external_unavailable") {
-    console.warn(`[front-desk] ${config.slug}: external booking backend unavailable (${backend.reason})`);
-  }
-  ctx.booking = {
-    workspaceId: config.workspaceId,
-    contactId: conv.contactId,
-    calendarId: config.integrations.calendar.calendar_id,
-    timezone: config.timezone,
-    businessHours: config.businessHours,
-    agentSlug: config.slug,
-    externalBackend: backend.mode === "external" ? backend.backend : null,
-    bookingUnavailable: backend.mode === "external_unavailable",
-    bookingLinkOnly: backend.mode === "link",
-    bookingLinkUrl: backend.mode === "link" ? backend.linkUrl : config.integrations.booking.link_url,
-    contactPhone: conv.phone || undefined,
-  };
 }
 
 async function interpret(ctx: TurnContext, r: LoopResult): Promise<Step> {

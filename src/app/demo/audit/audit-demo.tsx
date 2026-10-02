@@ -28,34 +28,45 @@ type AttemptResponse = {
   message: string;
 };
 
+/** Read the masked audit log. Never rejects: a failure comes back as query_failed. */
+async function fetchAuditLog(): Promise<ReadResponse> {
+  try {
+    const res = await fetch("/api/demo/audit", { cache: "no-store" });
+    return (await res.json()) as ReadResponse;
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "query_failed",
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
+
 export function AuditDemo() {
   const [data, setData] = useState<ReadResponse | null>(null);
-  const [loading, setLoading] = useState(false);
+  // The first fetch starts on mount, so the log begins in the loading state.
+  const [loading, setLoading] = useState(true);
   const [attemptResult, setAttemptResult] = useState<AttemptResponse | null>(
     null,
   );
   const [attemptInFlight, setAttemptInFlight] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/demo/audit", { cache: "no-store" });
-      const json = (await res.json()) as ReadResponse;
-      setData(json);
-    } catch (err) {
-      setData({
-        ok: false,
-        reason: "query_failed",
-        error: err instanceof Error ? err.message : "Network error",
-      });
-    } finally {
-      setLoading(false);
-    }
+  // Store a settled fetch. Only ever called from a promise callback, so the
+  // mount effect below never sets state synchronously.
+  const receive = useCallback((json: ReadResponse) => {
+    setData(json);
+    setLoading(false);
   }, []);
 
+  // Refresh button: show the spinner, then fetch.
+  const load = useCallback(() => {
+    setLoading(true);
+    void fetchAuditLog().then(receive);
+  }, [receive]);
+
   useEffect(() => {
-    load();
-  }, [load]);
+    void fetchAuditLog().then(receive);
+  }, [receive]);
 
   const runAttempt = useCallback(async (op: "update" | "delete") => {
     setAttemptInFlight(op);
@@ -92,7 +103,7 @@ export function AuditDemo() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <span className="text-micro text-cyan">
-              // TRUST STACK · DEMO 03
+              {"//"} TRUST STACK · DEMO 03
             </span>
             <span className="text-mono-xs text-text-tertiary">
               IMMUTABLE AUDIT TRAIL

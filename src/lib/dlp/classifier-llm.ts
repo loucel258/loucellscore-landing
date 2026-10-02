@@ -1,5 +1,5 @@
 import "server-only";
-import { classifyWithTool } from "@/lib/ai/claude-client";
+import { classifyWithToolMetered, type CallUsage } from "@/lib/ai/claude-client";
 import type { PIIType } from "./patterns";
 
 /**
@@ -122,10 +122,12 @@ const TOOL_SCHEMA = {
 type ClassifierOutput = { findings: LLMRedaction[] };
 
 export type LLMClassifyResult = {
-  available: boolean;
-  findings: LLMRedaction[];
   /** If false, Layer 2 was not run (env missing or call failed). Layer 1
    *  output is the only authoritative source. */
+  available: boolean;
+  findings: LLMRedaction[];
+  /** Tokens the classifier call spent (budget accounting); null/absent = no billed call. */
+  usage?: CallUsage | null;
 };
 
 const MIN_CONFIDENCE = 60;
@@ -135,7 +137,7 @@ export async function classifyWithLLM(rawPrompt: string): Promise<LLMClassifyRes
     return { available: true, findings: [] };
   }
 
-  const result = await classifyWithTool<ClassifierOutput>({
+  const { result, usage } = await classifyWithToolMetered<ClassifierOutput>({
     systemPrompt: SYSTEM_PROMPT,
     userPrompt: `<input_text>\n${rawPrompt}\n</input_text>`,
     toolName: "report_pii_findings",
@@ -145,7 +147,7 @@ export async function classifyWithLLM(rawPrompt: string): Promise<LLMClassifyRes
   });
 
   if (!result) {
-    return { available: false, findings: [] };
+    return { available: false, findings: [], usage };
   }
 
   // Validate + filter: keep only findings whose `match` substring actually
@@ -160,5 +162,5 @@ export async function classifyWithLLM(rawPrompt: string): Promise<LLMClassifyRes
     .filter((f) => (f.confidence ?? 0) >= MIN_CONFIDENCE)
     .slice(0, 50);
 
-  return { available: true, findings: filtered };
+  return { available: true, findings: filtered, usage };
 }

@@ -8,7 +8,8 @@ import { piiRefusal } from "../copy";
  * screen: the ONE copy of the inbound DLP gate (Layer 1 regex + Layer 2
  * Haiku). High-risk PII never reaches the model: the turn is refused with a
  * plain explanation and a DENY audit row. Names / emails / phones are not
- * high-risk (customers share them on purpose to book).
+ * high-risk (customers share them on purpose to book). Layer 2's tokens count
+ * against the agent's monthly budget.
  */
 
 export const HIGH_RISK_PII: ReadonlySet<string> = new Set([
@@ -27,7 +28,8 @@ export async function screen(ctx: TurnContext): Promise<TurnOutcome | null> {
   let blocked = dlp.redactions.some((r) => isHighRisk(r.type));
   if (!blocked && text.length >= LAYER2_MIN_CHARS) {
     try {
-      const layer2 = await ctx.deps.sanitizeWithLLM(text);
+      const { result: layer2, usage } = await ctx.deps.sanitizeWithLLM(text);
+      await ctx.meter(usage);
       if (layer2.layer2Available && layer2.redactions.some((r) => isHighRisk(r.type))) {
         dlp = layer2;
         blocked = true;
@@ -66,7 +68,8 @@ export async function draftPiiFlags(ctx: TurnContext, draft: string): Promise<st
   const flags = new Set(ctx.deps.sanitize(draft).redactions.map((r) => `pii:${String(r.type).toLowerCase()}`));
   if (draft.length >= LAYER2_MIN_CHARS) {
     try {
-      const layer2 = await ctx.deps.sanitizeWithLLM(draft);
+      const { result: layer2, usage } = await ctx.deps.sanitizeWithLLM(draft);
+      await ctx.meter(usage);
       if (layer2.layer2Available) {
         for (const r of layer2.redactions) flags.add(`pii:${String(r.type).toLowerCase()}`);
       }

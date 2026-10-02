@@ -109,3 +109,164 @@ export function optOutConfirmation(keyword: string, businessName: string): strin
   }
   return `Done, you won't get more messages from ${businessName}. Reply START to receive them again.`;
 }
+
+// ── SMS two-phase confirmation (pending-action.ts, steps/confirm.ts) ───────
+
+type ActionCopyInput = {
+  tool: "create_appointment" | "reschedule_appointment" | "cancel_appointment";
+  service: string | null;
+  /** create: new start; reschedule / cancel: current start. */
+  startIso: string | null;
+  /** reschedule: new start. */
+  newStartIso: string | null;
+  timezone: string;
+};
+
+const WEEKDAY_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MONTH_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+const WEEKDAY_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/**
+ * "Tuesday, October 7 at 3:00 PM" / "martes 7 de octubre, 3:00 p. m." in the
+ * business timezone. Built from numeric parts so the text never depends on
+ * the server's ICU data. Unparseable input comes back unchanged.
+ */
+export function formatWhen(iso: string, timezone: string, locale: Locale): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hourCycle: "h23",
+      weekday: "short",
+    }).formatToParts(at);
+  } catch {
+    return iso;
+  }
+  const get = (t: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === t)?.value ?? "";
+  const month = Number(get("month")) - 1;
+  const day = Number(get("day"));
+  const hour = Number(get("hour")) % 24;
+  const minute = get("minute").padStart(2, "0");
+  const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(get("weekday"));
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  if (locale === "es") {
+    const period = hour < 12 ? "a. m." : "p. m.";
+    return `${WEEKDAY_ES[weekday] ?? ""} ${day} de ${MONTH_ES[month] ?? ""}, ${h12}:${minute} ${period}`.trim();
+  }
+  const period = hour < 12 ? "AM" : "PM";
+  return `${WEEKDAY_EN[weekday] ?? ""}, ${MONTH_EN[month] ?? ""} ${day} at ${h12}:${minute} ${period}`.trim();
+}
+
+/** The yes/no question for a pending action, e.g. "Cancel your Gel appointment on ...?". */
+export function pendingActionQuestion(a: ActionCopyInput, locale: Locale): string {
+  const when = (iso: string | null) => (iso ? formatWhen(iso, a.timezone, locale) : "");
+  const start = when(a.startIso);
+  const next = when(a.newStartIso);
+  if (locale === "es") {
+    const cita = a.service ? `tu cita de ${a.service}` : "tu cita";
+    switch (a.tool) {
+      case "create_appointment":
+        return `¿Reservar ${a.service ? `una cita de ${a.service}` : "una cita"} para el ${start}?`;
+      case "reschedule_appointment":
+        return start ? `¿Cambiar ${cita} del ${start} al ${next}?` : `¿Cambiar ${cita} al ${next}?`;
+      case "cancel_appointment":
+        return start ? `¿Cancelar ${cita} del ${start}?` : `¿Cancelar ${cita}?`;
+    }
+  }
+  const appt = a.service ? `your ${a.service} appointment` : "your appointment";
+  switch (a.tool) {
+    case "create_appointment":
+      return `Book ${a.service ? `your ${a.service} appointment` : "an appointment"} for ${start}?`;
+    case "reschedule_appointment":
+      return start ? `Move ${appt} from ${start} to ${next}?` : `Move ${appt} to ${next}?`;
+    case "cancel_appointment":
+      return start ? `Cancel ${appt} on ${start}?` : `Cancel ${appt}?`;
+  }
+}
+
+/** End a sentence with one period ("3:00 p. m." already has it). */
+const sentence = (s: string) => (s.endsWith(".") ? s : `${s}.`);
+
+/** The action ran: plain confirmation of what changed. */
+export function actionDoneReply(a: ActionCopyInput, locale: Locale): string {
+  const when = (iso: string | null) => (iso ? formatWhen(iso, a.timezone, locale) : "");
+  if (locale === "es") {
+    const cita = a.service ? `tu cita de ${a.service}` : "tu cita";
+    switch (a.tool) {
+      case "create_appointment":
+        return sentence(`Listo. Reservamos ${cita} para el ${when(a.startIso)}`);
+      case "reschedule_appointment":
+        return sentence(`Listo. Cambiamos ${cita} para el ${when(a.newStartIso)}`);
+      case "cancel_appointment":
+        return sentence(a.startIso ? `Listo. Cancelamos ${cita} del ${when(a.startIso)}` : `Listo. Cancelamos ${cita}`);
+    }
+  }
+  const appt = a.service ? `your ${a.service} appointment` : "your appointment";
+  switch (a.tool) {
+    case "create_appointment":
+      return sentence(`Done. We booked ${appt} for ${when(a.startIso)}`);
+    case "reschedule_appointment":
+      return sentence(`Done. We moved ${appt} to ${when(a.newStartIso)}`);
+    case "cancel_appointment":
+      return sentence(a.startIso ? `Done. We cancelled ${appt} on ${when(a.startIso)}` : `Done. We cancelled ${appt}`);
+  }
+}
+
+export type ActionFailure =
+  | { kind: "slot_taken" }
+  | { kind: "not_found" }
+  | { kind: "link"; url: string }
+  | { kind: "unavailable"; notified: boolean; businessName: string };
+
+/** The confirmed action could not run. Every variant says nothing was changed. */
+export function actionFailedReply(f: ActionFailure, locale: Locale): string {
+  const es = locale === "es";
+  switch (f.kind) {
+    case "slot_taken":
+      return es
+        ? "Lo siento, ese horario ya no está disponible, así que no se hizo ningún cambio. Responde con otro día u hora y lo reviso."
+        : "Sorry, that time is no longer available, so nothing was changed. Reply with another day or time and I'll check.";
+    case "not_found":
+      return es
+        ? "No encontré esa cita, así que no se hizo ningún cambio. Responde si quieres que revise tus citas."
+        : "I couldn't find that appointment, so nothing was changed. Reply if you'd like me to look up your appointments.";
+    case "link":
+      return es
+        ? `No se hizo ningún cambio. Puedes gestionar tus citas aquí: ${f.url}`
+        : `Nothing was changed. You can manage your appointments here: ${f.url}`;
+    case "unavailable":
+      if (es) {
+        return f.notified
+          ? "Lo siento, no pude completarlo en este momento, así que no se hizo ningún cambio. Un miembro del equipo te responderá en breve."
+          : `Lo siento, no pude completarlo en este momento, así que no se hizo ningún cambio. Por favor comunícate directamente con ${f.businessName}.`;
+      }
+      return f.notified
+        ? "Sorry, I couldn't complete that right now, so nothing was changed. A team member will get back to you shortly."
+        : `Sorry, I couldn't complete that right now, so nothing was changed. Please contact ${f.businessName} directly.`;
+  }
+}
+
+/** The customer declined the pending action. */
+export function actionDeclinedReply(locale: Locale): string {
+  return pick(
+    {
+      en: "Okay, nothing was changed. Is there anything else I can help with?",
+      es: "De acuerdo, no se hizo ningún cambio. ¿Hay algo más en lo que te pueda ayudar?",
+    },
+    locale,
+  );
+}

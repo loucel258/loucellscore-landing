@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * Vercel cron: chat-health-alerts
- * Schedule: every 15 minutes (configured in vercel.json)
+ * Schedule: every 15 minutes from GitHub Actions (.github/workflows/frequent-ops.yml),
+ * plus the daily Vercel cron in vercel.json as a backup (Hobby allows daily only).
  *
  * Closes GAP-F5 (no push alerting). Queries audit_logs for signals that
  * indicate operational health is degraded, and emails Steven if any fire.

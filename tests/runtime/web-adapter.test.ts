@@ -41,7 +41,8 @@ beforeEach(() => {
 function setup(agent: ResolvedAgent, model: ReturnType<typeof fakeModel> | null) {
   const { deps, audits } = fakeDeps(store, model?.client ?? null);
   const resolveAgent = vi.fn(async () => agent);
-  return { deps: { ...deps, resolveAgent }, audits };
+  // Session tokens off: these tests pin the pre-token protocol (see session-token.test.ts).
+  return { deps: { ...deps, resolveAgent, sessionKey: () => null }, audits };
 }
 
 describe("web adapter: widget response shape", () => {

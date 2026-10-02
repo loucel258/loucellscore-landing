@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const targetId = existing[0].id;
   let attemptError: { code?: string; message: string } | null = null;
-  let attemptedOp = op;
+  const attemptedOp = op;
 
   if (op === "delete") {
     const { error } = await client

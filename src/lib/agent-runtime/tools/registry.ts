@@ -12,8 +12,11 @@ import type { TurnContext } from "../context";
  *
  * policy:
  *   read             looks something up, no side effects
- *   customer_confirm changes something for THIS customer; the prompt tells
- *                    the model to call it only after the customer confirmed
+ *   customer_confirm changes something for THIS customer. SMS: calling it
+ *                    only stores the request; it runs when the customer
+ *                    replies YES (pending-action.ts, steps/confirm.ts).
+ *                    Web: the prompt tells the model to call it only after
+ *                    the customer confirmed
  *   owner_hitl       drafts an action for the owner's approval queue
  *   escalate         hands the conversation to a person
  */
@@ -90,7 +93,7 @@ export function policyRules(tools: readonly RegisteredTool[]): string[] {
   if (read) lines.push(`- ${read}: look things up only.`);
   if (confirm) {
     lines.push(
-      `- ${confirm}: change something real for this customer. Call them only after the customer clearly confirmed the exact service and time in this conversation.`,
+      `- ${confirm}: change something real for this customer, but calling one does NOT make the change. It saves the request and returns a short summary; the change happens only when the customer replies YES. Call it as soon as the customer has chosen the exact service and time (do not ask them to confirm first), then ask them to reply YES (or SÍ) to confirm, quoting the summary in their language. Never say it is booked, changed, or cancelled until the system confirms it.`,
     );
   }
   if (hitl) lines.push(`- ${hitl}: sends a draft to the business owner for approval. Say it is pending review, never that it is done.`);

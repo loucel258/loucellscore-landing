@@ -11,7 +11,8 @@
  *     Origin matches the page that hosts the widget.
  *   - Style + DOM are scoped via Shadow DOM — parent page CSS cannot
  *     leak in, and our styles cannot leak out.
- *   - Session id lives in sessionStorage keyed by slug.
+ *   - Session id (and the server-signed session token, when the server
+ *     issues one) live in sessionStorage keyed by slug.
  *   - All network traffic flows through Loucells Core's Trust Stack (DLP,
  *     audit log, rate limit, origin allowlist, encryption at rest).
  */
@@ -47,19 +48,45 @@
   var apiOrigin;
   try {
     apiOrigin = new URL(script.src).origin;
-  } catch {
+  } catch (e) {
     console.error("[loucels] could not parse script src");
     return;
   }
 
   var SESSION_KEY = "loucels-session-" + slug;
   var HISTORY_KEY = "loucels-chat-" + slug;
+  // Signed session token issued by the server for this sessionId. Lives
+  // next to the sessionId (same storage, same lifetime) and is sent back
+  // with every message. The server may rotate both (e.g. an expired token
+  // starts a fresh session), so they are always stored together.
+  var TOKEN_KEY = "loucels-session-token-" + slug;
   var sessionId =
     sessionStorage.getItem(SESSION_KEY) ||
     "s_" +
       Math.random().toString(36).slice(2, 10) +
       Date.now().toString(36).slice(-6);
   sessionStorage.setItem(SESSION_KEY, sessionId);
+  var sessionToken = null;
+  try {
+    sessionToken = sessionStorage.getItem(TOKEN_KEY);
+  } catch (e) {
+    sessionToken = null;
+  }
+
+  function adoptSession(body) {
+    if (!body || typeof body.sessionToken !== "string" || !body.sessionToken) return;
+    if (body.sessionToken.length > 512) return;
+    var nextId = typeof body.sessionId === "string" ? body.sessionId : sessionId;
+    if (nextId.length < 8 || nextId.length > 64) return;
+    sessionId = nextId;
+    sessionToken = body.sessionToken;
+    try {
+      sessionStorage.setItem(SESSION_KEY, sessionId);
+      sessionStorage.setItem(TOKEN_KEY, sessionToken);
+    } catch (e) {
+      // Storage full or blocked: keep the pair in memory for this page.
+    }
+  }
 
   // ── State ───────────────────────────────────────────────────────────
   var config = {
@@ -91,7 +118,7 @@
           );
         })
         .slice(-40);
-    } catch {
+    } catch (e) {
       return [];
     }
   }
@@ -99,7 +126,7 @@
   function saveHistory() {
     try {
       sessionStorage.setItem(HISTORY_KEY, JSON.stringify(messages.slice(-40)));
-    } catch {
+    } catch (e) {
       // Storage full or blocked — degrade to in-memory only.
     }
   }
@@ -513,15 +540,18 @@
     saveHistory();
     var typing = pushTyping();
 
+    var payload = {
+      sessionId: sessionId,
+      locale: config.language,
+      messages: messages.slice(-20),
+    };
+    if (sessionToken) payload.sessionToken = sessionToken;
+
     fetch(apiOrigin + "/api/agent/" + encodeURIComponent(slug) + "/chat", {
       method: "POST",
       credentials: "omit",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: sessionId,
-        locale: config.language,
-        messages: messages.slice(-20),
-      }),
+      body: JSON.stringify(payload),
     })
       .then(function (r) {
         return r.json().then(function (body) {
@@ -530,6 +560,7 @@
       })
       .then(function (resp) {
         typing.remove();
+        if (resp.body && resp.body.ok) adoptSession(resp.body);
         if (resp.body && resp.body.ok && resp.body.reply) {
           pushBubble("assistant", resp.body.reply);
           messages.push({ role: "assistant", content: resp.body.reply });

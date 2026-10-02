@@ -18,6 +18,7 @@ vi.mock("@/lib/ai/claude-client", () => ({
 const classifyIntent = vi.fn();
 vi.mock("@/lib/booking/intent", () => ({
   classifyIntent: (...a: unknown[]) => classifyIntent(...a),
+  classifyIntentMetered: async (...a: unknown[]) => ({ result: await classifyIntent(...a), usage: null }),
   shouldEscalate: (r: { intent: string; confidence: string } | null) =>
     !r || r.intent === "other" || r.confidence === "low",
 }));

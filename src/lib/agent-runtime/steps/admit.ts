@@ -4,6 +4,7 @@ import { parseSmsKeyword } from "@/lib/booking/gates";
 import type { TurnContext } from "../context";
 import type { TurnOutcome } from "../types";
 import { optOutConfirmation, smsBudgetNotice, standdown, standdownAfterCompletion, webBudgetNotice } from "../copy";
+import { dropPendingAction } from "./confirm";
 
 /**
  * admit: may this turn run at all? In order:
@@ -33,6 +34,8 @@ async function smsKeywords(ctx: TurnContext): Promise<TurnOutcome | null> {
 
   if (keyword?.kind === "opt_out") {
     await store?.optOut(ws, conv.phone);
+    // A pending appointment change dies with the opt-out (a later YES is a re-subscribe, never a confirmation).
+    await dropPendingAction(ctx);
     // Carrier keywords (STOP, CANCEL...) are blocked + confirmed by Twilio
     // Advanced Opt-Out. Ours (BAJA, PARAR, ALTO, CANCELAR, REVOKE, OPTOUT)
     // are not, so we send the single allowed confirmation (no marketing).

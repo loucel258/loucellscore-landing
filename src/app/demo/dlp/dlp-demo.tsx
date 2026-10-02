@@ -58,10 +58,35 @@ const EMPTY_RESULT: SanitizeResult = {
   layer2Available: false,
 };
 
+type MintedToken = { token: string; expiresAt: number };
+
+/** Mint a short-lived demo workspace JWT. null when the auth endpoint fails. */
+async function mintDemoToken(): Promise<MintedToken | null> {
+  try {
+    const res = await fetch("/api/demo/auth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        workspace_id: "ws_demo_001",
+        role_label: "front_desk_agent",
+      }),
+    });
+    if (!res.ok) return null;
+    const { token, ttl_seconds } = (await res.json()) as {
+      token: string;
+      ttl_seconds: number;
+    };
+    return { token, expiresAt: Date.now() + ttl_seconds * 1000 };
+  } catch {
+    return null;
+  }
+}
+
 export function DLPDemo() {
   const [input, setInput] = useState(SAMPLE_PROMPTS[0].text);
   const [result, setResult] = useState<SanitizeResult>(EMPTY_RESULT);
-  const [previewing, setPreviewing] = useState(false);
+  // The first sample is previewed on mount, so start in the previewing state.
+  const [previewing, setPreviewing] = useState(() => SAMPLE_PROMPTS[0].text !== "");
   const [layer2, setLayer2] = useState(false);
   // Workspace JWT, minted once per session. TTL is 5 min server-side; if a
   // demo session runs longer we re-mint on demand.
@@ -73,36 +98,40 @@ export function DLPDemo() {
   // routes now require a workspace JWT, so the preview AND the record path
   // both depend on this. We mint with role_label='front_desk_agent' since
   // DLP is most often invoked on the inbound (front-desk) path.
+  const storeToken = useCallback((minted: MintedToken): string => {
+    tokenExpiresAtRef.current = minted.expiresAt;
+    setToken(minted.token);
+    return minted.token;
+  }, []);
+
   const ensureToken = useCallback(async (): Promise<string | null> => {
     if (token && tokenExpiresAtRef.current > Date.now() + 30_000) {
       return token; // still valid for at least 30 more seconds
     }
-    try {
-      const res = await fetch("/api/demo/auth", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspace_id: "ws_demo_001",
-          role_label: "front_desk_agent",
-        }),
-      });
-      if (!res.ok) return null;
-      const { token: fresh, ttl_seconds } = (await res.json()) as {
-        token: string;
-        ttl_seconds: number;
-      };
-      tokenExpiresAtRef.current = Date.now() + ttl_seconds * 1000;
-      setToken(fresh);
-      return fresh;
-    } catch {
-      return null;
-    }
-  }, [token]);
+    const minted = await mintDemoToken();
+    return minted ? storeToken(minted) : null;
+  }, [token, storeToken]);
 
   // Mint token on mount so the first keystroke isn't delayed by an auth call.
   useEffect(() => {
-    ensureToken();
-  }, [ensureToken]);
+    void mintDemoToken().then((minted) => {
+      if (minted) storeToken(minted);
+    });
+  }, [storeToken]);
+
+  // Input and layer changes start the preview right away (the request
+  // itself is debounced below). An empty prompt clears the result.
+  function changeInput(next: string) {
+    if (next === input) return;
+    setInput(next);
+    if (!next) setResult(EMPTY_RESULT);
+    else setPreviewing(true);
+  }
+
+  function changeLayer2(next: boolean) {
+    setLayer2(next);
+    if (input) setPreviewing(true);
+  }
 
   // Debounced server-side sanitization. Both layers run server-side; the
   // browser never sees the canonical regex output. JWT is required and
@@ -110,11 +139,7 @@ export function DLPDemo() {
   // arrives, the preview just defers one tick.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!input) {
-      setResult(EMPTY_RESULT);
-      return;
-    }
-    setPreviewing(true);
+    if (!input) return;
     const delay = layer2 ? 600 : 250; // give the LLM more breathing room
     debounceRef.current = setTimeout(async () => {
       try {
@@ -211,7 +236,7 @@ export function DLPDemo() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <span className="text-micro text-cyan">
-              // TRUST STACK · DEMO 01
+              {"//"} TRUST STACK · DEMO 01
             </span>
             <span className="text-mono-xs text-text-tertiary">
               DLP MIDDLEWARE
@@ -257,7 +282,7 @@ export function DLPDemo() {
           <input
             type="checkbox"
             checked={layer2}
-            onChange={(e) => setLayer2(e.target.checked)}
+            onChange={(e) => changeLayer2(e.target.checked)}
             className="size-4 accent-cyan"
           />
           <span className="text-mono-xs text-cyan">Enable Layer 2</span>
@@ -272,7 +297,7 @@ export function DLPDemo() {
             <button
               key={p.label}
               type="button"
-              onClick={() => setInput(p.text)}
+              onClick={() => changeInput(p.text)}
               className="group flex items-start gap-3 rounded-lg border border-border-soft bg-surface/60 p-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan/40 hover:bg-surface-2"
             >
               <Send
@@ -295,7 +320,7 @@ export function DLPDemo() {
             </span>
             <button
               type="button"
-              onClick={() => setInput("")}
+              onClick={() => changeInput("")}
               className="inline-flex items-center gap-1.5 text-mono-xs text-text-tertiary transition-colors hover:text-cyan"
             >
               <RotateCcw className="size-3" strokeWidth={1.5} />
@@ -305,7 +330,7 @@ export function DLPDemo() {
           <div className="relative rounded-xl border border-border-soft bg-surface/50">
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => changeInput(e.target.value)}
               className="block min-h-[280px] w-full resize-y rounded-xl bg-transparent p-5 font-mono text-[13px] leading-relaxed text-text-primary outline-none placeholder:text-text-tertiary focus:ring-1 focus:ring-cyan/40"
               placeholder="Paste a prompt with PII, secrets, or sensitive identifiers..."
               spellCheck={false}

@@ -9,8 +9,8 @@ export const runtime = "nodejs";
 
 /**
  * Moved: an agent's configuration is in its client's Setup tab. This page
- * redirects there, scrolled to the agent. ConfigPanel and IntegrationsPanel
- * stay in this folder and are rendered by the client page.
+ * redirects there, scrolled to the agent. ConfigPanel, HoursPanel and
+ * IntegrationsPanel stay in this folder and are rendered by the client page.
  */
 export default async function AgentRedirect({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdminAuthed())) return <AuthWall />;

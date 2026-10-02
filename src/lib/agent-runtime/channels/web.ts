@@ -6,25 +6,31 @@ import { resolveAgent, originAllowedForAgent } from "@/lib/agents/resolver";
 import type { ChatResponse } from "@/lib/chat/types";
 import { isLocale } from "@/i18n/config";
 import { toAgentConfig } from "../config";
-import { createTurnContext } from "../context";
+import { createTurnContext, type TurnContext } from "../context";
 import { withDeps, type TurnDeps } from "../deps";
-import { runTurn } from "../runtime";
+import { runTurnWithContext } from "../runtime";
+import { issueSessionToken, resolveWebSession, sessionTokenKey, type SessionTrust } from "../session-token";
 import type { Inbound, TurnOutcome } from "../types";
 
 /**
  * Web chat adapter for the embeddable widget (public/agent.js) and the
- * marketing site's own chat. Protocol unchanged:
- *   POST { sessionId?, locale, messages: [{ role, content }] }
- *   → { ok: true, reply, bookingLink? } | { ok: false, error }
+ * marketing site's own chat. Protocol (backward compatible):
+ *   POST { sessionId?, sessionToken?, locale, messages: [{ role, content }] }
+ *   → { ok: true, reply, bookingLink?, sessionId?, sessionToken? } | { ok: false, error }
+ *
+ * sessionToken is a signed widget session (session-token.ts). Widgets that
+ * never send one (older cached agent.js) get exactly the old behavior; the
+ * extra response fields are ignored by them.
  *
  * Request-level gates live here (agent resolution, origin allowlist + CORS,
- * body size, payload validation); everything else is runTurn().
+ * body size, payload validation, session token); everything else is runTurn().
  */
 
 const MAX_BODY_BYTES = 32 * 1024;
 
 const ChatRequestSchema = z.object({
   sessionId: z.string().min(8).max(64).optional(),
+  sessionToken: z.string().max(512).nullish(),
   locale: z.string().refine(isLocale).default("en"),
   messages: z
     .array(
@@ -103,10 +109,14 @@ export function getClientIp(req: Request): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-export type WebDeps = TurnDeps & { resolveAgent: typeof resolveAgent };
+export type WebDeps = TurnDeps & {
+  resolveAgent: typeof resolveAgent;
+  /** HMAC key for widget session tokens; null = tokens off (pre-token behavior). */
+  sessionKey: () => Buffer | null;
+};
 
 function webDeps(overrides?: Partial<WebDeps>): WebDeps {
-  return { resolveAgent, ...withDeps(overrides) };
+  return { resolveAgent, sessionKey: () => sessionTokenKey(), ...withDeps(overrides) };
 }
 
 /**
@@ -169,13 +179,21 @@ export async function handleWebChat(req: Request, slug: string, overrides?: Part
   }
   if (lastUser < 0) return safeError("bad_request", cors);
 
+  // 5. Session token: valid → trusted session; absent → as before; present
+  //    but bad / expired / for another slug → brand-new session.
+  const key = deps.sessionKey();
+  const session = resolveWebSession({
+    key,
+    slug: config.slug,
+    sessionId: parsed.sessionId,
+    token: parsed.sessionToken,
+    nowMs: deps.now(),
+  });
+
   const inbound: Inbound = {
     channel: "web",
     agent: config,
-    conv: {
-      kind: "session",
-      sessionId: parsed.sessionId ?? `s_anon_${crypto.randomUUID().replace(/-/g, "").slice(0, 14)}`,
-    },
+    conv: { kind: "session", sessionId: session.sessionId, trust: session.trust },
     text: parsed.messages[lastUser]!.content,
     locale: parsed.locale === "es" ? "es" : "en",
     ip,
@@ -183,20 +201,44 @@ export async function handleWebChat(req: Request, slug: string, overrides?: Part
     clientHistory: parsed.messages.slice(0, lastUser),
   };
 
-  return toResponse(await runTurn(inbound, deps), cors);
+  const { outcome, ctx } = await runTurnWithContext(inbound, deps);
+  const sessionFields =
+    key && sessionToIssue(session.trust, ctx)
+      ? { sessionId: session.sessionId, sessionToken: issueSessionToken(key, config.slug, session.sessionId, deps.now()) }
+      : {};
+  return toResponse(outcome, cors, sessionFields);
 }
 
-function toResponse(outcome: TurnOutcome, cors: Record<string, string>): Response {
+/**
+ * Issue (or refresh) a token for this turn's sessionId when the server
+ * vouches for it: a valid token, a fresh server-issued session, or a token-
+ * less session whose stored transcript is this client's (anchored) or empty.
+ * A token-less request whose transcript was NOT anchored gets none, so a
+ * replayed sessionId can never be upgraded to a trusted one.
+ */
+function sessionToIssue(trust: SessionTrust, ctx: TurnContext): boolean {
+  if (trust === "verified" || trust === "fresh") return true;
+  return ctx.historySource === "server" || ctx.historySource === "new";
+}
+
+type SessionFields = { sessionId?: string; sessionToken?: string };
+
+function toResponse(outcome: TurnOutcome, cors: Record<string, string>, session: SessionFields = {}): Response {
   switch (outcome.kind) {
     case "reply":
       return NextResponse.json(
-        { ok: true, reply: outcome.text, ...(outcome.bookingLink ? { bookingLink: outcome.bookingLink } : {}) },
+        {
+          ok: true,
+          reply: outcome.text,
+          ...(outcome.bookingLink ? { bookingLink: outcome.bookingLink } : {}),
+          ...session,
+        },
         { headers: cors },
       );
     case "escalated":
-      return NextResponse.json({ ok: true, reply: outcome.text }, { headers: cors });
+      return NextResponse.json({ ok: true, reply: outcome.text, ...session }, { headers: cors });
     case "suppressed":
-      return NextResponse.json({ ok: true, reply: outcome.text ?? "" }, { headers: cors });
+      return NextResponse.json({ ok: true, reply: outcome.text ?? "", ...session }, { headers: cors });
     case "blocked":
       switch (outcome.reason) {
         case "rate_limited":
@@ -206,7 +248,7 @@ function toResponse(outcome: TurnOutcome, cors: Record<string, string>): Respons
           );
         case "pii":
         case "budget":
-          return NextResponse.json({ ok: true, reply: outcome.text ?? "" }, { headers: cors });
+          return NextResponse.json({ ok: true, reply: outcome.text ?? "", ...session }, { headers: cors });
         case "unavailable":
           return safeError("chat_unavailable", cors);
         case "failed":

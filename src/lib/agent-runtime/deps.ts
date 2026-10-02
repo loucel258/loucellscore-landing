@@ -1,20 +1,20 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getClaudeClient } from "@/lib/ai/claude-client";
+import { getClaudeClient, type Metered } from "@/lib/ai/claude-client";
 import { getServiceClient } from "@/lib/audit/client";
 import { writeAuditEntry } from "@/lib/audit/writer";
 import type { AuditEntry } from "@/lib/audit/types";
 import { rateLimit } from "@/lib/rate-limit/limiter";
 import { isBudgetExhausted, recordUsage } from "@/lib/agents/budget";
 import { sanitize, type SanitizeResult } from "@/lib/dlp/sanitizer";
-import { sanitizeWithLLM } from "@/lib/dlp/sanitizer-llm";
+import { sanitizeWithLLMMetered } from "@/lib/dlp/sanitizer-llm";
 import { persistTurn } from "@/lib/portal/transcripts";
 import { decryptMessage, encryptionAvailable } from "@/lib/portal/encrypt";
 import { sendInternalAlert } from "@/lib/notify/resend";
 import { insertLead } from "@/lib/leads/leads";
 import { propose } from "@/lib/hitl/queue";
-import { classifyIntent } from "@/lib/booking/intent";
+import { classifyIntentMetered, type IntentContext, type IntentResult } from "@/lib/booking/intent";
 import { resolveBookingBackend } from "@/lib/integration/agent-client";
 import { dispatchBookingTool } from "@/lib/booking/tools";
 import { createSupabaseStore, type RuntimeStore } from "./store";
@@ -46,13 +46,15 @@ export type TurnDeps = {
   isBudgetExhausted: typeof isBudgetExhausted;
   recordUsage: typeof recordUsage;
   sanitize: (text: string) => SanitizeResult;
-  sanitizeWithLLM: (text: string) => Promise<SanitizeResult>;
+  /** DLP Layer 2 (Haiku). `usage` is billed to the agent's monthly budget (ctx.meter). */
+  sanitizeWithLLM: (text: string) => Promise<Metered<SanitizeResult>>;
   writeAudit: (entry: AuditEntry) => Promise<unknown>;
   persistTurn: typeof persistTurn;
   sendAlert: typeof sendInternalAlert;
   insertLead: typeof insertLead;
   propose: typeof propose;
-  classifyIntent: typeof classifyIntent;
+  /** SMS triage classifier (Haiku). `usage` is billed to the agent's monthly budget (ctx.meter). */
+  classifyIntent: (message: string, context?: IntentContext) => Promise<Metered<IntentResult | null>>;
   resolveBookingBackend: typeof resolveBookingBackend;
   dispatchBookingTool: typeof dispatchBookingTool;
   decrypt: (engagementId: string, cipherB64: string) => string;
@@ -70,13 +72,13 @@ export function defaultTurnDeps(): TurnDeps {
     isBudgetExhausted,
     recordUsage,
     sanitize,
-    sanitizeWithLLM: (text) => sanitizeWithLLM(text),
+    sanitizeWithLLM: (text) => sanitizeWithLLMMetered(text),
     writeAudit: writeAuditEntry,
     persistTurn,
     sendAlert: sendInternalAlert,
     insertLead,
     propose,
-    classifyIntent,
+    classifyIntent: classifyIntentMetered,
     resolveBookingBackend,
     dispatchBookingTool,
     decrypt: decryptMessage,

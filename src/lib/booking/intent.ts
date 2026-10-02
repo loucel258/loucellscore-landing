@@ -1,5 +1,5 @@
 import "server-only";
-import { classifyWithTool } from "@/lib/ai/claude-client";
+import { classifyWithToolMetered, type Metered } from "@/lib/ai/claude-client";
 
 /**
  * Intent classification for inbound Front Desk messages (Haiku, structured
@@ -62,21 +62,28 @@ Rules:
   "confirmo", "ok see you then"), not for making a new booking.${extra}`;
 }
 
-export async function classifyIntent(
+export type IntentContext = {
+  hasUpcomingAppointment?: boolean;
+  /** Who the message was sent to (vertical profile intentSubject). */
+  subject?: string;
+  /** Vertical vocabulary hints (vertical profile intentHints). */
+  hints?: readonly string[];
+};
+
+export async function classifyIntent(message: string, context?: IntentContext): Promise<IntentResult | null> {
+  return (await classifyIntentMetered(message, context)).result;
+}
+
+/** classifyIntent plus the classifier call's usage (the agent runtime bills it to the tenant). */
+export async function classifyIntentMetered(
   message: string,
-  context?: {
-    hasUpcomingAppointment?: boolean;
-    /** Who the message was sent to (vertical profile intentSubject). */
-    subject?: string;
-    /** Vertical vocabulary hints (vertical profile intentHints). */
-    hints?: readonly string[];
-  },
-): Promise<IntentResult | null> {
+  context?: IntentContext,
+): Promise<Metered<IntentResult | null>> {
   const userPrompt = context?.hasUpcomingAppointment
     ? `Customer has an upcoming appointment.\nMessage: """${message}"""`
     : `Message: """${message}"""`;
 
-  return classifyWithTool<IntentResult>({
+  return classifyWithToolMetered<IntentResult>({
     systemPrompt: intentSystemPrompt(context?.subject, context?.hints),
     userPrompt,
     toolName: "classify_intent",

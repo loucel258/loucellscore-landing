@@ -2,6 +2,7 @@ import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { TurnContext } from "../context";
 import type { HistoryTurn } from "../types";
+import type { SessionTrust } from "../session-token";
 import { redactHighRisk } from "./screen";
 
 /**
@@ -14,7 +15,9 @@ import { redactHighRisk } from "./screen";
  * approved" never reaches the model. The client's USER turns are used only
  * as a fallback when the transcript can't be read, and also when the
  * transcript isn't anchored in what the client holds (someone replaying
- * another visitor's session id gets no one else's conversation).
+ * another visitor's session id gets no one else's conversation). A valid
+ * signed session token (session-token.ts) skips the anchoring check; a bad
+ * one starts a fresh session with no stored history.
  *
  * SMS: messages_log for this contact (the just-claimed inbound excluded,
  * failed sends dropped, high-risk PII redacted).
@@ -26,16 +29,23 @@ const FALLBACK_USER_TURNS = 10;
 
 export async function loadHistory(ctx: TurnContext): Promise<HistoryTurn[]> {
   if (ctx.history) return ctx.history;
-  ctx.history = ctx.inbound.conv.kind === "session" ? await webHistory(ctx, ctx.inbound.conv.sessionId) : await smsHistory(ctx);
+  const conv = ctx.inbound.conv;
+  ctx.history = conv.kind === "session" ? await webHistory(ctx, conv.sessionId, conv.trust ?? "unverified") : await smsHistory(ctx);
   return ctx.history;
 }
 
-async function webHistory(ctx: TurnContext, sessionId: string): Promise<HistoryTurn[]> {
+async function webHistory(ctx: TurnContext, sessionId: string, trust: SessionTrust): Promise<HistoryTurn[]> {
   const clientUserTurns = (ctx.inbound.clientHistory ?? [])
     .filter((m) => m.role === "user")
     .map((m) => m.content);
-  const fallback = (): HistoryTurn[] =>
-    clientUserTurns.slice(-FALLBACK_USER_TURNS).map((content) => ({ role: "user", content }));
+  const fallback = (source: "new" | "client_only" = "client_only"): HistoryTurn[] => {
+    ctx.historySource = source;
+    return clientUserTurns.slice(-FALLBACK_USER_TURNS).map((content) => ({ role: "user", content }));
+  };
+
+  // A bad / expired / other-slug session token: brand-new server-issued
+  // session, so no stored transcript is used.
+  if (trust === "fresh") return fallback();
 
   const { store } = ctx.deps;
   if (!store || !ctx.deps.encryptionAvailable()) return fallback();
@@ -46,6 +56,8 @@ async function webHistory(ctx: TurnContext, sessionId: string): Promise<HistoryT
     rows = null;
   }
   if (!rows) return fallback();
+  // Nothing stored for this session yet (first message).
+  if (rows.length === 0) return fallback("new");
 
   const server: HistoryTurn[] = [];
   for (const r of rows) {
@@ -57,11 +69,15 @@ async function webHistory(ctx: TurnContext, sessionId: string): Promise<HistoryT
   }
   if (server.length === 0) return fallback();
 
+  // A valid session token proves the server issued this sessionId to this
+  // widget: its transcript is trusted as is. Without one, the transcript must
+  // be anchored in what the client holds.
   const lastServerUser = [...server].reverse().find((t) => t.role === "user");
-  if (lastServerUser && !clientUserTurns.includes(lastServerUser.content)) {
+  if (trust !== "verified" && lastServerUser && !clientUserTurns.includes(lastServerUser.content)) {
     console.warn(`[agent-runtime] ${ctx.config.slug}: transcript not anchored in client history; using client user turns only`);
     return fallback();
   }
+  ctx.historySource = "server";
   return server;
 }
 

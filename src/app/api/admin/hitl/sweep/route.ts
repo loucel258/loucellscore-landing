@@ -21,12 +21,8 @@ export const dynamic = "force-dynamic";
  * calls — fail-closed rather than expose an unauthenticated mutation
  * surface.
  *
- * Vercel Cron config (add to vercel.json):
- *
- *   { "crons": [
- *       { "path": "/api/admin/hitl/sweep", "schedule": "* * * * *" }
- *     ]
- *   }
+ * Scheduled every 15 minutes by GitHub Actions (.github/workflows/frequent-ops.yml)
+ * with CRON_SECRET as a Bearer token; Vercel Hobby crons run daily at most.
  *
  * Vercel Cron requests carry a `x-vercel-cron` header AND the project's
  * `CRON_SECRET` in `Authorization: Bearer`. We accept either auth path

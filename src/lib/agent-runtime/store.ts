@@ -7,6 +7,7 @@ import {
   recordConsent,
   type Contact,
 } from "@/lib/booking/contacts";
+import type { PendingAction } from "./pending-action";
 
 /**
  * Every table the runtime touches, behind one small interface so steps stay
@@ -61,9 +62,35 @@ export type RuntimeStore = {
   getOrCreateContact(workspaceId: string, phone: string): Promise<Contact | null>;
   optOut(workspaceId: string, phone: string): Promise<void>;
   optIn(workspaceId: string, contactId: string): Promise<void>;
+  /** SMS two-phase confirmation: contacts.metadata.pending_action, raw (callers parse it). */
+  getPendingAction(workspaceId: string, contactId: string): Promise<unknown>;
+  /** Store (replace) the contact's pending action. false = not stored. */
+  setPendingAction(workspaceId: string, contactId: string, action: PendingAction): Promise<boolean>;
+  /**
+   * Remove the pending action only if it is still the one with this id. The
+   * write is conditional on that id (compare-and-swap), so of two concurrent
+   * callers at most one gets true, and only that one may execute it.
+   */
+  takePendingAction(workspaceId: string, contactId: string, actionId: string): Promise<boolean>;
 };
 
+function asObject(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v) ? { ...(v as Record<string, unknown>) } : {};
+}
+
 export function createSupabaseStore(sb: SupabaseClient): RuntimeStore {
+  /** contacts.metadata for one contact; null = contact not found / read failed. */
+  async function readMetadata(workspaceId: string, contactId: string): Promise<Record<string, unknown> | null> {
+    const { data, error } = await sb
+      .from("contacts")
+      .select("metadata")
+      .eq("workspace_id", workspaceId)
+      .eq("id", contactId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return asObject((data as { metadata: unknown }).metadata);
+  }
+
   return {
     async isPaused(engagementId, sessionKey) {
       const { data } = await sb
@@ -217,6 +244,44 @@ export function createSupabaseStore(sb: SupabaseClient): RuntimeStore {
         granted: true,
         source: "sms_optin",
       });
+    },
+
+    async getPendingAction(workspaceId, contactId) {
+      return (await readMetadata(workspaceId, contactId))?.pending_action ?? null;
+    },
+
+    async setPendingAction(workspaceId, contactId, action) {
+      // Read-modify-write keeps the other metadata keys (e.g. email).
+      const meta = await readMetadata(workspaceId, contactId);
+      if (!meta) return false;
+      const { data, error } = await sb
+        .from("contacts")
+        .update({ metadata: { ...meta, pending_action: action }, updated_at: new Date().toISOString() })
+        .eq("workspace_id", workspaceId)
+        .eq("id", contactId)
+        .select("id");
+      if (error) console.warn(`[agent-runtime] pending action not stored: ${error.code ?? "error"}`);
+      return !error && ((data as unknown[] | null)?.length ?? 0) > 0;
+    },
+
+    async takePendingAction(workspaceId, contactId, actionId) {
+      const meta = await readMetadata(workspaceId, contactId);
+      const current = meta?.pending_action as { id?: unknown } | undefined;
+      if (!meta || !current || current.id !== actionId) return false;
+      const rest = { ...meta };
+      delete rest.pending_action;
+      // The id filter makes this a compare-and-swap: a concurrent taker
+      // (double YES) or a newer proposal changes the row first, this update
+      // then matches nothing and returns no row.
+      const { data, error } = await sb
+        .from("contacts")
+        .update({ metadata: rest, updated_at: new Date().toISOString() })
+        .eq("workspace_id", workspaceId)
+        .eq("id", contactId)
+        .eq("metadata->pending_action->>id", actionId)
+        .select("id");
+      if (error) console.warn(`[agent-runtime] pending action not cleared: ${error.code ?? "error"}`);
+      return !error && ((data as unknown[] | null)?.length ?? 0) > 0;
     },
   };
 }

@@ -8,6 +8,12 @@ import { isE164, isSupportedTimeZone } from "@/lib/admin/validators";
 import { safeHttpsUrl } from "@/lib/agents/booking-config";
 import { toAgentConfig } from "@/lib/agent-runtime/config";
 import { checkReadiness } from "@/lib/agent-runtime/readiness";
+import {
+  TIME_ZONE_ERROR,
+  mergeBookingHours,
+  validateBusinessHours,
+  validateTimeZone,
+} from "@/lib/admin/business-hours";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,6 +31,9 @@ export const dynamic = "force-dynamic";
  *   - slug lock: the slug is the client's embed identifier, so it can
  *     only change while the agent is still 'designing' (or has none yet)
  *   - reminders can't be enabled without Twilio keys in the vault
+ *   - business hours and time zone are accepted exactly when the runtime's
+ *     parser accepts them, merged into integrations.booking without
+ *     touching its other keys, and written only when they change
  *   - resolver cache invalidation so changes apply immediately
  *   - an audit entry per config change (governance-first, also for us)
  */
@@ -92,6 +101,26 @@ const InputSchema = z.object({
             .max(500)
             .refine((v) => v === "" || safeHttpsUrl(v) !== null, "Booking link must be an https URL")
             .optional(),
+          // { mon: [9, 18], sun: null, ... } or null to go back to the
+          // defaults. Accepted exactly when the runtime's parser accepts it.
+          business_hours: z
+            .unknown()
+            .optional()
+            .superRefine((v, ctx) => {
+              if (v === undefined || v === null) return;
+              const r = validateBusinessHours(v);
+              if (!r.ok) ctx.addIssue({ code: "custom", message: r.error });
+            }),
+          // IANA name; null or "" clears it.
+          timezone: z
+            .string({ error: TIME_ZONE_ERROR })
+            .nullable()
+            .optional()
+            .superRefine((v, ctx) => {
+              if (v === undefined || v === null || v.trim() === "") return;
+              const r = validateTimeZone(v);
+              if (!r.ok) ctx.addIssue({ code: "custom", message: r.error });
+            }),
         })
         .optional(),
     })
@@ -232,26 +261,44 @@ export async function POST(
     changed.push("minutes_saved_per_conversation");
   }
 
-  // Integrations config (calendar + reminders). Deep-merge into the existing
-  // jsonb so we never clobber sibling keys (e.g. a future "crm" block).
+  // Integrations config (calendar, reminders, booking). Deep-merge into the
+  // existing jsonb so we never clobber sibling keys (e.g. a future "crm"
+  // block, or booking.mode/prefill when only the hours change).
   if (input.integrations !== undefined) {
     const cur = (agent.integrations ?? {}) as Record<string, Record<string, unknown>>;
     const next: Record<string, unknown> = { ...cur };
+    // calendar / reminders / locale / link_url are written whenever sent,
+    // as before. Hours and time zone only when they actually change.
+    let touched = false;
     if (input.integrations.calendar) {
       next.calendar = { ...(cur.calendar ?? {}), ...input.integrations.calendar };
+      touched = true;
     }
     if (input.integrations.reminders) {
       next.reminders = { ...(cur.reminders ?? {}), ...input.integrations.reminders };
+      touched = true;
     }
     if (input.integrations.locale !== undefined) {
       next.locale = input.integrations.locale;
+      touched = true;
     }
+    const booking: Record<string, unknown> = { ...(cur.booking ?? {}) };
     if (input.integrations.booking?.link_url !== undefined) {
-      const booking: Record<string, unknown> = { ...(cur.booking ?? {}) };
       const url = input.integrations.booking.link_url;
       if (url === "") delete booking.link_url;
       else booking.link_url = safeHttpsUrl(url);
-      next.booking = booking;
+      touched = true;
+    }
+    const hours = mergeBookingHours(booking, {
+      business_hours: input.integrations.booking?.business_hours,
+      timezone: input.integrations.booking?.timezone,
+    });
+    if (!hours.ok) {
+      // Already refused by the schema; kept so a bad value can never be written.
+      return NextResponse.json({ ok: false, error: "invalid_input", detail: hours.error }, { status: 400 });
+    }
+    if (input.integrations.booking?.link_url !== undefined || hours.changed.length > 0) {
+      next.booking = hours.booking;
     }
 
     // Enabling reminders without Twilio keys (or a sender number) would
@@ -281,8 +328,12 @@ export async function POST(
       }
     }
 
-    update.integrations = next;
-    changed.push("integrations");
+    if (touched || hours.changed.length > 0) {
+      update.integrations = next;
+      if (touched) changed.push("integrations");
+      // Field names only: the values (the client's hours) stay out of the audit reason.
+      for (const field of hours.changed) changed.push(`integrations.booking.${field}`);
+    }
   }
 
   // Origins: every entry must canonicalize. We reject the whole write on

@@ -48,6 +48,17 @@ export function cachedSystem(text: string): Anthropic.Messages.TextBlockParam[] 
   return [{ type: "text", text, cache_control: { type: "ephemeral" } }];
 }
 
+/** The token counts budget accounting needs from a response's `usage`. */
+export type CallUsage = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+};
+
+/** A model call's answer plus the tokens it spent (null = no call was billed). */
+export type Metered<T> = { result: T; usage: CallUsage | null };
+
 /**
  * Run a single-turn classification call with a tool-use schema. The model
  * MUST respond by calling the provided tool — that's our structured-output
@@ -55,15 +66,27 @@ export function cachedSystem(text: string): Anthropic.Messages.TextBlockParam[] 
  *
  * Generic over the tool's input shape so callers get a typed result.
  */
-export async function classifyWithTool<TInput>(opts: {
+export async function classifyWithTool<TInput>(opts: ClassifyOptions): Promise<TInput | null> {
+  return (await classifyWithToolMetered<TInput>(opts)).result;
+}
+
+type ClassifyOptions = {
   systemPrompt: string;
   userPrompt: string;
   toolName: string;
   toolDescription: string;
   toolInputSchema: Record<string, unknown>;
-}): Promise<TInput | null> {
+};
+
+/**
+ * classifyWithTool plus the call's usage, so callers that bill a tenant's
+ * monthly budget (agent runtime: SMS triage, DLP Layer 2) can record it.
+ * Usage is reported even when the model skipped the tool (the call was
+ * still billed); it is null only when no response came back.
+ */
+export async function classifyWithToolMetered<TInput>(opts: ClassifyOptions): Promise<Metered<TInput | null>> {
   const client = getClaudeClient();
-  if (!client) return null;
+  if (!client) return { result: null, usage: null };
 
   try {
     const response = await client.messages.create({
@@ -80,16 +103,17 @@ export async function classifyWithTool<TInput>(opts: {
       ],
       tool_choice: { type: "tool", name: opts.toolName },
     });
+    const usage = response.usage ?? null;
 
     const toolBlock = response.content.find(
       (block): block is Anthropic.Messages.ToolUseBlock => block.type === "tool_use",
     );
-    if (!toolBlock || toolBlock.name !== opts.toolName) return null;
-    return toolBlock.input as TInput;
+    if (!toolBlock || toolBlock.name !== opts.toolName) return { result: null, usage };
+    return { result: toolBlock.input as TInput, usage };
   } catch {
     // Anthropic error (timeout, rate limit, auth, etc.) — caller decides
     // fallback behavior. We never throw so Layer 1 keeps protecting requests
     // even when Layer 2 is down.
-    return null;
+    return { result: null, usage: null };
   }
 }

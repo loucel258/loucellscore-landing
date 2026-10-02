@@ -78,6 +78,64 @@ type QueueResponse =
   | { ok: true; data: PendingApproval[] }
   | { ok: false; reason: string; error?: string };
 
+type MintedToken = { token: string; expiresAt: number };
+
+const NO_TOKEN_ERROR = "Could not mint workspace JWT. Auth endpoint unreachable.";
+
+/**
+ * The token to use: the current one while it has 30+ seconds left, else a
+ * freshly minted supervisor token (returned in `minted` so the caller can
+ * store it). null when minting fails. Sets no state.
+ */
+async function resolveToken(
+  current: string | null,
+  expiresAt: number,
+): Promise<{ token: string; minted: MintedToken | null } | null> {
+  if (current && expiresAt > Date.now() + 30_000) return { token: current, minted: null };
+  try {
+    const res = await fetch("/api/demo/auth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        workspace_id: "ws_demo_001",
+        role_label: "supervisor",
+      }),
+    });
+    if (!res.ok) return null;
+    const { token: fresh, ttl_seconds } = (await res.json()) as {
+      token: string;
+      ttl_seconds: number;
+    };
+    const minted = { token: fresh, expiresAt: Date.now() + ttl_seconds * 1000 };
+    return { token: fresh, minted };
+  } catch {
+    return null;
+  }
+}
+
+type QueueOutcome =
+  | { kind: "ok"; data: PendingApproval[] }
+  | { kind: "not_configured" }
+  | { kind: "error"; error: string };
+
+/** Fetch the approval queue. Never throws: failures come back as an outcome. */
+async function fetchQueue(token: string): Promise<QueueOutcome> {
+  try {
+    const res = await fetch("/api/demo/hitl/queue", {
+      cache: "no-store",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const json = (await res.json()) as QueueResponse;
+    if (!json.ok) {
+      if (json.reason === "not_configured") return { kind: "not_configured" };
+      return { kind: "error", error: json.error ?? "Unknown error" };
+    }
+    return { kind: "ok", data: json.data };
+  } catch (err) {
+    return { kind: "error", error: err instanceof Error ? err.message : "Network error" };
+  }
+}
+
 export function HitlDemo() {
   const [queue, setQueue] = useState<PendingApproval[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -99,71 +157,63 @@ export function HitlDemo() {
   const [token, setToken] = useState<string | null>(null);
   const tokenExpiresAtRef = useRef<number>(0);
 
+  const storeToken = useCallback((minted: MintedToken) => {
+    tokenExpiresAtRef.current = minted.expiresAt;
+    setToken(minted.token);
+  }, []);
+
   const ensureToken = useCallback(async (): Promise<string | null> => {
-    if (token && tokenExpiresAtRef.current > Date.now() + 30_000) return token;
-    try {
-      const res = await fetch("/api/demo/auth", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspace_id: "ws_demo_001",
-          role_label: "supervisor",
-        }),
-      });
-      if (!res.ok) return null;
-      const { token: fresh, ttl_seconds } = (await res.json()) as {
-        token: string;
-        ttl_seconds: number;
-      };
-      tokenExpiresAtRef.current = Date.now() + ttl_seconds * 1000;
-      setToken(fresh);
-      return fresh;
-    } catch {
-      return null;
+    const resolved = await resolveToken(token, tokenExpiresAtRef.current);
+    if (!resolved) return null;
+    if (resolved.minted) storeToken(resolved.minted);
+    return resolved.token;
+  }, [token, storeToken]);
+
+  const applyQueue = useCallback((outcome: QueueOutcome) => {
+    if (outcome.kind === "not_configured") {
+      setNotConfigured(true);
+      setQueue([]);
+      return;
     }
-  }, [token]);
+    if (outcome.kind === "error") {
+      setError(outcome.error);
+      return;
+    }
+    setNotConfigured(false);
+    // Do NOT clear `error` here. Errors from propose/decide must stay
+    // visible until the user dismisses them, not until the next queue
+    // refresh that happens to succeed.
+    setQueue(outcome.data);
+  }, []);
 
   const load = useCallback(async () => {
-    try {
-      const t = await ensureToken();
-      if (!t) {
-        setError("Could not mint workspace JWT. Auth endpoint unreachable.");
-        return;
-      }
-      const res = await fetch("/api/demo/hitl/queue", {
-        cache: "no-store",
-        headers: { authorization: `Bearer ${t}` },
-      });
-      const json = (await res.json()) as QueueResponse;
-      if (!json.ok) {
-        if (json.reason === "not_configured") {
-          setNotConfigured(true);
-          setQueue([]);
-          return;
-        }
-        setError(json.error ?? "Unknown error");
-        return;
-      }
-      setNotConfigured(false);
-      // Do NOT clear `error` here. Errors from propose/decide must stay
-      // visible until the user dismisses them, not until the next queue
-      // refresh that happens to succeed.
-      setQueue(json.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+    const t = await ensureToken();
+    if (!t) {
+      setError(NO_TOKEN_ERROR);
+      return;
     }
-  }, [ensureToken]);
+    applyQueue(await fetchQueue(t));
+  }, [ensureToken, applyQueue]);
 
+  // Load on mount and again whenever the token changes (same as calling
+  // load() here). State is only set from the promise callback.
   useEffect(() => {
-    load();
-  }, [load]);
+    void resolveToken(token, tokenExpiresAtRef.current).then(async (resolved) => {
+      if (!resolved) {
+        setError(NO_TOKEN_ERROR);
+        return;
+      }
+      if (resolved.minted) storeToken(resolved.minted);
+      applyQueue(await fetchQueue(resolved.token));
+    });
+  }, [token, storeToken, applyQueue]);
 
   async function propose(sample: (typeof SAMPLE_PROPOSALS)[number]) {
     setProposing(sample.label);
     try {
       const t = await ensureToken();
       if (!t) {
-        setError("Could not mint workspace JWT. Auth endpoint unreachable.");
+        setError(NO_TOKEN_ERROR);
         return;
       }
       const res = await fetch("/api/demo/hitl/propose", {
@@ -202,7 +252,7 @@ export function HitlDemo() {
     try {
       const t = await ensureToken();
       if (!t) {
-        setError("Could not mint workspace JWT. Auth endpoint unreachable.");
+        setError(NO_TOKEN_ERROR);
         return;
       }
       const res = await fetch("/api/demo/hitl/decide", {
@@ -257,7 +307,7 @@ export function HitlDemo() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <span className="text-micro text-violet">
-              // TRUST STACK · DEMO 04
+              {"//"} TRUST STACK · DEMO 04
             </span>
             <span className="text-mono-xs text-text-tertiary">
               HUMAN-IN-THE-LOOP

@@ -1,4 +1,5 @@
 import "server-only";
+import type { Metered } from "@/lib/ai/claude-client";
 import { _collectAndApply, type Redaction, type SanitizeResult } from "./sanitizer";
 import { classifyWithLLM } from "./classifier-llm";
 import { Layer2RequiredError } from "@/lib/clients/policy";
@@ -18,7 +19,20 @@ export async function sanitizeWithLLM(
   rawPrompt: string,
   opts: { failClosed?: boolean; workspace_id?: string } = {},
 ): Promise<SanitizeResult> {
+  return (await sanitizeWithLLMMetered(rawPrompt, opts)).result;
+}
+
+/**
+ * sanitizeWithLLM plus the Layer 2 call's token usage, for callers that bill
+ * a tenant's monthly budget (the agent runtime's DLP screen). The result
+ * itself is identical to sanitizeWithLLM's.
+ */
+export async function sanitizeWithLLMMetered(
+  rawPrompt: string,
+  opts: { failClosed?: boolean; workspace_id?: string } = {},
+): Promise<Metered<SanitizeResult>> {
   const llmResult = await classifyWithLLM(rawPrompt);
+  const usage = llmResult.usage ?? null;
 
   if (!llmResult.available && opts.failClosed) {
     throw new Layer2RequiredError(
@@ -49,8 +63,11 @@ export async function sanitizeWithLLM(
 
   const result = _collectAndApply(rawPrompt, llmRedactions);
   return {
-    ...result,
-    layer2Used: true,
-    layer2Available: llmResult.available,
+    result: {
+      ...result,
+      layer2Used: true,
+      layer2Available: llmResult.available,
+    },
+    usage,
   };
 }

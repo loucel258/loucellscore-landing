@@ -3,6 +3,7 @@ import { Panel } from "@/components/workspace/panel";
 import { Metric, MetricRow } from "@/components/workspace/metric";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { formatShortDate, daysAgo } from "@/lib/admin/format";
+import { DAY_MS, cutoffMs } from "@/lib/admin/cutoffs";
 import type { PendingApprovalRow } from "../types";
 
 export function HitlTab({
@@ -25,13 +26,14 @@ export function HitlTab({
     );
   }
 
+  const since7d = cutoffMs(7 * DAY_MS);
   const approved7d = recent.filter((r) => {
     if (r.status !== "approved" || !r.decided_at) return false;
-    return Date.now() - new Date(r.decided_at).getTime() < 7 * 86400_000;
+    return new Date(r.decided_at).getTime() > since7d;
   }).length;
   const rejected7d = recent.filter((r) => {
     if (r.status !== "rejected" || !r.decided_at) return false;
-    return Date.now() - new Date(r.decided_at).getTime() < 7 * 86400_000;
+    return new Date(r.decided_at).getTime() > since7d;
   }).length;
 
   const decidedWithTime = recent.filter((r) => r.decided_at);

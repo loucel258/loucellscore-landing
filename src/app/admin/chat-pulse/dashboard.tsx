@@ -1,3 +1,5 @@
+import { HOUR_MS, cutoffMs } from "@/lib/admin/cutoffs";
+
 /**
  * ChatPulseDashboard — read-only operator panel.
  *
@@ -54,8 +56,9 @@ export function ChatPulseDashboard({
         100;
 
   const recentFail = data.failsLast50[0];
+  const since24h = cutoffMs(24 * HOUR_MS);
   const last24hFails = data.failsLast50.filter((r) => {
-    return new Date(r.inserted_at).getTime() > Date.now() - 24 * 3600 * 1000;
+    return new Date(r.inserted_at).getTime() > since24h;
   });
 
   return (

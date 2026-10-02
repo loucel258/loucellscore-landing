@@ -181,7 +181,7 @@ export function RBACDemo() {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <span className="text-micro text-violet">
-              // TRUST STACK · DEMO 02
+              {"//"} TRUST STACK · DEMO 02
             </span>
             <span className="text-mono-xs text-text-tertiary">
               RBAC AT THE LLM LAYER

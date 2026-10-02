@@ -634,19 +634,17 @@ function KpiCard({
 }
 
 function AnimatedNumber({ value, className }: { value: number; className?: string }) {
-  const [display, setDisplay] = useState(0);
-  const startedRef = useRef(false);
   const reduce = useReducedMotion();
+  // One count-up from 0 toward the first value, unless the user prefers
+  // reduced motion. While it runs, `tween` holds the frame on screen; any
+  // other time (finished, cancelled, or a later value) the value shows as is.
+  const [tween, setTween] = useState<{ target: number; shown: number } | null>(() =>
+    reduce ? null : { target: value, shown: 0 },
+  );
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (reduce) {
-      setDisplay(value);
-      return;
-    }
-    if (startedRef.current) {
-      setDisplay(value);
-      return;
-    }
+    if (reduce || startedRef.current) return;
     startedRef.current = true;
     const start = performance.now();
     const duration = 950;
@@ -654,13 +652,18 @@ function AnimatedNumber({ value, className }: { value: number; className?: strin
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(eased * value));
+      setTween({ target: value, shown: Math.round(eased * value) });
       if (t < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // Interrupted (new value, unmount): stop showing the count-up frame.
+      setTween(null);
+    };
   }, [value, reduce]);
 
+  const display = tween && tween.target === value ? tween.shown : value;
   return <span className={className}>{display}</span>;
 }
 

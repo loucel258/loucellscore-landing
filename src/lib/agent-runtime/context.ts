@@ -1,9 +1,11 @@
 import "server-only";
 import type { BookingToolCtx } from "@/lib/booking/tools";
 import type { ModelRole } from "@/lib/ai/models";
+import { usageTokens, type UsageLike } from "@/lib/agents/budget";
 import type { AgentConfig } from "./config";
 import type { TurnDeps } from "./deps";
 import type { ServiceLite } from "./store";
+import type { PendingAction } from "./pending-action";
 import type { Channel, HistoryTurn, Inbound, Locale } from "./types";
 import { escalate, type EscalationRequest, type EscalationResult } from "./steps/escalate";
 
@@ -82,15 +84,33 @@ export type TurnContext = {
   toolsUsed: string[];
   /** Prior turns (set by loadHistory, or preset by a caller). */
   history: HistoryTurn[] | null;
+  /**
+   * Web: where loadHistory got the prior turns. "server" = this session's
+   * stored transcript; "new" = the session has no stored transcript yet;
+   * "client_only" = the stored transcript was not used (unreadable,
+   * unanchored, or a fresh session). null = history not loaded this turn.
+   */
+  historySource: "server" | "new" | "client_only" | null;
   /** SMS: active services for the prompt (loaded, or preset). */
   services: ServiceLite[] | null;
   /** SMS: booking tool scope, bound to this workspace + contact. */
   booking: BookingToolCtx | null;
   /** SMS: messages_log id of the claimed inbound row. */
   claimedId: string | null;
+  /**
+   * SMS: a live pending action (awaiting the customer's YES / NO) that this
+   * message did not answer. Shown to the model as context; never executed by it.
+   */
+  pendingAction: PendingAction | null;
   /** First escalation of the turn (one per turn). */
   escalation: { reason: string; result: EscalationResult } | null;
   audit(fields: AuditFields): Promise<void>;
+  /**
+   * Bill one model call to the agent's monthly token budget (cache-weighted,
+   * see usageTokens). Every call a turn makes goes through here: the agent
+   * loop, the SMS triage classifier and DLP Layer 2. Never throws.
+   */
+  meter(usage: UsageLike): Promise<void>;
   /** Escalate once per turn: escalations row first, then the alert. */
   escalate(req: EscalationRequest): Promise<EscalationResult>;
 };
@@ -118,9 +138,11 @@ export function createTurnContext(inbound: Inbound, deps: TurnDeps): TurnContext
     state: {},
     toolsUsed: [],
     history: null,
+    historySource: null,
     services: null,
     booking: null,
     claimedId: null,
+    pendingAction: null,
     escalation: null,
     async audit(fields) {
       // Only hashes reach the writer: the audit chain never holds plaintext.
@@ -142,6 +164,15 @@ export function createTurnContext(inbound: Inbound, deps: TurnDeps): TurnContext
         });
       } catch (err) {
         console.warn("[agent-runtime] audit write failed:", err instanceof Error ? err.name : "error");
+      }
+    },
+    async meter(usage) {
+      const u = usageTokens(usage);
+      if (u.tokensIn <= 0 && u.tokensOut <= 0) return;
+      try {
+        await deps.recordUsage(inbound.agent.workspaceId, u.tokensIn, u.tokensOut, inbound.agent.monthlyTokenBudget);
+      } catch (err) {
+        console.warn("[agent-runtime] usage record failed:", err instanceof Error ? err.name : "error");
       }
     },
     async escalate(req) {

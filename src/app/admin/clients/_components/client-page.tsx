@@ -58,6 +58,8 @@ import { ServiceUnavailable } from "@/components/workspace/service-unavailable";
 import { AddNote, AddTask, LifecycleSelect, TaskToggle } from "@/app/admin/crm/[accountId]/account-actions";
 import { ConfigPanel } from "@/app/admin/agent/[id]/config-panel";
 import { IntegrationsPanel } from "@/app/admin/agent/[id]/integrations-panel";
+import { HoursPanel } from "@/app/admin/agent/[id]/hours-panel";
+import { readHoursConfig, timeZoneOptions } from "@/lib/admin/business-hours";
 import { NewAgentForm } from "@/app/admin/agents/new-agent-form";
 import { ConversationsTab } from "@/app/admin/engagement/[id]/tabs/conversations";
 import { HitlTab } from "@/app/admin/engagement/[id]/tabs/hitl";
@@ -672,6 +674,7 @@ async function SetupTab({
 
       {ordered.map((a) => {
         const portal = portalForAgent(a, d.portals);
+        const hoursCfg = readHoursConfig(a.integrations);
         return (
           <section key={a.id} id={agentAnchor(a.id)} className="scroll-mt-40">
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
@@ -717,6 +720,13 @@ async function SetupTab({
                     isHouseAgent: a.slug !== null && HOUSE_AGENT_SLUGS.has(a.slug),
                   }}
                   baseUrl={url}
+                />
+                <HoursPanel
+                  agentId={a.id}
+                  hours={hoursCfg.hours}
+                  timezone={hoursCfg.timezone}
+                  calendarTimezone={hoursCfg.calendarTimezone}
+                  timeZoneGroups={timeZoneOptions(hoursCfg.timezone ?? hoursCfg.calendarTimezone)}
                 />
                 <IntegrationsPanel agentId={a.id} integrations={a.integrations} />
               </>

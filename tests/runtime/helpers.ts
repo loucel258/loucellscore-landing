@@ -101,6 +101,8 @@ export type MemoryStore = RuntimeStore & {
   pending: { pending: number; duplicate: boolean };
   services: ServiceLite[];
   optedOut: string[];
+  /** contacts.metadata by contact id. */
+  metadata: Map<string, Record<string, unknown>>;
 };
 
 export function memoryStore(): MemoryStore {
@@ -115,6 +117,7 @@ export function memoryStore(): MemoryStore {
     pending: { pending: 0, duplicate: false },
     services: [{ id: "svc_gel", name: "Gel", duration_min: 60, price_cents: 4500 }],
     optedOut: [],
+    metadata: new Map(),
     async isPaused(_eng, key) {
       return store.paused.has(key);
     },
@@ -182,6 +185,25 @@ export function memoryStore(): MemoryStore {
     async optIn(_ws, contactId) {
       for (const c of store.contacts.values()) if (c.id === contactId) c.opted_out = false;
     },
+    async getPendingAction(_ws, contactId) {
+      return store.metadata.get(contactId)?.pending_action ?? null;
+    },
+    async setPendingAction(_ws, contactId, action) {
+      store.calls.push("setPendingAction");
+      store.metadata.set(contactId, { ...(store.metadata.get(contactId) ?? {}), pending_action: action });
+      return true;
+    },
+    async takePendingAction(_ws, contactId, actionId) {
+      // Same compare-and-swap contract as the Supabase store.
+      const meta = store.metadata.get(contactId);
+      const current = meta?.pending_action as { id?: string } | undefined;
+      if (!meta || current?.id !== actionId) return false;
+      const rest = { ...meta };
+      delete rest.pending_action;
+      store.metadata.set(contactId, rest);
+      store.calls.push("takePendingAction");
+      return true;
+    },
   };
   return store;
 }
@@ -201,7 +223,10 @@ export function fakeDeps(store: MemoryStore, client: { messages: { create: Retur
     isBudgetExhausted: vi.fn(async () => false),
     recordUsage: vi.fn(async () => {}),
     sanitize,
-    sanitizeWithLLM: vi.fn(async (t: string) => ({ ...sanitize(t), layer2Used: true, layer2Available: false })),
+    sanitizeWithLLM: vi.fn(async (t: string) => ({
+      result: { ...sanitize(t), layer2Used: true, layer2Available: false },
+      usage: null,
+    })),
     writeAudit: vi.fn(async (e: AuditEntry) => {
       audits.push(e);
       return { ok: true };
@@ -213,7 +238,10 @@ export function fakeDeps(store: MemoryStore, client: { messages: { create: Retur
     }),
     insertLead: vi.fn(async () => ({ ok: true as const, leadId: "lead_1" })),
     propose: vi.fn(async () => ({ ok: true as const, data: { id: "appr_1" } as never })),
-    classifyIntent: vi.fn(async () => ({ intent: "book" as const, confidence: "high" as const })),
+    classifyIntent: vi.fn(async () => ({
+      result: { intent: "book" as const, confidence: "high" as const },
+      usage: null,
+    })),
     resolveBookingBackend: vi.fn(async () => ({ mode: "local" as const })),
     dispatchBookingTool: vi.fn(async () => ({ content: JSON.stringify({ slots: [] }) })),
     decrypt: (_eng: string, cipher: string) => {

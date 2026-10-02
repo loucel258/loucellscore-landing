@@ -1,4 +1,5 @@
 import type { AgentConfig } from "./config";
+import type { SessionTrust } from "./session-token";
 
 /**
  * Shared vocabulary of the agent runtime. A channel adapter (channels/web.ts,
@@ -12,7 +13,12 @@ export type Locale = "en" | "es";
 
 /** Which conversation the turn belongs to. Never taken from the model. */
 export type ConvRef =
-  | { kind: "session"; sessionId: string }
+  | {
+      kind: "session";
+      sessionId: string;
+      /** Web: what the signed session token said (see session-token.ts). Absent = "unverified". */
+      trust?: SessionTrust;
+    }
   | {
       kind: "contact";
       contactId: string;

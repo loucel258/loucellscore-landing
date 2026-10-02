@@ -4,7 +4,7 @@ import { getClaudeClient } from "@/lib/ai/claude-client";
 import { sendInternalAlert } from "@/lib/notify/resend";
 import { resolveBookingBackend } from "@/lib/integration/agent-client";
 import { sanitize } from "@/lib/dlp/sanitizer";
-import { classifyIntent } from "./intent";
+import { classifyIntentMetered } from "./intent";
 import { dispatchBookingTool } from "./tools";
 import type { BusinessHours } from "./availability";
 import { toAgentConfig, type AgentConfig } from "@/lib/agent-runtime/config";
@@ -112,13 +112,13 @@ export async function runFrontDeskTurn(
       usage.tokensOut += tokensOut;
     },
     sanitize,
-    sanitizeWithLLM: async (text) => sanitize(text),
+    sanitizeWithLLM: async (text) => ({ result: sanitize(text), usage: null }),
     writeAudit: async () => undefined,
     persistTurn: async () => undefined,
     sendAlert: sendInternalAlert,
     insertLead: async () => ({ ok: false, reason: "no_client" }),
     propose: async () => ({ ok: false, reason: "not_configured" }),
-    classifyIntent,
+    classifyIntent: classifyIntentMetered,
     resolveBookingBackend,
     dispatchBookingTool,
     decrypt: () => "",

@@ -1,0 +1,45 @@
+name: frequent-ops
+
+# Jobs that must run more often than Vercel Hobby's once-a-day crons allow.
+# GitHub may delay scheduled runs by a few minutes under load; both jobs are
+# safe to run late or twice (the sweep is idempotent, alerts dedupe for 6h).
+#   - chat-health-alerts: its "chat unavailable in the last 15 min" rule is
+#     only meaningful if it runs about every 15 minutes.
+#   - HITL orphan sweep: rolls approvals stuck in 'approving' back to
+#     'pending' (stale after 90s). Nothing else schedules it.
+# Scheduled workflows only run from the default branch, so this takes effect
+# when it reaches main.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: frequent-ops
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Health alerts and approval sweep
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repo secret is not set"; exit 1
+          fi
+          fail=0
+          for path in /api/cron/chat-health-alerts /api/admin/hitl/sweep; do
+            code=$(curl -sS -L -o /tmp/resp.json -w "%{http_code}" -X POST \
+              --max-time 60 \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "https://www.loucellscore.com$path")
+            echo "$path -> HTTP $code"; echo "Response: $(head -c 400 /tmp/resp.json)"
+            if [ "$code" != "200" ]; then
+              echo "::error::$path returned $code (401/403 = secret mismatch)"; fail=1
+            fi
+          done
+          exit $fail

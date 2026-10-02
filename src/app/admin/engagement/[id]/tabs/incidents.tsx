@@ -3,6 +3,7 @@ import { Panel } from "@/components/workspace/panel";
 import { Metric, MetricRow } from "@/components/workspace/metric";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { formatShortDate } from "@/lib/admin/format";
+import { DAY_MS, cutoffMs } from "@/lib/admin/cutoffs";
 import type { IncidentRow } from "../types";
 
 const SEVERITY_TONES: Record<IncidentRow["severity"], { label: string; cls: string }> = {
@@ -19,8 +20,9 @@ export function IncidentsTab({
 }) {
   const open = incidents.filter((i) => !i.resolved_at);
   const resolved = incidents.filter((i) => i.resolved_at);
+  const since30d = cutoffMs(30 * DAY_MS);
   const resolved30d = resolved.filter(
-    (i) => i.resolved_at && Date.now() - new Date(i.resolved_at).getTime() < 30 * 86400_000,
+    (i) => i.resolved_at && new Date(i.resolved_at).getTime() > since30d,
   );
 
   // Mean time to resolution (in hours), only over resolved
