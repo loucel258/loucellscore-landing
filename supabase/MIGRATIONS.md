@@ -47,3 +47,4 @@ encrypted transcripts → leads).
 | 064 | ✅ `grant execute` on `admin_workspace_metrics` to `loucels_dashboard_read` (admin pages use the RPC instead of paging). Applied 2026-10-01, verified with the read role |
 | 065 | ✅ `appointments.price_cents` (booking price from the external app), `vault_presence()` (presence only, no secrets), read grants for `loucels_dashboard_read` on front-desk tables. Applied 2026-10-01, verified with the read role |
 | 066 | ✅ `client_reports` (weekly reports: drafted by cron, sent only on admin approval). Applied 2026-10-01, verified |
+| 067 | ✅ `customers.phone` (text-only customers; legacy "tel:" rows moved) + `retainer_payments` (append-only, admin read role can select, anon 401). Applied 2026-10-02, verified |
