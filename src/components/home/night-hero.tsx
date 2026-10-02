@@ -393,7 +393,14 @@ function PinnedNight({ copy, ff }: { copy: HomeCopy["hero"]; ff: FormFactor | nu
           className="pointer-events-none absolute inset-x-0 top-[38%] z-10 text-center md:top-1/2"
           style={{ opacity: passIn, y: passY }}
         >
-          <p className="lc-h2 mx-auto max-w-[16ch] px-4 text-bone">{copy.nightPass}</p>
+          {/* Two more log lines from the same night, one per line. */}
+          <p className="lc-h2 mx-auto max-w-[34ch] px-4 text-balance text-bone">
+            {copy.nightPass.split(/(?<=\.)\s+/).map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </p>
         </motion.div>
 
         {/* MORNING REPORT */}

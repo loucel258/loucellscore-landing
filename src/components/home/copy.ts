@@ -318,7 +318,7 @@ const en: HomeCopy = {
       { t: "9:49 PM", who: "Needs you", text: "The customer asked for 10% off. Discounts need your approval.", kind: "hold" },
       { t: "9:49 PM", who: "Logged", text: "Each step saved to the audit log", kind: "sys" },
     ],
-    nightPass: "Two more people wrote before morning. Both got an answer.",
+    nightPass: "11:58 PM, a pool leak. 2:14 AM, a quote request in Spanish.",
     morning: {
       label: "Morning report",
       title: "Good morning.",
@@ -648,7 +648,7 @@ const es: HomeCopy = {
       { t: "9:49 PM", who: "Te necesita", text: "El cliente pidió 10% de descuento. Los descuentos necesitan tu aprobación.", kind: "hold" },
       { t: "9:49 PM", who: "Registrado", text: "Cada paso quedó guardado en el registro", kind: "sys" },
     ],
-    nightPass: "Dos personas más escribieron antes del amanecer. Las dos recibieron respuesta.",
+    nightPass: "11:58 PM, una fuga en la piscina. 2:14 AM, una cotización en inglés.",
     morning: {
       label: "Reporte de la mañana",
       title: "Buenos días.",
