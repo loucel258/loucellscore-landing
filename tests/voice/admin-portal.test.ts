@@ -158,7 +158,7 @@ describe("portal: calls in the inbox", () => {
   it("attaches caller, duration and outcome from voice_calls", () => {
     const threads = buildThreads({ webMessages: [msg("call_CA1", "user", "2026-10-02T10:00:00Z")], smsMessages: [] });
     const [th] = applyCallMeta(threads, [{ call_sid: "CA1", caller: "+13055551234", duration_sec: 125, outcome: "booked" }]);
-    expect(th!.call).toEqual({ durationSec: 125, outcome: "booked" });
+    expect(th!.call).toEqual({ durationSec: 125, outcome: "booked", summary: null });
     expect(threadDisplayName(th!, "Visitor")).toBe("(305) 555-1234");
     expect(formatCallLength(125)).toBe("2 min 05 s");
     expect(formatCallLength(45)).toBe("45 s");

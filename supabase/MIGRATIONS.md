@@ -52,3 +52,4 @@ encrypted transcripts → leads).
 | 069 | ✅ `portal_users` (per-person portal logins, owner/staff) + `client_portal_access.shared_passcode_enabled`. Admin read role sees no passcode columns (403 verified); anon 401. Applied 2026-10-02, verified |
 | 070 | ✅ `agent_config_versions` (append-only signed snapshot of each agent config change; anon denied). Applied 2026-10-02, verified |
 | 071 | ✅ `voice_calls` (one row per phone call: caller, caller_verified via SHAKEN/STIR, duration, outcome) + `escalations.channel` accepts `voice`. Anon 401, admin read role 200. Applied 2026-10-02, verified |
+| 072 | ✅ `voice_calls.summary_cipher` (encrypted one-line note per call, written after the call ends). Service 200, anon 401, admin read role 200. Applied 2026-10-03, verified |

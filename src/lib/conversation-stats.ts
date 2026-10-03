@@ -23,7 +23,35 @@ export type ConversationStats = {
   /** Median seconds from an inbound SMS to the next outbound reply; null without SMS. */
   smsMedianReplySec: number | null;
   dispositions: Record<Disposition, number>;
+  /** Conversations per channel (they add up to `conversations`). */
+  byChannel: { web: number; sms: number; phone: number };
+  /** Phone calls in the window (voice_calls, migration 071); null when there were none. */
+  calls: CallStats | null;
 };
+
+export type CallStats = {
+  answered: number;
+  /** Put through to a person live. */
+  transferred: number;
+  /** A person has to call back (escalated, not transferred). */
+  callbacks: number;
+  booked: number;
+  /** Average length of calls with a known duration, seconds; null when none ended yet. */
+  avgDurationSec: number | null;
+};
+
+/** Pure: voice_calls rows → call numbers. */
+export function callStats(rows: Array<{ outcome: string | null; duration_sec: number | null }>): CallStats | null {
+  if (rows.length === 0) return null;
+  const durations = rows.map((r) => r.duration_sec).filter((d): d is number => typeof d === "number" && d >= 0);
+  return {
+    answered: rows.filter((r) => r.outcome !== "abandoned").length,
+    transferred: rows.filter((r) => r.outcome === "transferred").length,
+    callbacks: rows.filter((r) => r.outcome === "escalated").length,
+    booked: rows.filter((r) => r.outcome === "booked").length,
+    avgDurationSec: durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null,
+  };
+}
 
 /** Hour-of-week check in the business time zone. */
 export function isAfterHours(iso: string, timeZone: string, hours: BusinessHours = DEFAULT_BUSINESS_HOURS): boolean {
@@ -73,7 +101,7 @@ export async function loadConversationStats(
   // Paged: PostgREST caps each response at 1000 rows, and these are read
   // oldest-first, so a plain .limit() would silently drop the newest rows.
   const none = Promise.resolve({ rows: [] as never[], error: null, truncated: false });
-  const [auditPage, leadsPage, smsPage] = await Promise.all([
+  const [auditPage, leadsPage, smsPage, callsPage] = await Promise.all([
     ws.length
       ? fetchAllRows<{ user_id: string | null; reason: string; source: string; inserted_at: string }>((from, to) =>
           sb
@@ -110,6 +138,19 @@ export async function loadConversationStats(
             .range(from, to),
         )
       : none,
+    // An older database without voice_calls reads as "no calls".
+    ws.length
+      ? fetchAllRows<{ outcome: string | null; duration_sec: number | null }>((from, to) =>
+          sb
+            .from("voice_calls")
+            .select("outcome, duration_sec")
+            .in("workspace_id", ws)
+            .gte("started_at", sinceIso)
+            .order("started_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        )
+      : none,
   ]);
   const auditRes = { data: auditPage.rows };
   const leadsRes = { data: leadsPage.rows };
@@ -117,8 +158,16 @@ export async function loadConversationStats(
 
   // Web: one conversation per customer session.
   const sessions = new Map<string, { firstAt: string; reasons: string[] }>();
+  // SMS turns are audited under "sms_<contactId>"; SMS conversations are counted
+  // from messages_log below, so here they only lend their reasons (no double count).
+  const smsReasons = new Map<string, string[]>();
   for (const r of (auditRes.data as Array<{ user_id: string | null; reason: string; source: string; inserted_at: string }> | null) ?? []) {
     if (!isCustomerSession(r.user_id) || r.source === "vault" || r.source === "rbac") continue;
+    if (r.user_id.startsWith("sms_")) {
+      const contactId = r.user_id.slice(4);
+      smsReasons.set(contactId, [...(smsReasons.get(contactId) ?? []), r.reason]);
+      continue;
+    }
     const s = sessions.get(r.user_id) ?? { firstAt: r.inserted_at, reasons: [] };
     s.reasons.push(r.reason);
     sessions.set(r.user_id, s);
@@ -150,7 +199,7 @@ export async function loadConversationStats(
       if (!smsConversations.has(key)) {
         smsConversations.add(key);
         if (isAfterHours(m.created_at, scope.timeZone, hours)) afterHours++;
-        dispositions.answered++;
+        dispositions[dispositionFor(smsReasons.get(m.contact_id) ?? [], null)]++;
       }
       if (!pending.has(m.contact_id)) pending.set(m.contact_id, m.created_at);
     } else {
@@ -165,8 +214,12 @@ export async function loadConversationStats(
   replySecs.sort((a, b) => a - b);
 
   const conversations = sessions.size + smsConversations.size;
+  let phone = 0;
+  for (const id of sessions.keys()) if (id.startsWith("call_")) phone++;
   return {
     conversations,
+    byChannel: { web: sessions.size - phone, sms: smsConversations.size, phone },
+    calls: callsPage.error ? null : callStats(callsPage.rows),
     afterHours,
     afterHoursShare: conversations > 0 ? afterHours / conversations : null,
     smsMedianReplySec: replySecs.length ? replySecs[Math.floor(replySecs.length / 2)]! : null,

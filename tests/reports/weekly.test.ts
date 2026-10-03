@@ -119,6 +119,17 @@ describe("renderWeeklyReport", () => {
     for (const s of [r.subject, r.text, r.html]) expect(s).not.toMatch(DASHES);
   });
 
+  it("lists phone calls when there were any", () => {
+    const calls = { answered: 9, transferred: 2, callbacks: 1, booked: 3 };
+    expect(renderWeeklyReport({ ...sample, calls }).text).toContain(
+      "Phone calls answered: 9 (3 booked on the call, 2 put through to you, 1 to call back)",
+    );
+    expect(renderWeeklyReport({ ...sample, locale: "es", calls }).text).toContain(
+      "Llamadas atendidas: 9 (3 con cita agendada en la llamada, 2 pasadas a ti, 1 para devolver la llamada)",
+    );
+    expect(renderWeeklyReport(sample).text).not.toContain("Phone calls");
+  });
+
   it("says plainly when the week was quiet and escapes names", () => {
     const r = renderWeeklyReport({
       ...sample,
@@ -229,6 +240,7 @@ describe("buildWeeklyReport (fake client)", () => {
       web: { state: "active", lastCustomerAt: null },
       sms: { state: sms, credentials: false, fromNumber: false, lastInboundAt: null },
       reminders: { state: "off", lastSentAt: null, sent30d: 0 },
+      phone: { state: "off", provider: "twilio_cr", missing: [], lastCallAt: null, calls30d: 0 },
       booking: { mode: "none", linkConfigured: false, backendCredential: false, state: "off" },
       lastCustomerAt: null,
       noTrafficDays: null,

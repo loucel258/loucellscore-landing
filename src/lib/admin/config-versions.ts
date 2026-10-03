@@ -201,7 +201,19 @@ export function lineDiff(a: string, b: string): LineDiffOp[] {
 // ── Restore ────────────────────────────────────────────────────────────────
 
 /** integrations keys the update route can write (everything else is shown in the diff, never restored). */
-export const RESTORABLE_INTEGRATIONS = ["calendar", "reminders", "locale", "booking"] as const;
+export const RESTORABLE_INTEGRATIONS = ["calendar", "reminders", "locale", "booking", "voice"] as const;
+
+/** Phone settings a restore may put back. Never the Vapi secret (snapshots don't hold it). */
+const RESTORABLE_VOICE = [
+  "enabled",
+  "provider",
+  "voice_en",
+  "voice_es",
+  "default_lang",
+  "transfer_number",
+  "recording_notice",
+  "max_call_minutes",
+];
 
 const pick = (o: Record<string, unknown>, keys: string[]) =>
   Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
@@ -228,6 +240,11 @@ export function restoreInputFromSnapshot(s: ConfigSnapshot): Record<string, unkn
     integrations.reminders = pick(reminders, ["enabled", "lead_hours", "channel", "from_number"]);
   }
   if (integ.locale === "en" || integ.locale === "es") integrations.locale = integ.locale;
+  // Turning voice back on still goes through the route's checks (credentials, Vapi secret).
+  const voice = Object.fromEntries(
+    Object.entries(pick(asRecord(integ.voice), RESTORABLE_VOICE)).filter(([, v]) => v !== null),
+  );
+  if (Object.keys(voice).length > 0) integrations.voice = voice;
 
   return {
     name: s.name || undefined,

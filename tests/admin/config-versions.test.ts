@@ -128,6 +128,20 @@ describe("snapshots and diffs", () => {
     });
     expect(JSON.stringify(input)).not.toContain("Policies"); // kb is not restorable
   });
+
+  it("restores phone settings but never the Vapi secret", () => {
+    const row = agentRow() as Record<string, unknown>;
+    const snap = snapshotFromRow({
+      ...row,
+      integrations: {
+        ...((row.integrations as Record<string, unknown>) ?? {}),
+        voice: { enabled: true, provider: "vapi", voice_es: "VOICE_ES", transfer_number: null, vapi_secret_hash: "abc123" },
+      },
+    } as never);
+    const input = restoreInputFromSnapshot(snap) as { integrations: { voice?: Record<string, unknown> } };
+    expect(input.integrations.voice).toEqual({ enabled: true, provider: "vapi", voice_es: "VOICE_ES" });
+    expect(JSON.stringify(input)).not.toContain("abc123");
+  });
 });
 
 describe("update route: versions", () => {

@@ -11,6 +11,9 @@ import { toAgentConfig, type AgentConfig } from "../config";
 import { createTurnContext } from "../context";
 import { withDeps, type TurnDeps } from "../deps";
 import { runTurnWithContext } from "../runtime";
+import { after } from "next/server";
+import { encryptMessage } from "@/lib/portal/encrypt";
+import { summarizeCall } from "../call-summary";
 import { aiDisclosure, voiceWelcome } from "../disclosure";
 import { voiceBudgetNotice, voiceFallback, voiceFiller, voiceRateLimited, voiceTimeLimit } from "../copy";
 import type { VoiceOutcome } from "../store";
@@ -36,10 +39,29 @@ export type VoiceDeps = TurnDeps & {
   resolveAgent: typeof resolveAgent;
   /** HKDF key for turn signatures; null = voice off (fail closed). */
   voiceKey: () => Buffer | null;
+  encrypt: (engagementId: string, plaintext: string) => string;
+  /** Work that must not hold the response (the call summary). Next's after() in production. */
+  afterResponse: (task: () => Promise<unknown>) => void;
 };
 
+function runAfterResponse(task: () => Promise<unknown>): void {
+  const safe = () => task().catch(() => undefined);
+  try {
+    after(safe);
+  } catch {
+    // Outside a request scope (scripts): just start it.
+    void safe();
+  }
+}
+
 export function voiceDeps(overrides?: Partial<VoiceDeps>): VoiceDeps {
-  return { resolveAgent, voiceKey: () => voiceKeyFromEnv(), ...withDeps(overrides) };
+  return {
+    resolveAgent,
+    voiceKey: () => voiceKeyFromEnv(),
+    encrypt: encryptMessage,
+    afterResponse: runAfterResponse,
+    ...withDeps(overrides),
+  };
 }
 
 const E164 = /^\+[1-9]\d{7,14}$/;
@@ -260,8 +282,9 @@ export async function runVoiceEvent(
 
   // ── end ──────────────────────────────────────────────────────────────────
   if (body.event === "end") {
+    let call: Awaited<ReturnType<NonNullable<NonNullable<typeof store>["getVoiceCall"]>>> = null;
     try {
-      const call = await store?.getVoiceCall?.(ws, sid);
+      call = (await store?.getVoiceCall?.(ws, sid)) ?? null;
       const durationSec = call ? Math.max(0, Math.round((deps.now() - Date.parse(call.started_at)) / 1000)) : undefined;
       await store?.updateVoiceCall?.(ws, sid, {
         endedAt: startedIso,
@@ -272,6 +295,9 @@ export async function runVoiceEvent(
     } catch {
       // best-effort
     }
+    // The owner's one-line note for the inbox, after the response (the gateway doesn't wait).
+    const lang: Locale = call?.language === "en" || call?.language === "es" ? call.language : baseLocale;
+    deps.afterResponse(() => summarizeCall(deps, config, sid, lang));
     return;
   }
 

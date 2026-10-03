@@ -126,3 +126,21 @@ Twilio number setup (outside the code)
 - Primary voice webhook: `POST https://<app>/api/agent/<slug>/voice/incoming`.
 - **Fallback URL** ("Primary handler fails"): a TwiML Bin that forwards to the owner's phone (`<Dial>`), so if the app itself is down the call still reaches a person.
 
+
+## Portal and admin (2026-10-03, competitor parity)
+
+Checked against the receptionist dashboards in `docs/medibilidad-portal-admin-2026-10-01.md` (My AI Front Desk, Zenoti, Smith.ai, Goodcall, GoHighLevel/Synthflow for the agency side).
+
+Portal
+- **Per-call summary** (Smith.ai, Zenoti): after the call ends, Haiku writes one or two sentences from the call's transcript (no tools, budget-metered, DLP-masked, encrypted in `voice_calls.summary_cipher`, migration 072, audited as `voice_call_summary`). Shown as the inbox preview and above the transcript. Runs in `after()`, so the gateway never waits.
+- **Conversations by channel** (My AI Front Desk): "Phone 12 · Chat 5 · Text 3" under the conversations number; a calls line: answered, booked on the call, put through, to call back, average length. Same numbers in the Monday report.
+- **Callbacks** in "Needs you" say "Call them back", show the caller's number, and open the call (not the caller's text thread).
+- **"What's working"** has a phone row (live, last call, calls in 30 days; "needs setup" without naming what is missing).
+- **Revenue attribution counts calls**: a call answered by the agent before a booking makes it "influenced", like an inbound text.
+
+Admin
+- Phone line in client health (working / not live / what is missing: Twilio keys, Vapi secret, gateway env), phone chip in the client list, "live but silent" counts calls as activity.
+- **Phone cost**: minutes per client (each call rounded up) at `VOICE_USD_PER_MIN` (default $0.0785 = ConversationRelay $0.07 + inbound minute), added to spend, cost per conversation and margin. Never shown in the portal.
+- Restoring an agent version also restores its phone settings (never the Vapi secret).
+
+Also fixed on the way: each SMS conversation was counted twice in the portal's conversation total (once from the audit session, once from messages_log).

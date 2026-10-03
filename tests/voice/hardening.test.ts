@@ -157,3 +157,40 @@ describe("gateway monitoring", () => {
     expect(await checkVoiceGateway("voice.example.com", down)).toMatchObject({ configured: true, ok: false });
   });
 });
+
+describe("call summary for the owner", () => {
+  const transcript = [
+    { role: "assistant" as const, cipher_b64: "enc:Hola, soy el asistente virtual.", engagement_id: "e", inserted_at: "1" },
+    { role: "user" as const, cipher_b64: "enc:quiero una limpieza el martes", engagement_id: "e", inserted_at: "2" },
+    { role: "assistant" as const, cipher_b64: "enc:Listo, quedó el martes a las tres.", engagement_id: "e", inserted_at: "3" },
+  ];
+
+  it("after the call ends: one Haiku note, DLP-masked, encrypted, audited, metered", async () => {
+    const s = setup({ model: streamingModel(textMsg("Quería una limpieza; quedó agendada el martes a las 3. Su tarjeta 4111 1111 1111 1111.")) });
+    await readEvents(await call(s, { event: "start" }));
+    s.store.transcripts.set("ws_test:call_CA1", transcript);
+    const res = await call(s, { event: "end" });
+    await res.text();
+    expect(s.model.create).not.toHaveBeenCalled(); // nothing before the response
+    await s.runAfter();
+    expect(s.model.create).toHaveBeenCalledTimes(1);
+    const body = (s.model.create.mock.calls as unknown as unknown[][])[0]![0] as { max_tokens: number; tools?: unknown; messages: { content: string }[] };
+    expect(body.max_tokens).toBe(160);
+    expect(body.tools).toBeUndefined(); // no tools: it can only write text
+    expect(body.messages[0]!.content).toContain("Cliente: quiero una limpieza el martes");
+    const stored = (s.store.calls_.get("CA1") as { summary_cipher?: string }).summary_cipher!;
+    expect(stored.startsWith("enc:")).toBe(true);
+    expect(stored).not.toContain("4111 1111 1111 1111");
+    expect(s.audits.some((a) => a.reason === "voice_call_summary")).toBe(true);
+    expect(s.deps.recordUsage).toHaveBeenCalled();
+  });
+
+  it("no summary when the caller never spoke", async () => {
+    const s = setup({ model: streamingModel(textMsg("x")) });
+    await readEvents(await call(s, { event: "start" }));
+    s.store.transcripts.set("ws_test:call_CA1", [transcript[0]!]);
+    await (await call(s, { event: "end" })).text();
+    await s.runAfter();
+    expect(s.model.create).not.toHaveBeenCalled();
+  });
+});

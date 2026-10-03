@@ -20,6 +20,12 @@ import { getWorkspaceMetrics } from "@/lib/metrics";
 
 const HAIKU_INPUT_USD_PER_1M = Number(process.env.HAIKU_INPUT_USD_PER_1M ?? "1.00");
 const HAIKU_OUTPUT_USD_PER_1M = Number(process.env.HAIKU_OUTPUT_USD_PER_1M ?? "5.00");
+/**
+ * Phone minute, estimated: Twilio ConversationRelay ($0.07/min, includes the
+ * speech-to-text and the voice) + a Twilio inbound local minute (~$0.0085).
+ * Override with VOICE_USD_PER_MIN when the real invoice says otherwise.
+ */
+export const VOICE_USD_PER_MIN = Number(process.env.VOICE_USD_PER_MIN ?? "0.0785");
 
 export type CostWindow = "24h" | "7d" | "30d" | "all";
 
@@ -37,6 +43,10 @@ export type CostBreakdown = {
   /** Customer conversations, from the shared metrics (lib/metrics.ts). */
   conversations: number;
   trendDaily: Array<{ date: string; usd: number }>;
+  /** Phone calls in the window (voice_calls), their minutes and estimated cost. */
+  calls: number;
+  phoneMinutes: number;
+  phoneUsd: number;
 };
 
 const EMPTY_BREAKDOWN: CostBreakdown = {
@@ -45,6 +55,9 @@ const EMPTY_BREAKDOWN: CostBreakdown = {
   estimatedUsd: 0,
   conversations: 0,
   trendDaily: [],
+  calls: 0,
+  phoneMinutes: 0,
+  phoneUsd: 0,
 };
 
 /**
@@ -69,7 +82,7 @@ export async function getCostBreakdown(
   const windowMs = WINDOW_MS[window];
   const since = windowMs === null ? new Date(0) : new Date(Date.now() - windowMs);
 
-  const metrics = await getWorkspaceMetrics(sb, ids, since);
+  const [metrics, phone] = await Promise.all([getWorkspaceMetrics(sb, ids, since), phoneUsage(sb, ids, since)]);
   let inTok = 0;
   let outTok = 0;
   let conversations = 0;
@@ -85,7 +98,36 @@ export async function getCostBreakdown(
     estimatedUsd: tokensToUsd(inTok, outTok),
     conversations,
     trendDaily: opts.trend === false ? [] : await dailyTrend(sb, ids, since),
+    ...phone,
   };
+}
+
+/** Minutes billed per call (Twilio rounds each call up to the minute). */
+export function billedMinutes(durations: Array<number | null>): number {
+  return durations.reduce<number>((sum, d) => sum + (typeof d === "number" && d > 0 ? Math.ceil(d / 60) : 0), 0);
+}
+
+async function phoneUsage(
+  sb: SupabaseClient,
+  ids: string[],
+  since: Date,
+): Promise<Pick<CostBreakdown, "calls" | "phoneMinutes" | "phoneUsd">> {
+  const durations: Array<number | null> = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await sb
+      .from("voice_calls")
+      .select("duration_sec")
+      .in("workspace_id", ids)
+      .gte("started_at", since.toISOString())
+      .order("started_at", { ascending: true })
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    // An older database without voice_calls: no calls, no phone cost.
+    if (error || !data) break;
+    durations.push(...(data as Array<{ duration_sec: number | null }>).map((r) => r.duration_sec));
+    if (data.length < PAGE) break;
+  }
+  const phoneMinutes = billedMinutes(durations);
+  return { calls: durations.length, phoneMinutes, phoneUsd: phoneMinutes * VOICE_USD_PER_MIN };
 }
 
 const PAGE = 1000;

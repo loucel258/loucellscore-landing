@@ -122,7 +122,7 @@ export async function loadValueSummary(
     const parts = await Promise.all(chunk(ids).map((part) => fetchAllRows<T>((from, to) => page(part, from, to))));
     return { data: parts.flatMap((p) => p.rows), error: parts.find((p) => p.error)?.error ?? null };
   };
-  const [svcRes, touchRes, remRes] = await Promise.all([
+  const [svcRes, touchRes, remRes, contactRes] = await Promise.all([
     perChunk<{ id: string; price_cents: number | null }>(serviceIds, (part, from, to) =>
       sb.from("services").select("id, price_cents").in("id", part).order("id", { ascending: true }).range(from, to),
     ),
@@ -148,7 +148,37 @@ export async function loadValueSummary(
         .order("id", { ascending: true })
         .range(from, to),
     ),
+    // Phones of the booked contacts: a phone call from that number is a touch too.
+    perChunk<{ id: string; phone: string | null }>(contactIds, (part, from, to) =>
+      sb.from("contacts").select("id, phone").in("workspace_id", ws).in("id", part).order("id", { ascending: true }).range(from, to),
+    ),
   ]);
+
+  // Calls answered by the agent (voice_calls, migration 071) count like inbound texts.
+  const contactByPhone = new Map(
+    ((contactRes.data as Array<{ id: string; phone: string | null }> | null) ?? [])
+      .filter((c) => !!c.phone)
+      .map((c) => [c.phone as string, c.id]),
+  );
+  const callRes = contactByPhone.size
+    ? await perChunk<{ caller: string; started_at: string }>([...contactByPhone.keys()], (part, from, to) =>
+        sb
+          .from("voice_calls")
+          .select("caller, started_at")
+          .in("workspace_id", ws)
+          .in("caller", part)
+          .gte("started_at", touchSince)
+          .order("started_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      )
+    : { data: [] as Array<{ caller: string; started_at: string }>, error: null };
+  const callTouches: AgentTouch[] = ((callRes.data as Array<{ caller: string; started_at: string }> | null) ?? []).flatMap(
+    (c) => {
+      const contactId = contactByPhone.get(c.caller);
+      return contactId ? [{ contact_id: contactId, created_at: c.started_at }] : [];
+    },
+  );
 
   const price = new Map(
     ((svcRes.data as Array<{ id: string; price_cents: number | null }> | null) ?? []).map((s) => [
@@ -156,9 +186,13 @@ export async function loadValueSummary(
       s.price_cents,
     ]),
   );
-  const touches: AgentTouch[] = ((touchRes.data as Array<{ contact_id: string; created_at: string }> | null) ?? []).map(
-    (t) => ({ contact_id: t.contact_id, created_at: t.created_at }),
-  );
+  const touches: AgentTouch[] = [
+    ...((touchRes.data as Array<{ contact_id: string; created_at: string }> | null) ?? []).map((t) => ({
+      contact_id: t.contact_id,
+      created_at: t.created_at,
+    })),
+    ...callTouches,
+  ];
   const reminded = new Set(
     ((remRes.data as Array<{ event_id: string }> | null) ?? []).map((r) => r.event_id),
   );

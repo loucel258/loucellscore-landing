@@ -181,7 +181,11 @@ export default async function PortalHomePage({
                 rows={escalations.slice(0, 5).map((e) => ({
                   key: e.id,
                   name: nameFor(e),
-                  detail: e.summary ? `${escalationReasonLabel(lang, e.reason)} · ${e.summary}` : escalationReasonLabel(lang, e.reason),
+                  detail: (() => {
+                    // Calls: the action is the call back (the phone number is the row's name).
+                    const head = e.isCall ? t(lang, "escalation.callback") : escalationReasonLabel(lang, e.reason);
+                    return e.summary ? `${head} · ${e.summary}` : head;
+                  })(),
                   when: e.createdAt ? formatWhen(e.createdAt, lang, tz) : null,
                   href: conversationHref(slug, e),
                 }))}

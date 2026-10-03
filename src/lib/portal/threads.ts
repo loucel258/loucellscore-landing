@@ -17,6 +17,8 @@ export const isCallSession = (sessionId: string): boolean => sessionId.startsWit
 export type CallMeta = {
   durationSec: number | null;
   outcome: "answered" | "booked" | "escalated" | "transferred" | "abandoned" | null;
+  /** The owner's one-line note about the call (decrypted), when one was written. */
+  summary?: string | null;
 };
 
 export type VoiceCallLite = {
@@ -24,6 +26,8 @@ export type VoiceCallLite = {
   caller: string | null;
   duration_sec: number | null;
   outcome: string | null;
+  /** Already decrypted by the loader. */
+  summary?: string | null;
 };
 
 export type WebMessageRow = {
@@ -289,6 +293,7 @@ export function applyCallMeta(threads: ThreadSummary[], calls: readonly VoiceCal
       call: {
         durationSec: c.duration_sec,
         outcome: c.outcome && CALL_OUTCOMES.has(c.outcome) ? (c.outcome as CallMeta["outcome"]) : null,
+        summary: c.summary ?? null,
       },
     };
   });
@@ -408,6 +413,10 @@ export function conversationHref(
   slug: string,
   row: { session_id?: string | null; contact_id?: string | null },
 ): string | null {
+  // A phone call carries both the caller's contact and the call: open the call itself.
+  if (row.session_id && isCallSession(row.session_id) && SESSION_RE.test(row.session_id)) {
+    return threadHref(slug, { channel: "web", id: row.session_id });
+  }
   if (row.contact_id && UUID_RE.test(row.contact_id)) return threadHref(slug, { channel: "sms", id: row.contact_id });
   if (row.session_id && SESSION_RE.test(row.session_id)) return threadHref(slug, { channel: "web", id: row.session_id });
   return null;

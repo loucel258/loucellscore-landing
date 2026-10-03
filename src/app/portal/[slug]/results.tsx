@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertCircle, CalendarCheck, CircleDollarSign, Clock, Info, MessageSquare, Moon, Timer } from "lucide-react";
+import { AlertCircle, CalendarCheck, CircleDollarSign, Clock, Info, MessageSquare, Moon, Phone, Timer } from "lucide-react";
 import { Metric, MetricRow } from "@/components/workspace/metric";
 import { Panel } from "@/components/workspace/panel";
 import { agentBookings, type ValueSummary } from "@/lib/value";
@@ -39,6 +39,25 @@ export function ResultsSection({
   const conversations = stats?.conversations ?? null;
   const hours = conversations !== null ? hoursEstimate(conversations, minutesPerAgent) : null;
   const reply = stats?.smsMedianReplySec != null ? replyTimeParts(stats.smsMedianReplySec) : null;
+  // "Phone 12 · Chat 5 · Text 3" once more than one channel has conversations.
+  const channelParts = stats
+    ? (["phone", "web", "sms"] as const)
+        .filter((k) => stats.byChannel[k] > 0)
+        .map((k) => t(lang, `value.by_channel.${k}`, { n: stats.byChannel[k] }))
+    : [];
+  const conversationsSub = channelParts.length > 1 ? channelParts.join(" · ") : sub;
+  const calls = stats?.calls ?? null;
+  const callLine = calls && calls.answered > 0
+    ? [
+        tn(lang, "value.calls", calls.answered),
+        calls.booked > 0 ? t(lang, "value.calls_booked", { n: calls.booked }) : null,
+        calls.transferred > 0 ? t(lang, "value.calls_transferred", { n: calls.transferred }) : null,
+        calls.callbacks > 0 ? t(lang, "value.calls_callbacks", { n: calls.callbacks }) : null,
+        calls.avgDurationSec != null ? t(lang, "value.calls_avg", { m: Math.max(1, Math.round(calls.avgDurationSec / 60)) }) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
   return (
     <section aria-labelledby="results-title" className="space-y-4">
@@ -84,7 +103,7 @@ export function ResultsSection({
         <Metric
           label={t(lang, "value.conversations")}
           value={conversations ?? "-"}
-          sub={sub}
+          sub={conversationsSub}
           tone="violet"
           icon={<MessageSquare className="size-4" />}
         />
@@ -104,6 +123,9 @@ export function ResultsSection({
           <Note icon={<Moon className="size-3.5 text-violet-500" />}>
             {tn(lang, "value.after_hours", stats.conversations, { a: stats.afterHours })}
           </Note>
+        )}
+        {callLine && (
+          <Note icon={<Phone className="size-3.5 text-emerald-600" />}>{callLine}.</Note>
         )}
         {reply && (
           <Note icon={<Timer className="size-3.5 text-cyan-600" />}>

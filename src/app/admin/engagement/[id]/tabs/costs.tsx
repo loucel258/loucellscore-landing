@@ -4,7 +4,7 @@ import { Metric, MetricRow } from "@/components/workspace/metric";
 import { Sparkline, BarStrip } from "@/components/workspace/sparkline";
 import { EmptyPanel } from "@/components/workspace/empty-panel";
 import { formatUsdInt } from "@/lib/admin/format";
-import { formatUsdPrecise, type CostBreakdown } from "@/lib/admin/costs";
+import { VOICE_USD_PER_MIN, formatUsdPrecise, type CostBreakdown } from "@/lib/admin/costs";
 
 export function CostsTab({
   workspaceIds,
@@ -28,9 +28,10 @@ export function CostsTab({
     );
   }
 
-  const projected30d = cost7d.estimatedUsd * (30 / 7);
-  const avgCostPerConv =
-    cost30d.conversations > 0 ? cost30d.estimatedUsd / cost30d.conversations : 0;
+  // Claude tokens + phone minutes: both are what a client costs to serve.
+  const total30d = cost30d.estimatedUsd + cost30d.phoneUsd;
+  const projected30d = (cost7d.estimatedUsd + cost7d.phoneUsd) * (30 / 7);
+  const avgCostPerConv = cost30d.conversations > 0 ? total30d / cost30d.conversations : 0;
   const margin = monthlyRetainerUsd - projected30d;
   const marginPct = monthlyRetainerUsd > 0 ? (margin / monthlyRetainerUsd) * 100 : 0;
 
@@ -41,8 +42,12 @@ export function CostsTab({
       <MetricRow>
         <Metric
           label="Spend (30d actual)"
-          value={formatUsdPrecise(cost30d.estimatedUsd)}
-          sub="Anthropic tokens only"
+          value={formatUsdPrecise(total30d)}
+          sub={
+            cost30d.calls > 0
+              ? `Claude ${formatUsdPrecise(cost30d.estimatedUsd)} + phone ${formatUsdPrecise(cost30d.phoneUsd)} (${cost30d.phoneMinutes} min, ${cost30d.calls} call${cost30d.calls === 1 ? "" : "s"})`
+              : "Claude tokens (no phone calls)"
+          }
           tone="accent"
           icon={<Zap className="size-4" />}
         />
@@ -134,7 +139,11 @@ export function CostsTab({
             <ul className="ml-4 list-disc space-y-1 text-neutral-600">
               <li>PII blocks, origin blocks, and rate limits cost $0 (no model call).</li>
               <li>Layer-2 DLP escalations are included in input tokens.</li>
-              <li>Resend and Twilio costs are not tracked here yet.</li>
+              <li>
+                Phone minutes are estimated at ${VOICE_USD_PER_MIN.toFixed(4)} per billed minute (Twilio ConversationRelay $0.07 plus an
+                inbound minute; each call rounds up). Set VOICE_USD_PER_MIN to match the Twilio invoice.
+              </li>
+              <li>Text messages and Resend emails are not tracked here yet.</li>
             </ul>
             <p className="text-[10px] text-neutral-500">
               Estimates may differ from Anthropic&apos;s monthly invoice by ±5% due to rounding and prompt caching credits.

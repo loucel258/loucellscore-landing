@@ -287,6 +287,7 @@ const status = (over: Partial<AgentServiceStatus> = {}): AgentServiceStatus => (
   web: { state: "active", lastCustomerAt: "2026-09-30T18:00:00Z" },
   sms: { state: "off", credentials: false, fromNumber: false, lastInboundAt: null },
   reminders: { state: "off", lastSentAt: null, sent30d: 0 },
+  phone: { state: "off", provider: "twilio_cr", missing: [], lastCallAt: null, calls30d: 0 },
   booking: { mode: "none", linkConfigured: false, backendCredential: false, state: "off" },
   lastCustomerAt: "2026-09-30T18:00:00Z",
   noTrafficDays: 1,

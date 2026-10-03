@@ -29,6 +29,15 @@ export type AgentServiceStatus = {
     lastInboundAt: string | null;
   };
   reminders: { state: ChannelState; lastSentAt: string | null; sent30d: number };
+  /** Phone calls (voice channel, voice_calls from migration 071). */
+  phone: {
+    state: ChannelState;
+    provider: "twilio_cr" | "vapi";
+    /** What is missing when state is "attention" (never secret values). */
+    missing: Array<"twilio_keys" | "vapi_secret" | "gateway">;
+    lastCallAt: string | null;
+    calls30d: number;
+  };
   booking: {
     mode: "external" | "local" | "link" | "none";
     linkConfigured: boolean;
@@ -90,7 +99,7 @@ export async function loadServiceStatus(
   // push a quiet one out of the window.
   const perWs = await Promise.all(
     ws.map(async (w) => {
-      const [inbound, lastRem, remCount] = await Promise.all([
+      const [inbound, lastRem, remCount, lastCall, callCount] = await Promise.all([
         sb
           .from("messages_log")
           .select("created_at")
@@ -111,12 +120,27 @@ export async function loadServiceStatus(
           .select("id", { count: "exact", head: true })
           .eq("workspace_id", w)
           .gte("sent_at", since30),
+        // voice_calls may not exist on an older database: an error reads as "no calls".
+        sb
+          .from("voice_calls")
+          .select("started_at")
+          .eq("workspace_id", w)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        sb
+          .from("voice_calls")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", w)
+          .gte("started_at", since30),
       ]);
       return {
         w,
         lastInbound: (inbound.data as { created_at: string } | null)?.created_at ?? null,
         lastReminder: (lastRem.data as { sent_at: string } | null)?.sent_at ?? null,
         reminders30d: remCount.count ?? 0,
+        lastCall: lastCall.error ? null : ((lastCall.data as { started_at: string } | null)?.started_at ?? null),
+        calls30d: callCount.error ? 0 : (callCount.count ?? 0),
       };
     }),
   );
@@ -124,10 +148,14 @@ export async function loadServiceStatus(
 
   const lastInbound = new Map<string, string>();
   const reminders = new Map<string, { last: string | null; count: number }>();
+  const calls = new Map<string, { last: string | null; count: number }>();
   for (const r of perWs) {
     if (r.lastInbound) lastInbound.set(r.w, r.lastInbound);
     reminders.set(r.w, { last: r.lastReminder, count: r.reminders30d });
+    calls.set(r.w, { last: r.lastCall, count: r.calls30d });
   }
+  // The gateway is shared by every phone agent; only Twilio calls go through it.
+  const gatewayReady = !!process.env.VOICE_GATEWAY_URL && !!process.env.VOICE_GATEWAY_SECRET;
   const has = (w: string, provider: string) =>
     presence.some((p) => p.workspace_id === w && p.provider === provider && p.has_secret);
 
@@ -174,8 +202,21 @@ export async function loadServiceStatus(
             ? "active"
             : "off";
 
+    const call = calls.get(a.workspace_id) ?? { last: null, count: 0 };
+    const voice = cfg.voice;
+    const missing: AgentServiceStatus["phone"]["missing"] = [];
+    if (voice.enabled) {
+      if (voice.provider === "twilio_cr") {
+        if (!twilio) missing.push("twilio_keys");
+        if (!gatewayReady) missing.push("gateway");
+      } else if (!voice.vapi_secret_hash) {
+        missing.push("vapi_secret");
+      }
+    }
+    const phoneState: ChannelState = !voice.enabled ? "off" : missing.length > 0 ? "attention" : !live ? "pending" : "active";
+
     const smsLast = lastInbound.get(a.workspace_id) ?? null;
-    const lastCustomerAt = [webLast, smsLast].filter((x): x is string => !!x).sort().at(-1) ?? null;
+    const lastCustomerAt = [webLast, smsLast, call.last].filter((x): x is string => !!x).sort().at(-1) ?? null;
     const reference = lastCustomerAt ?? a.live_started_at;
     const noTrafficDays = live && reference ? Math.floor((now.getTime() - Date.parse(reference)) / DAY_MS) : null;
 
@@ -197,6 +238,7 @@ export async function loadServiceStatus(
       },
       sms: { state: smsState, credentials: twilio, fromNumber, lastInboundAt: smsLast },
       reminders: { state: remState, lastSentAt: rem.last, sent30d: rem.count },
+      phone: { state: phoneState, provider: voice.provider, missing, lastCallAt: call.last, calls30d: call.count },
       booking: { mode, linkConfigured: !!cfg.booking.link_url, backendCredential: external, state: bookingState },
       lastCustomerAt,
       noTrafficDays,

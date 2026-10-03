@@ -79,11 +79,12 @@ export async function probeMeasurementReads(
 
 // ── Plain words ──────────────────────────────────────────────────────
 
-export type ChannelKey = "web" | "sms" | "reminders" | "booking";
+export type ChannelKey = "web" | "sms" | "phone" | "reminders" | "booking";
 
 export const CHANNEL_LABEL: Record<ChannelKey, string> = {
   web: "Web chat",
   sms: "Text messages",
+  phone: "Phone calls",
   reminders: "Reminders",
   booking: "Booking",
 };
@@ -91,8 +92,15 @@ export const CHANNEL_LABEL: Record<ChannelKey, string> = {
 export const CHANNEL_SHORT: Record<ChannelKey, string> = {
   web: "Web",
   sms: "SMS",
+  phone: "Phone",
   reminders: "Reminders",
   booking: "Booking",
+};
+
+const PHONE_MISSING: Record<AgentServiceStatus["phone"]["missing"][number], string> = {
+  twilio_keys: "the Twilio keys are missing",
+  vapi_secret: "the Vapi secret was never generated",
+  gateway: "the voice gateway is not configured (VOICE_GATEWAY_URL / VOICE_GATEWAY_SECRET)",
 };
 
 export const STATE_LABEL: Record<ChannelState, string> = {
@@ -153,6 +161,17 @@ export function describeChannels(s: AgentServiceStatus, now: number = Date.now()
         ? `On, but ${missingSmsPhrase(s)}, so nothing goes out`
         : "Off";
 
+  const phone =
+    s.phone.state === "active"
+      ? s.phone.lastCallAt
+        ? `Last call ${rel(s.phone.lastCallAt)}, ${s.phone.calls30d} in the last 30 days (${s.phone.provider === "vapi" ? "Vapi" : "Twilio"})`
+        : `Ready, no calls yet (${s.phone.provider === "vapi" ? "Vapi" : "Twilio"})`
+      : s.phone.state === "attention"
+        ? `Switched on, but ${s.phone.missing.map((m) => PHONE_MISSING[m]).join(" and ")}`
+        : s.phone.state === "pending"
+          ? "Switched on, but the agent is not live yet"
+          : "Not set up";
+
   const booking = (() => {
     switch (s.booking.mode) {
       case "external":
@@ -181,6 +200,7 @@ export function describeChannels(s: AgentServiceStatus, now: number = Date.now()
   return [
     line("web", s.web.state, web),
     line("sms", s.sms.state, sms),
+    line("phone", s.phone.state, phone),
     line("reminders", s.reminders.state, reminders),
     line("booking", s.booking.state, booking),
   ];
@@ -196,9 +216,17 @@ const STATE_RANK: Record<ChannelState, number> = { attention: 3, active: 2, pend
  * not switched on. Channels that are off on every agent are left out.
  */
 export function clientChannelChips(statuses: AgentServiceStatus[]): ChannelChip[] {
-  const keys: ChannelKey[] = ["web", "sms", "reminders", "booking"];
+  const keys: ChannelKey[] = ["web", "sms", "phone", "reminders", "booking"];
   const stateOf = (s: AgentServiceStatus, k: ChannelKey): ChannelState =>
-    k === "web" ? s.web.state : k === "sms" ? s.sms.state : k === "reminders" ? s.reminders.state : s.booking.state;
+    k === "web"
+      ? s.web.state
+      : k === "sms"
+        ? s.sms.state
+        : k === "phone"
+          ? s.phone.state
+          : k === "reminders"
+            ? s.reminders.state
+            : s.booking.state;
   const chips: ChannelChip[] = [];
   for (const k of keys) {
     let best: ChannelState = "off";

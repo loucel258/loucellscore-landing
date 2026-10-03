@@ -7,7 +7,7 @@ import type { ReportLocale } from "./recipient";
  * so a sent report can always be traced back to its numbers.
  */
 
-export type ReportChannel = "web" | "sms" | "reminders" | "booking";
+export type ReportChannel = "web" | "sms" | "phone" | "reminders" | "booking";
 
 export type WeeklyReportData = {
   version: 1;
@@ -40,6 +40,8 @@ export type WeeklyReportData = {
   portalUrl: string | null;
   /** Latest daily audit-chain check across the client's workspaces (migration 068). */
   audit?: { ok: boolean; rows: number; headHash: string | null; verifiedAt: string } | null;
+  /** Phone calls (voice channel); absent or null when there were none. */
+  calls?: { answered: number; transferred: number; callbacks: number; booked: number } | null;
 };
 
 export type RenderedReport = { subject: string; html: string; text: string };
@@ -54,6 +56,8 @@ type Strings = {
   quiet: string;
   conversations: string;
   afterHours: (n: number) => string;
+  calls: string;
+  callsDetail: (booked: number, transferred: number, callbacks: number) => string;
   bookings: string;
   bookingsDetail: (direct: number, influenced: number, web: number) => string;
   revenue: string;
@@ -83,6 +87,11 @@ const EN: Strings = {
   quiet: "It was a quiet week: no customer conversations or bookings came through your assistant.",
   conversations: "Customer conversations",
   afterHours: (n) => `${n} outside business hours`,
+  calls: "Phone calls answered",
+  callsDetail: (b, tr, cb) =>
+    [b > 0 && `${b} booked on the call`, tr > 0 && `${tr} put through to you`, cb > 0 && `${cb} to call back`]
+      .filter(Boolean)
+      .join(", "),
   bookings: "Bookings your assistant made or helped make",
   bookingsDetail: (d, i, w) =>
     [d > 0 && `${d} booked by your assistant`, i > 0 && `${i} after a conversation`, w > 0 && `${w} through the booking link`]
@@ -104,7 +113,7 @@ const EN: Strings = {
   auditOk: (rows, hash) =>
     `Audit log verified: ${rows} recorded events, none altered. Chain fingerprint: ${hash}. Keep this email: if history were ever rewritten, it would no longer match this fingerprint.`,
   auditBroken: "Audit log check: we found a problem and are reviewing it. We'll write to you with details.",
-  channel: { web: "web chat", sms: "text messages", reminders: "appointment reminders", booking: "booking" },
+  channel: { web: "web chat", sms: "text messages", phone: "phone calls", reminders: "appointment reminders", booking: "booking" },
   portalCta: "Open your portal",
   portalText: (url) => `See every conversation in your portal: ${url}`,
   signoff: "Steven\nLoucells Core",
@@ -120,6 +129,11 @@ const ES: Strings = {
   quiet: "Fue una semana tranquila: no llegaron conversaciones ni citas a través de tu asistente.",
   conversations: "Conversaciones con clientes",
   afterHours: (n) => `${n} fuera del horario de atención`,
+  calls: "Llamadas atendidas",
+  callsDetail: (b, tr, cb) =>
+    [b > 0 && `${b} con cita agendada en la llamada`, tr > 0 && `${tr} pasadas a ti`, cb > 0 && `${cb} para devolver la llamada`]
+      .filter(Boolean)
+      .join(", "),
   bookings: "Citas que tu asistente hizo o ayudó a conseguir",
   bookingsDetail: (d, i, w) =>
     [d > 0 && `${d} agendadas por tu asistente`, i > 0 && `${i} después de una conversación`, w > 0 && `${w} con el enlace de reservas`]
@@ -141,7 +155,7 @@ const ES: Strings = {
   auditOk: (rows, hash) =>
     `Registro de auditoría verificado: ${rows} eventos registrados, ninguno alterado. Huella de la cadena: ${hash}. Guarda este correo: si alguien reescribiera el historial, ya no coincidiría con esta huella.`,
   auditBroken: "Revisión del registro de auditoría: encontramos un problema y lo estamos revisando. Te escribiremos con los detalles.",
-  channel: { web: "chat en tu sitio web", sms: "mensajes de texto", reminders: "recordatorios de cita", booking: "reservas" },
+  channel: { web: "chat en tu sitio web", sms: "mensajes de texto", phone: "llamadas", reminders: "recordatorios de cita", booking: "reservas" },
   portalCta: "Abrir tu portal",
   portalText: (url) => `Mira cada conversación en tu portal: ${url}`,
   signoff: "Steven\nLoucells Core",
@@ -210,6 +224,10 @@ export function renderWeeklyReport(d: WeeklyReportData): RenderedReport {
       detail: d.reminders.sent > 0 ? t.remindersDetail(d.reminders.kept, d.reminders.noShow) : undefined,
     },
   ];
+  if (d.calls && d.calls.answered > 0) {
+    const detail = t.callsDetail(d.calls.booked, d.calls.transferred, d.calls.callbacks);
+    rows.splice(1, 0, { label: t.calls, value: d.calls.answered.toLocaleString(L), ...(detail ? { detail } : {}) });
+  }
   if (d.smsMedianReplySec !== null) rows.push({ label: t.reply, value: t.replyValue(d.smsMedianReplySec) });
 
   const notes: string[] = [];

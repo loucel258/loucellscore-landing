@@ -80,6 +80,29 @@ describe("loadValueSummary", () => {
   });
 });
 
+describe("loadValueSummary: phone calls", () => {
+  it("a call answered by the agent before the booking makes it influenced", async () => {
+    const sb = fakeSb({
+      appointments: [
+        { id: "a1", contact_id: "c1", service_id: "s1", status: "completed", booked_by: "external", created_at: "2026-09-10T12:00:00Z", start_at: "2026-09-12T15:00:00Z" },
+      ],
+      services: [{ id: "s1", price_cents: 4500 }],
+      messages_log: [],
+      appointment_reminders_sent: [],
+      contacts: [{ id: "c1", phone: "+15615550123" }],
+      voice_calls: [{ caller: "+15615550123", started_at: "2026-09-09T18:00:00Z" }],
+      leads: [],
+    });
+    const v = await loadValueSummary(
+      sb,
+      { workspaceIds: ["ws"], engagementId: "e" },
+      { since: new Date("2026-09-01T00:00:00Z"), until: new Date("2026-10-01T00:00:00Z") },
+    );
+    expect(v.appointments.influenced.count).toBe(1);
+    expect(v.revenueCents).toBe(4500);
+  });
+});
+
 describe("silentAgents", () => {
   const base = (noTrafficDays: number | null): AgentServiceStatus => ({
     agentId: "x",
@@ -88,11 +111,34 @@ describe("silentAgents", () => {
     web: { state: "active", lastCustomerAt: null },
     sms: { state: "off", credentials: false, fromNumber: false, lastInboundAt: null },
     reminders: { state: "off", lastSentAt: null, sent30d: 0 },
+    phone: { state: "off", provider: "twilio_cr", missing: [], lastCallAt: null, calls30d: 0 },
     booking: { mode: "none", linkConfigured: false, backendCredential: false, state: "off" },
     lastCustomerAt: null,
     noTrafficDays,
   });
   it("flags live agents silent for 7+ days", () => {
     expect(silentAgents([base(3), base(7), base(97), base(null)]).map((s) => s.noTrafficDays)).toEqual([7, 97]);
+  });
+});
+
+describe("callStats", () => {
+  it("counts answered, transferred, callbacks, booked and the average length", async () => {
+    const { callStats } = await import("@/lib/conversation-stats");
+    expect(callStats([])).toBeNull();
+    expect(
+      callStats([
+        { outcome: "booked", duration_sec: 120 },
+        { outcome: "transferred", duration_sec: 60 },
+        { outcome: "escalated", duration_sec: null },
+        { outcome: "abandoned", duration_sec: 3 },
+      ]),
+    ).toEqual({ answered: 3, transferred: 1, callbacks: 1, booked: 1, avgDurationSec: 61 });
+  });
+});
+
+describe("phone cost", () => {
+  it("bills each call rounded up to the minute", async () => {
+    const { billedMinutes } = await import("@/lib/admin/costs");
+    expect(billedMinutes([61, 30, null, 0, 120])).toBe(5); // 2 + 1 + 0 + 0 + 2
   });
 });

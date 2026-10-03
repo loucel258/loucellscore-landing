@@ -345,7 +345,7 @@ function ThreadListItem({
               </span>
             </div>
             <p className="mt-0.5 truncate text-xs text-neutral-600">
-              {preview ? `${preview.prefix}${preview.text}` : ""}
+              {thread.call?.summary ? thread.call.summary : preview ? `${preview.prefix}${preview.text}` : ""}
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-1">
               <ChannelBadge channel={thread.channel} lang={lang} />
@@ -418,6 +418,12 @@ function ThreadView({
             )}
           </div>
         </div>
+        {thread.call?.summary && (
+          <p className="mt-2 rounded-lg bg-white px-3 py-2 text-xs leading-relaxed text-neutral-700 ring-1 ring-neutral-200">
+            <span className="font-semibold text-neutral-900">{t(lang, "call.summary")}: </span>
+            {thread.call.summary}
+          </p>
+        )}
         {detail.channel === "web" && (
           <div className="mt-3">
             <TagBar

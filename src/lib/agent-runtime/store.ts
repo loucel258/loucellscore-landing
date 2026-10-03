@@ -97,7 +97,7 @@ export type RuntimeStore = {
   updateVoiceCall?(
     workspaceId: string,
     callSid: string,
-    patch: { endedAt?: string; durationSec?: number; outcome?: VoiceOutcome; language?: string },
+    patch: { endedAt?: string; durationSec?: number; outcome?: VoiceOutcome; language?: string; summaryCipher?: string },
   ): Promise<void>;
   /** SMS two-phase confirmation: contacts.metadata.pending_action, raw (callers parse it). */
   getPendingAction(workspaceId: string, contactId: string): Promise<unknown>;
@@ -175,6 +175,7 @@ export function createSupabaseStore(sb: SupabaseClient): RuntimeStore {
       if (patch.endedAt) update.ended_at = patch.endedAt;
       if (patch.durationSec !== undefined) update.duration_sec = patch.durationSec;
       if (patch.language) update.language = patch.language;
+      if (patch.summaryCipher) update.summary_cipher = patch.summaryCipher; // migration 072
       if (patch.outcome) {
         const { data, error } = await sb
           .from("voice_calls")

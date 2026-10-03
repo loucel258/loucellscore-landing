@@ -104,6 +104,7 @@ const status = (over: Partial<AgentServiceStatus> = {}): AgentServiceStatus => (
   web: { state: "active", lastCustomerAt: null },
   sms: { state: "off", credentials: false, fromNumber: false, lastInboundAt: null },
   reminders: { state: "off", lastSentAt: null, sent30d: 0 },
+  phone: { state: "off", provider: "twilio_cr", missing: [], lastCallAt: null, calls30d: 0 },
   booking: { mode: "none", linkConfigured: false, backendCredential: false, state: "off" },
   lastCustomerAt: null,
   noTrafficDays: null,
@@ -124,9 +125,23 @@ describe("health in plain words", () => {
     expect(lines.map((l) => [l.label, l.stateLabel, l.detail])).toEqual([
       ["Web chat", "Working", "Last customer chat 3d ago"],
       ["Text messages", "Needs setup", "Switched on, but the sending number is missing"],
+      ["Phone calls", "Off", "Not set up"],
       ["Reminders", "Working", "Last sent 3h ago, 14 in the last 30 days"],
       ["Booking", "Needs setup", "Set to the client's booking app, but its key is missing"],
     ]);
+  });
+
+  it("explains the phone line: working, and what is missing", () => {
+    const phone = (p: Partial<AgentServiceStatus["phone"]>) =>
+      describeChannels(status({ phone: { state: "off", provider: "twilio_cr", missing: [], lastCallAt: null, calls30d: 0, ...p } }), NOW).find(
+        (l) => l.key === "phone",
+      )!;
+    expect(phone({ state: "active", lastCallAt: "2026-10-01T09:00:00Z", calls30d: 4 }).detail).toBe(
+      "Last call 3h ago, 4 in the last 30 days (Twilio)",
+    );
+    expect(phone({ state: "attention", missing: ["twilio_keys", "gateway"] }).detail).toBe(
+      "Switched on, but the Twilio keys are missing and the voice gateway is not configured (VOICE_GATEWAY_URL / VOICE_GATEWAY_SECRET)",
+    );
   });
 
   it("says when a live web chat never had a customer", () => {

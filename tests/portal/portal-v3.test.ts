@@ -127,8 +127,16 @@ describe("escalations (table may not exist yet)", () => {
       { status: "open" },
     ]);
     expect(rows.map((r) => r.id)).toEqual(["e1", "e4"]);
-    expect(rows[0]).toEqual({ id: "e1", createdAt: null, reason: "sensitive_topic", summary: "Asked about a refund", session_id: "s1", contact_id: null });
+    expect(rows[0]).toEqual({ id: "e1", createdAt: null, reason: "sensitive_topic", summary: "Asked about a refund", session_id: "s1", contact_id: null, isCall: false });
     expect(Object.keys(rows[0]!)).not.toContain("workspace_id");
+  });
+  it("a phone escalation is a callback and links to the call, not the caller's text thread", async () => {
+    const { conversationHref } = await import("@/lib/portal/threads");
+    const [e] = normalizeEscalations([
+      { id: "v1", channel: "voice", session_id: "call_CA123", contact_id: "6f1c1e1a-1111-4111-8111-111111111111" },
+    ]);
+    expect(e!.isCall).toBe(true);
+    expect(conversationHref("acme", e!)).toBe("/portal/acme/bandeja?session=call_CA123");
   });
 });
 

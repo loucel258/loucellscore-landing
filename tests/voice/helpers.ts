@@ -67,6 +67,7 @@ export function voiceStore(): VoiceStore {
     if (!c) return;
     if (patch.endedAt) c.ended_at = patch.endedAt;
     if (patch.language) c.language = patch.language;
+    if (patch.summaryCipher) (c as { summary_cipher?: string }).summary_cipher = patch.summaryCipher;
     if (patch.outcome && (!c.outcome || rank[patch.outcome] > rank[c.outcome])) c.outcome = patch.outcome;
   };
   return s;
@@ -87,6 +88,7 @@ export function setup(opts: {
   secret?: string | null;
 } = {}) {
   const store = voiceStore();
+  const afterTasks: Array<() => Promise<unknown>> = [];
   const model = opts.model ?? streamingModel(textMsg("Claro, ¿en qué le ayudo?"));
   const { deps, audits } = fakeDeps(store, model.client as never);
   const now = opts.now ?? OPEN_NOW;
@@ -96,8 +98,13 @@ export function setup(opts: {
     ...deps,
     resolveAgent: async (slug: string) => (slug === agent.slug ? agent : null),
     voiceKey: () => (opts.secret === null ? null : KEY),
+    encrypt: (_eng: string, text: string) => `enc:${text}`,
+    // Tests collect after-response work and run it when they want to.
+    afterResponse: (task) => {
+      afterTasks.push(task);
+    },
   };
-  return { store, model, deps: vdeps, audits, now };
+  return { store, model, deps: vdeps, audits, now, afterTasks, runAfter: () => Promise.all(afterTasks.splice(0).map((t) => t())) };
 }
 
 let n = 0;

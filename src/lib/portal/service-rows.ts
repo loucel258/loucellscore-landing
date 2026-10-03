@@ -15,7 +15,7 @@ import { formatWhen } from "./time";
  * the last time something really happened.
  */
 
-export type ServiceRowKey = "web" | "sms" | "reminders" | "booking";
+export type ServiceRowKey = "web" | "sms" | "phone" | "reminders" | "booking";
 export type ServiceRowTone = "ok" | "wait" | "warn";
 
 export type ServiceRow = {
@@ -110,6 +110,26 @@ export function serviceRows(
       rows.push({ ...base, key: "sms", label, tone: "wait", chip: t(lang, "status.waiting"), line: t(lang, "status.sms_pending") });
     } else {
       rows.push({ ...base, key: "sms", label, tone: "warn", chip: setup, line: t(lang, "status.sms_setup") });
+    }
+  }
+
+  // Phone calls (never names the provider or what is missing: that is Steven's job)
+  if (s.phone.state !== "off") {
+    const label = t(lang, "channel.phone");
+    if (s.phone.state === "active") {
+      rows.push({
+        ...base,
+        key: "phone",
+        label,
+        tone: "ok",
+        chip: on,
+        line: s.phone.lastCallAt ? t(lang, "status.phone_last", { when: when(s.phone.lastCallAt) }) : t(lang, "status.phone_none"),
+        detail: full && s.phone.calls30d > 0 ? tn(lang, "status.phone_count", s.phone.calls30d) : null,
+      });
+    } else if (s.phone.state === "pending") {
+      rows.push({ ...base, key: "phone", label, tone: "wait", chip: t(lang, "status.not_live"), line: t(lang, "status.phone_pending") });
+    } else {
+      rows.push({ ...base, key: "phone", label, tone: "warn", chip: setup, line: t(lang, "status.phone_setup") });
     }
   }
 

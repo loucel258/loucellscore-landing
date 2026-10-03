@@ -55,6 +55,7 @@ export function notActiveChannels(statuses: AgentServiceStatus[]): ReportChannel
   const channels: Array<[ReportChannel, (s: AgentServiceStatus) => string]> = [
     ["web", (s) => s.web.state],
     ["sms", (s) => s.sms.state],
+    ["phone", (s) => s.phone.state],
     ["reminders", (s) => s.reminders.state],
     ["booking", (s) => s.booking.state],
   ];
@@ -107,6 +108,9 @@ export async function buildWeeklyReport(
     conversations: conv.conversations,
     afterHours: conv.afterHours,
     smsMedianReplySec: conv.smsMedianReplySec,
+    calls: conv.calls
+      ? { answered: conv.calls.answered, transferred: conv.calls.transferred, callbacks: conv.calls.callbacks, booked: conv.calls.booked }
+      : null,
     bookings: {
       direct: value.appointments.direct.count,
       influenced: value.appointments.influenced.count,

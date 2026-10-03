@@ -58,15 +58,28 @@ export async function loadCallMeta(
 ): Promise<ThreadSummary[]> {
   const sids = threads.filter((t) => t.channel === "call").map((t) => t.id.replace(/^call_/, ""));
   if (sids.length === 0 || ctx.workspaceIds.length === 0) return threads;
+  const canDecrypt = encryptionAvailable();
   try {
     const rows = await inChunks(sids, 100, async (chunk) => {
-      const { data, error } = await sb
-        .from("voice_calls")
-        .select("call_sid, caller, duration_sec, outcome")
-        .in("workspace_id", ctx.workspaceIds)
-        .in("call_sid", chunk);
-      if (error) return [] as VoiceCallLite[];
-      return (data as VoiceCallLite[] | null) ?? [];
+      const query = (cols: string) =>
+        sb.from("voice_calls").select(cols).in("workspace_id", ctx.workspaceIds).in("call_sid", chunk);
+      // summary_cipher is migration 072; without it the calls still show, just without a note.
+      let res = await query("call_sid, caller, duration_sec, outcome, summary_cipher");
+      if (res.error) res = await query("call_sid, caller, duration_sec, outcome");
+      if (res.error) return [] as VoiceCallLite[];
+      return ((res.data as unknown as Array<VoiceCallLite & { summary_cipher?: string | null }> | null) ?? []).map(
+        ({ summary_cipher, ...c }) => {
+          let summary: string | null = null;
+          if (summary_cipher && canDecrypt) {
+            try {
+              summary = decryptMessage(ctx.engagementId, summary_cipher);
+            } catch {
+              summary = null;
+            }
+          }
+          return { ...c, summary };
+        },
+      );
     });
     return applyCallMeta(threads, rows);
   } catch {

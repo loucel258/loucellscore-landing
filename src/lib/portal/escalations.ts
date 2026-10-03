@@ -31,6 +31,8 @@ export type OpenEscalation = {
   summary: string | null;
   session_id: string | null;
   contact_id: string | null;
+  /** A phone call: the owner should call this person back (unless it was transferred). */
+  isCall: boolean;
 };
 
 const CLOSED = new Set(["resolved", "closed", "dismissed", "done", "handled", "cancelled", "canceled"]);
@@ -66,6 +68,7 @@ export function normalizeEscalations(rows: unknown[]): OpenEscalation[] {
       summary: summary ? previewText(summary, 140) : null,
       session_id: str(r.session_id),
       contact_id: str(r.contact_id),
+      isCall: str(r.channel) === "voice" || (str(r.session_id) ?? "").startsWith("call_"),
     });
   }
   return out;
