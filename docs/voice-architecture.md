@@ -144,3 +144,11 @@ Admin
 - Restoring an agent version also restores its phone settings (never the Vapi secret).
 
 Also fixed on the way: each SMS conversation was counted twice in the portal's conversation total (once from the audit session, once from messages_log).
+
+## Instant owner alerts (2026-10-03)
+
+`src/lib/agent-runtime/owner-alert.ts`, called from every escalation (web, SMS, phone, including "transfer not answered" and "relay session failed").
+- **Off by default.** Steven turns it on per agent in the admin ("Instant alerts to the owner") and types up to 3 addresses (`integrations.owner_alerts`). On with no address is refused (422). Restorable with config versions.
+- **Fixed template**, EN/ES by the portal's language: what to do (call back / reply to the text / follow up the chat), why (fixed labels mapped from the escalation reason), the customer's number only if it is a valid E.164, and a link to the conversation in the portal (login required). Nothing the customer or the model wrote is in the email, so a caller cannot put instructions in front of the owner.
+- **10 per hour per workspace** (token bucket); over that, no email and a DENY audit row. Every attempt is audited (`owner_alert:sent|failed:<channel>:<recipient count>`), without addresses or numbers. Steven's internal alert still goes out as before.
+- Email only for now (texting the owner needs a registered 10DLC sender).

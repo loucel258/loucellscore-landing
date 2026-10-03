@@ -258,6 +258,20 @@ describe("update route: versions", () => {
     expect(state.sb.updates).toHaveLength(0);
   });
 
+  it("owner alerts: cannot be turned on without an email; bad addresses are refused; saved lowercased", async () => {
+    state.sb = fakeSb({ client_agents: [agentRow()], agent_config_versions: [] });
+    let res = await post({ integrations: { owner_alerts: { enabled: true, emails: [] } } });
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe("owner_alerts_need_email");
+    res = await post({ integrations: { owner_alerts: { enabled: true, emails: ["not-an-email"] } } });
+    expect(res.status).toBe(400);
+    expect(state.sb.updates).toHaveLength(0);
+    res = await post({ integrations: { owner_alerts: { enabled: true, emails: ["Denise@Salon.com", "denise@salon.com"] } } });
+    expect(res.status).toBe(200);
+    const update = state.sb.updates.find((u) => u.table === "client_agents")!.patch as { integrations: { owner_alerts: unknown } };
+    expect(update.integrations.owner_alerts).toEqual({ enabled: true, emails: ["denise@salon.com"] });
+  });
+
   it("restore needs the admin session", async () => {
     state.authed = false;
     expect((await post({ restoreVersion: 1 })).status).toBe(401);

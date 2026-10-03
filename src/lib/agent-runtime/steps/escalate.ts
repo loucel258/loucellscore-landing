@@ -2,6 +2,7 @@ import "server-only";
 import type { TurnContext } from "../context";
 import { sanitize } from "@/lib/dlp/sanitizer";
 import { contactOf } from "../types";
+import { notifyOwner } from "../owner-alert";
 
 /**
  * escalate: hand the conversation to a person.
@@ -112,5 +113,7 @@ export async function escalate(ctx: TurnContext, req: EscalationRequest): Promis
   } catch (e) {
     console.error("[agent-runtime] escalation alert failed", e instanceof Error ? e.name : "error");
   }
+  // The owner hears it directly when the client turned instant alerts on (off by default).
+  await notifyOwner(ctx, req.reason).catch(() => "failed");
   return { recorded, notified };
 }

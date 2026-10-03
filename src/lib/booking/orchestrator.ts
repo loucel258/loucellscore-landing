@@ -123,6 +123,9 @@ export async function runFrontDeskTurn(
     dispatchBookingTool,
     decrypt: () => "",
     encryptionAvailable: () => false,
+    // Legacy draft path: it never emails the owner.
+    sendOwnerEmail: async () => ({ ok: false, reason: "alerts_disabled" }),
+    ownerPortal: async () => null,
   };
 
   const ctx = createTurnContext(

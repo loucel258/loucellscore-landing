@@ -201,7 +201,7 @@ export function lineDiff(a: string, b: string): LineDiffOp[] {
 // ── Restore ────────────────────────────────────────────────────────────────
 
 /** integrations keys the update route can write (everything else is shown in the diff, never restored). */
-export const RESTORABLE_INTEGRATIONS = ["calendar", "reminders", "locale", "booking", "voice"] as const;
+export const RESTORABLE_INTEGRATIONS = ["calendar", "reminders", "locale", "booking", "voice", "owner_alerts"] as const;
 
 /** Phone settings a restore may put back. Never the Vapi secret (snapshots don't hold it). */
 const RESTORABLE_VOICE = [
@@ -245,6 +245,13 @@ export function restoreInputFromSnapshot(s: ConfigSnapshot): Record<string, unkn
     Object.entries(pick(asRecord(integ.voice), RESTORABLE_VOICE)).filter(([, v]) => v !== null),
   );
   if (Object.keys(voice).length > 0) integrations.voice = voice;
+  const alerts = asRecord(integ.owner_alerts);
+  if (Object.keys(alerts).length > 0) {
+    integrations.owner_alerts = {
+      enabled: alerts.enabled === true,
+      emails: Array.isArray(alerts.emails) ? alerts.emails.filter((e): e is string => typeof e === "string") : [],
+    };
+  }
 
   return {
     name: s.name || undefined,

@@ -11,7 +11,8 @@ import { sanitize, type SanitizeResult } from "@/lib/dlp/sanitizer";
 import { sanitizeWithLLMMetered } from "@/lib/dlp/sanitizer-llm";
 import { persistTurn } from "@/lib/portal/transcripts";
 import { decryptMessage, encryptionAvailable } from "@/lib/portal/encrypt";
-import { sendInternalAlert } from "@/lib/notify/resend";
+import { sendEmail, sendInternalAlert } from "@/lib/notify/resend";
+import { pickPortal, portalUrl, type PortalChoice } from "@/lib/reports/recipient";
 import { insertLead } from "@/lib/leads/leads";
 import { propose } from "@/lib/hitl/queue";
 import { classifyIntentMetered, type IntentContext, type IntentResult } from "@/lib/booking/intent";
@@ -67,7 +68,25 @@ export type TurnDeps = {
   dispatchBookingTool: typeof dispatchBookingTool;
   decrypt: (engagementId: string, cipherB64: string) => string;
   encryptionAvailable: () => boolean;
+  /** Owner alerts (owner-alert.ts): the email sender, and the portal the link points to. */
+  sendOwnerEmail: typeof sendEmail;
+  ownerPortal: (engagementId: string, agentSlug: string) => Promise<{ baseUrl: string; lang: "en" | "es" } | null>;
 };
+
+/** The engagement's usable portal (the one named like the agent first), as a link base and a language. */
+async function ownerPortal(engagementId: string, agentSlug: string): Promise<{ baseUrl: string; lang: "en" | "es" } | null> {
+  const sb = getServiceClient();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from("client_portal_access")
+    .select("engagement_id, client_slug, preferred_language, active, revoked_at")
+    .eq("engagement_id", engagementId);
+  if (error || !data) return null;
+  const portal = pickPortal(data as PortalChoice[], [agentSlug]);
+  const url = portal ? portalUrl(portal.client_slug, process.env.NEXT_PUBLIC_APP_URL) : null;
+  if (!portal || !url) return null;
+  return { baseUrl: url, lang: portal.preferred_language === "en" ? "en" : "es" };
+}
 
 export function defaultTurnDeps(): TurnDeps {
   const sb = getServiceClient();
@@ -91,6 +110,8 @@ export function defaultTurnDeps(): TurnDeps {
     dispatchBookingTool,
     decrypt: decryptMessage,
     encryptionAvailable,
+    sendOwnerEmail: sendEmail,
+    ownerPortal,
   };
 }
 

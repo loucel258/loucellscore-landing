@@ -260,6 +260,9 @@ export function fakeDeps(store: MemoryStore, client: { messages: { create: Retur
       return cipher.slice(4);
     },
     encryptionAvailable: () => true,
+    // Never a real email from tests.
+    sendOwnerEmail: vi.fn(async () => ({ ok: true as const, id: "owner_mail_1" })),
+    ownerPortal: vi.fn(async () => ({ baseUrl: "https://app.example/portal/test-agent", lang: "es" as const })),
   };
   return { deps, audits };
 }

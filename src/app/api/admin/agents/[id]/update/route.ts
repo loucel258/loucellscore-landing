@@ -6,7 +6,7 @@ import { canonicalizeOrigin, invalidateAgentCache } from "@/lib/agents/resolver"
 import { writeAuditEntry } from "@/lib/audit/writer";
 import { isE164, isSupportedTimeZone } from "@/lib/admin/validators";
 import { safeHttpsUrl } from "@/lib/agents/booking-config";
-import { toAgentConfig } from "@/lib/agent-runtime/config";
+import { MAX_OWNER_ALERT_EMAILS, OWNER_EMAIL_RE, toAgentConfig } from "@/lib/agent-runtime/config";
 import { newVapiSecret } from "@/lib/agent-runtime/channels/voice-vapi";
 import { checkReadiness } from "@/lib/agent-runtime/readiness";
 import { getVersion, recordConfigVersion } from "@/lib/admin/config-versions-db";
@@ -123,6 +123,16 @@ const InputSchema = z.object({
           max_call_minutes: z.number().int().min(1).max(60).optional(),
           // true = generate a new custom LLM secret (shown once in the response; only its hash is stored).
           vapi_secret_rotate: z.boolean().optional(),
+        })
+        .optional(),
+      // Instant email to the owner when a customer needs a person. Off by default.
+      owner_alerts: z
+        .object({
+          enabled: z.boolean().optional(),
+          emails: z
+            .array(z.string().trim().max(254).regex(OWNER_EMAIL_RE, "Each alert address must be a valid email"))
+            .max(MAX_OWNER_ALERT_EMAILS, `At most ${MAX_OWNER_ALERT_EMAILS} alert addresses`)
+            .optional(),
         })
         .optional(),
       // What request_booking shares. "" clears it; anything else must be a
@@ -453,6 +463,22 @@ export async function POST(
       next.voice = voice;
       touched = true;
       changed.push("integrations.voice");
+    }
+    if (input.integrations.owner_alerts) {
+      const alerts: Record<string, unknown> = { ...(cur.owner_alerts ?? {}), ...input.integrations.owner_alerts };
+      if (Array.isArray(alerts.emails)) {
+        alerts.emails = [...new Set((alerts.emails as string[]).map((e) => e.trim().toLowerCase()))];
+      }
+      // On with nobody to tell would look like alerts work when none ever go out.
+      if (alerts.enabled === true && (!Array.isArray(alerts.emails) || alerts.emails.length === 0)) {
+        return NextResponse.json(
+          { ok: false, error: "owner_alerts_need_email", detail: "Add at least one email before turning owner alerts on." },
+          { status: 422 },
+        );
+      }
+      next.owner_alerts = alerts;
+      touched = true;
+      changed.push("integrations.owner_alerts");
     }
     const booking: Record<string, unknown> = { ...(cur.booking ?? {}) };
     if (input.integrations.booking?.link_url !== undefined) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, KeyRound, Check, AlertTriangle } from "lucide-react";
 import { VoicePanel } from "./voice-panel";
+import { OwnerAlertsPanel } from "./owner-alerts-panel";
 
 type CalendarCfg = { provider?: string; calendar_id?: string; timezone?: string };
 type RemindersCfg = {
@@ -342,6 +343,7 @@ export function IntegrationsPanel({
       )}
     </section>
     <VoicePanel agentId={agentId} integrations={integrations} agentName={agentName} />
+    <OwnerAlertsPanel agentId={agentId} integrations={integrations} />
     </>
   );
 }

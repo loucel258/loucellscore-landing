@@ -120,6 +120,8 @@ const norm = <T>(fn: (v: unknown) => T | null) => z.unknown().transform(fn).catc
 const text = (max: number) =>
   norm((v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null));
 const flag = z.boolean().catch(false);
+export const OWNER_EMAIL_RE = /^[^\s@<>"]{1,64}@[^\s@<>"]{1,190}\.[a-z]{2,24}$/i;
+export const MAX_OWNER_ALERT_EMAILS = 3;
 const hour = z.number().int().nullable().catch(null);
 
 export const IntegrationsSchema = obj(
@@ -168,6 +170,24 @@ export const IntegrationsSchema = obj(
         max_call_minutes: z.number().int().min(1).max(60).catch(10),
         /** sha256 hex of the Vapi / custom-LLM bearer secret. Never the secret itself. */
         vapi_secret_hash: norm((v) => (typeof v === "string" && /^[0-9a-f]{64}$/.test(v) ? v : null)),
+      }),
+    ),
+    /**
+     * Instant email to the business owner when a customer needs a person
+     * (escalation / callback). Off unless Steven turns it on per agent and
+     * types the addresses; fixed template, never model-written text.
+     */
+    owner_alerts: obj(
+      z.object({
+        enabled: flag,
+        emails: norm((v) =>
+          Array.isArray(v)
+            ? v
+                .filter((e): e is string => typeof e === "string" && OWNER_EMAIL_RE.test(e.trim()))
+                .map((e) => e.trim().toLowerCase())
+                .slice(0, MAX_OWNER_ALERT_EMAILS)
+            : [],
+        ).transform((v) => v ?? []),
       }),
     ),
     kb: text(KB_MAX_CHARS),
