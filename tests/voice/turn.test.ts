@@ -46,6 +46,14 @@ describe("voice turn: gates", () => {
   });
 });
 
+describe("voice turn: one session per call", () => {
+  it("a second start for the same call is refused (409)", async () => {
+    const s = setup();
+    expect((await call(s, { event: "start" })).status).toBe(200);
+    expect((await call(s, { event: "start" })).status).toBe(409);
+  });
+});
+
 describe("voice turn: start and end", () => {
   it("start speaks the disclosure and the recording notice (Spanish default), then end_turn", async () => {
     const s = setup();

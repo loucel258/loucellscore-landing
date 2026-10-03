@@ -209,7 +209,11 @@ async function interpret(ctx: TurnContext, r: LoopResult): Promise<Step> {
  * is true. SMS promises a follow-up only when a person was notified.
  */
 async function giveUp(ctx: TurnContext, reason: string): Promise<Step> {
-  const result = await ctx.escalate({ reason, summary: ctx.inbound.text.slice(0, 200) });
+  const result = await ctx.escalate({
+    reason,
+    summary: ctx.inbound.text.slice(0, 200),
+    ...(ctx.inbound.text ? { ownerNote: { text: ctx.inbound.text, source: "customer" as const } } : {}),
+  });
   await ctx.audit({ decision: "ALLOW", reason: `escalation:${reason}` });
   const voice = ctx.inbound.voice;
   const text =

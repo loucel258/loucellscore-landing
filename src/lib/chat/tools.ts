@@ -104,7 +104,7 @@ export const ESCALATE_TO_HUMAN_TOOL: Anthropic.Tool = {
       summary: {
         type: "string",
         description:
-          "One-line summary of what the visitor needs (for the human follow-up queue). Be specific: 'Wants to discuss billing dispute from a previous engagement' is better than 'frustrated customer'.",
+          "One-line summary of what the visitor needs (for the human follow-up queue, and emailed to the business owner). Be specific: 'Wants to discuss billing dispute from a previous engagement' is better than 'frustrated customer'. Same language as the conversation. No phone numbers, account numbers or links.",
       },
       name: {
         type: "string",

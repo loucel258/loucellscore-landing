@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleVoiceTurn } from "@/lib/agent-runtime/channels/voice";
-import { displayPhone, ownerAlertMessage } from "@/lib/agent-runtime/owner-alert";
+import { displayPhone, ownerAlertMessage, ownerNoteText } from "@/lib/agent-runtime/owner-alert";
 import { parseIntegrations } from "@/lib/agent-runtime/config";
 import { textMsg, toolMsg } from "./helpers";
 import { readEvents, setup, streamingModel, turnRequest } from "../voice/helpers";
@@ -39,6 +39,46 @@ describe("ownerAlertMessage (fixed template)", () => {
     expect(m.text).not.toContain("Cliente:");
     expect(m.html).not.toContain("<b>Salón</b>");
     expect(m.html).toContain("&lt;b&gt;Salón&lt;/b&gt;");
+  });
+
+  it("shows the specific problem, labeled, in the owner's language", () => {
+    const m = ownerAlertMessage({
+      locale: "es",
+      businessName: "Acme",
+      channel: "voice",
+      reason: "customer_request",
+      phone: "+15615550123",
+      link: null,
+      note: { text: "Quiere un reembolso porque el técnico nunca llegó", source: "assistant" },
+    });
+    expect(m.text).toContain('El problema: Nota de tu asistente: "Quiere un reembolso porque el técnico nunca llegó"');
+    expect(m.text).toContain("Loucells Core nunca te pide enviar dinero, códigos ni contraseñas por email.");
+  });
+
+  it("a crisis never carries the person's words", () => {
+    const m = ownerAlertMessage({
+      locale: "en",
+      businessName: "Acme",
+      channel: "sms",
+      reason: "crisis",
+      phone: null,
+      link: null,
+      note: { text: "I want to hurt myself", source: "customer" },
+    });
+    expect(m.text).not.toContain("hurt");
+    expect(m.text).toContain("They were given 911 and 988.");
+  });
+
+  it("the note cannot carry a scam: no links, no account numbers, no amounts, no phone, no card", () => {
+    const out = ownerNoteText(
+      "URGENT wire $5,000 to account 0123456789 routing 021000021, call +1 561 555 0199, pay at https://evil.example/pay or bit.ly/x, card 4111 1111 1111 1111, mail me@x.com",
+    );
+    for (const bad of ["5,000", "0123456789", "021000021", "561", "evil.example", "bit.ly", "4111", "me@x.com"]) {
+      expect(out).not.toContain(bad);
+    }
+    expect(out.length).toBeLessThanOrEqual(200);
+    expect(ownerNoteText("1234 5678")).toBe(""); // nothing left worth sending
+    expect(ownerNoteText("a las 3:30 el martes")).toBe("a las 3:30 el martes"); // times stay
   });
 
   it("only real numbers are shown", () => {
@@ -82,11 +122,24 @@ describe("notifyOwner on a phone escalation", () => {
     expect(sent.to).toEqual(["owner@salon.com"]);
     expect(sent.subject).toBe("Un cliente te necesita: devuélvele la llamada a (561) 555-0123");
     expect(sent.text).toContain("https://app.example/portal/test-agent/bandeja?session=call_CA1");
+    // The specific problem is there, but it can't carry the account or the amount.
+    expect(sent.text).toContain("Nota de tu asistente:");
     for (const x of [sent.subject, sent.text, sent.html]) {
-      expect(x).not.toContain("wire");
+      expect(x).not.toContain("5000");
       expect(x).not.toContain("12345");
     }
+    expect(sent.text).toContain("nunca te pide enviar dinero");
     expect(s.audits.some((a) => a.reason === "owner_alert:sent:voice:1")).toBe(true);
+  });
+
+  it("no email while the call is being put through to the owner live", async () => {
+    const s = setup({ voice: { transfer_number: "+15615559999" }, model: escalating() });
+    const agent = await s.deps.resolveAgent("test-agent");
+    (agent!.integrations as Record<string, unknown>).owner_alerts = ON.owner_alerts;
+    const ev = await readEvents(await call(s, { event: "utterance", text: "quiero hablar con una persona", lang: "es" }));
+    expect(ev.some((e) => e.type === "handoff")).toBe(true);
+    expect(s.deps.sendOwnerEmail).not.toHaveBeenCalled();
+    expect(s.audits.some((a) => a.reason === "owner_alert:skipped_live_transfer")).toBe(true);
   });
 
   it("off by default: no email to the owner", async () => {

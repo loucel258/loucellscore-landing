@@ -149,6 +149,33 @@ Also fixed on the way: each SMS conversation was counted twice in the portal's c
 
 `src/lib/agent-runtime/owner-alert.ts`, called from every escalation (web, SMS, phone, including "transfer not answered" and "relay session failed").
 - **Off by default.** Steven turns it on per agent in the admin ("Instant alerts to the owner") and types up to 3 addresses (`integrations.owner_alerts`). On with no address is refused (422). Restorable with config versions.
-- **Fixed template**, EN/ES by the portal's language: what to do (call back / reply to the text / follow up the chat), why (fixed labels mapped from the escalation reason), the customer's number only if it is a valid E.164, and a link to the conversation in the portal (login required). Nothing the customer or the model wrote is in the email, so a caller cannot put instructions in front of the owner.
+- **Template**, EN/ES by the portal's language: what to do (call back / reply to the text / follow up the chat), why (fixed label from the escalation reason), **the problem** (one short note: the assistant's escalation summary, or the customer's last words when the assistant couldn't answer, labeled as such), the customer's number only if it is a valid E.164, and a link to the conversation in the portal (login required).
+- The note comes from untrusted words, so `ownerNoteText()` strips it of anything a scam needs: DLP masking, links removed, every run of 4+ digits removed (no account numbers, amounts or phone numbers), control characters removed, one line, 200 chars. The footer says Loucells Core never asks for money, codes or passwords by email. A crisis escalation never carries a note (privacy).
+- No email during a live transfer (the owner's phone is already ringing); if nobody answers, the callback escalation sends it.
 - **10 per hour per workspace** (token bucket); over that, no email and a DENY audit row. Every attempt is audited (`owner_alert:sent|failed:<channel>:<recipient count>`), without addresses or numbers. Steven's internal alert still goes out as before.
 - Email only for now (texting the owner needs a registered 10DLC sender).
+
+## Security review 2026-10-03
+
+Scope: everything since b961d61 (voice channel, gateway, portal/admin parity, owner alerts) plus dependencies.
+
+Fixed
+- **Next.js 16.2.6 → 16.3.8.** 16.2.6 had critical advisories (RCE in `next/og` ImageResponse, which the site uses for the OG image; RCE in image optimization with AVIF), plus SSRF, DoS and cache-confusion advisories. Production (main) runs the vulnerable version until this deploys. `npm audit --omit=dev`: 0 critical, 0 high (1 moderate, build-time only).
+- `shadcn` moved to devDependencies (a CLI; only its CSS is imported at build). Its MCP SDK / hono / ip-address chain is no longer a production dependency.
+- **Call summaries now follow retention**: past the workspace window, `voice_calls.summary_cipher` is cleared by the daily purge (call record kept); counted in the purge audit row.
+- **One session per call**: a second `start` for an existing call is refused (409) and the gateway hangs that socket up. Closes ticket replay across gateway machines (each machine has its own single-use list).
+- Gateway refuses to start unless `APP_URL` is https (transcripts travel on it).
+
+Checked, no change needed
+- Spoofed caller ID cannot make the business text a victim: reminders and confirmations need recorded transactional consent (SMS opt-in or the client's app), which a call never grants.
+- Toll fraud: the only number ever dialed is the configured transfer number (`/voice/after` ignores any other target); no `<Record>`.
+- Twilio signatures on `/incoming` and `/after` (workspace's own token); HMAC + slug binding on `/turn`; Vapi secret hash with constant-time compare and identical 401s; `/api` is outside the locale proxy.
+- Cross-tenant: every new query (calls, summaries, minutes, attribution, status) is scoped by workspace; `voice_calls.call_sid` is globally unique but reads/writes are workspace-scoped.
+- Portal renders summaries and notes as text; admin-only routes for owner alert addresses; `.env.local` is 600 and git-ignored.
+
+Residual (accepted or pending Steven)
+- Connection floods against the gateway (unauthenticated sockets are closed after 10 s; Fly has no WAF). Watch `fly logs`; add per-IP limits if it ever happens.
+- Rate limits fall back to per-instance memory without Upstash in Vercel (pending env), so caps are per instance.
+- `escalations.summary` (DLP-masked) is not purged by retention (pre-existing).
+- Naile Studio's own app (separate repo) is on Next 16.2.4 and needs the same upgrade.
+

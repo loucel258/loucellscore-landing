@@ -19,6 +19,12 @@ export type EscalationRequest = {
   summary: string;
   /** Web only: what the visitor shared, for the alert. */
   visitor?: { name?: string; email?: string };
+  /**
+   * The specific problem, for the owner's instant alert: the assistant's own
+   * summary, or the customer's last words when the assistant couldn't answer.
+   * Sanitized before it is emailed (owner-alert.ts). Never set for a crisis.
+   */
+  ownerNote?: { text: string; source: "assistant" | "customer" };
 };
 
 export type EscalationResult = { recorded: boolean; notified: boolean };
@@ -114,6 +120,6 @@ export async function escalate(ctx: TurnContext, req: EscalationRequest): Promis
     console.error("[agent-runtime] escalation alert failed", e instanceof Error ? e.name : "error");
   }
   // The owner hears it directly when the client turned instant alerts on (off by default).
-  await notifyOwner(ctx, req.reason).catch(() => "failed");
+  await notifyOwner(ctx, req).catch(() => "failed");
   return { recorded, notified };
 }

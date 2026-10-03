@@ -109,6 +109,7 @@ const escalateToHuman = defineTool({
       reason: input.reason,
       summary: input.summary,
       visitor: { name: input.name, email: input.email },
+      ownerNote: { text: input.summary, source: "assistant" },
     });
     await ctx.audit({ decision: "ALLOW", reason: `escalation:${input.reason}` });
     return {

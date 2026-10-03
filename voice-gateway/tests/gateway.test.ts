@@ -325,6 +325,17 @@ describe("call binding", () => {
   });
 });
 
+describe("one session per call", () => {
+  it("hangs up when the app says this call already started (ticket replayed on another machine)", async () => {
+    const { f, calls } = mockFetch(() => new Response(JSON.stringify({ error: "call_already_started" }), { status: 409 }));
+    const c = await connect(f);
+    c.ws.send(setup(goodTicket()));
+    expect(await c.closed).toBe(1008);
+    expect(calls).toHaveLength(1); // the start only: no end event for a session that never existed
+    expect(c.got.some((m) => m.token === FALLBACK.en)).toBe(false);
+  });
+});
+
 describe("silence and endings", () => {
   it("asks once if the caller is still there, then says goodbye and ends", async () => {
     const { f } = mockFetch(() => ok([j({ type: "text", token: "Hi." }), j({ type: "end_turn" })]));
@@ -399,6 +410,11 @@ describe("config", () => {
   it("refuses to start without secret", () => {
     expect(() => loadConfig({ APP_URL: "https://x" })).toThrow(/VOICE_GATEWAY_SECRET/);
     expect(() => createGateway({ appUrl: "https://x", secret: "", port: 0 })).toThrow(/VOICE_GATEWAY_SECRET/);
+  });
+  it("refuses a plain-http or malformed APP_URL (transcripts travel on it)", () => {
+    expect(() => loadConfig({ APP_URL: "http://www.loucellscore.com", VOICE_GATEWAY_SECRET: "s" })).toThrow(/https/);
+    expect(() => loadConfig({ APP_URL: "www.loucellscore.com", VOICE_GATEWAY_SECRET: "s" })).toThrow(/full URL/);
+    expect(loadConfig({ APP_URL: "http://localhost:3000", VOICE_GATEWAY_SECRET: "s" }).appUrl).toBe("http://localhost:3000");
   });
   it("loads valid config", () => {
     expect(loadConfig({ APP_URL: "https://x", VOICE_GATEWAY_SECRET: "s", PORT: "9" })).toEqual({ appUrl: "https://x", secret: "s", port: 9 });

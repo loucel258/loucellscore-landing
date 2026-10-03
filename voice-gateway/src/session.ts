@@ -344,6 +344,17 @@ export class CallSession {
         body: raw,
         signal: ac.signal,
       });
+      if (body.event === "start" && res.status === 409) {
+        // The app already has a live session for this call (a replayed ticket): drop this one.
+        await res.body?.cancel().catch(() => {});
+        clearTimeout(totalTimer);
+        if (firstByteTimer) clearTimeout(firstByteTimer);
+        this.deps.log("ticket_rejected", { reason: "call_already_started" });
+        this.ready = false;
+        this.ws.close(1008, "unauthorized");
+        this.closed = true;
+        return;
+      }
       if (!res.ok || !res.body) {
         failed = true;
       } else if (body.event === "end") {

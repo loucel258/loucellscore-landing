@@ -95,6 +95,7 @@ function bookingTool(name: keyof typeof SCHEMAS): RegisteredTool {
         const r = await ctx.escalate({
           reason: "booking_backend_unavailable",
           summary: ctx.inbound.text.slice(0, 200),
+          ownerNote: { text: ctx.inbound.text, source: "customer" },
         });
         return { kind: "result", content: bookingUnavailableContent(r.notified, mediumOf(ctx)) };
       }
@@ -123,7 +124,11 @@ function changesBackend(ctx: TurnContext, name: ConfirmableTool): boolean {
 
 /** Escalate (backend down) and tell the model the truth about it. */
 async function unavailableResult(ctx: TurnContext): Promise<ToolOutput> {
-  const r = await ctx.escalate({ reason: "booking_backend_unavailable", summary: ctx.inbound.text.slice(0, 200) });
+  const r = await ctx.escalate({
+    reason: "booking_backend_unavailable",
+    summary: ctx.inbound.text.slice(0, 200),
+    ownerNote: { text: ctx.inbound.text, source: "customer" },
+  });
   return { kind: "result", content: bookingUnavailableContent(r.notified, mediumOf(ctx)) };
 }
 
@@ -352,7 +357,11 @@ const escalateToHuman = defineTool({
   }),
   policy: "escalate",
   async handler(input, ctx) {
-    const r = await ctx.escalate({ reason: input.reason, summary: input.summary ?? "" });
+    const r = await ctx.escalate({
+      reason: input.reason,
+      summary: input.summary ?? "",
+      ...(input.summary ? { ownerNote: { text: input.summary, source: "assistant" as const } } : {}),
+    });
     if (ctx.channel === "voice") {
       const t = ctx.inbound.voice?.transfer;
       if (t?.number && t.open) {

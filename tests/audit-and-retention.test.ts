@@ -21,7 +21,8 @@ function fakeDb(tables: Record<string, Row[]>, rpc: (name: string, args: Row) =>
     rpc: async (name: string, args: Row) => ({ data: rpc(name, args), error: null }),
     from(table: string) {
       let rows = [...(tables[table] ?? [])];
-      let mode: "select" | "delete" = "select";
+      let mode: "select" | "delete" | "update" = "select";
+      let pending: Row = {};
       let limit = Infinity;
       const q: Record<string, unknown> = {
         select: () => q,
@@ -30,6 +31,8 @@ function fakeDb(tables: Record<string, Row[]>, rpc: (name: string, args: Row) =>
         lt: (c: string, v: string) => ((rows = rows.filter((r) => String(r[c]) < v)), q),
         in: (c: string, vs: unknown[]) => ((rows = rows.filter((r) => vs.includes(r[c]))), q),
         like: () => q,
+        not: (c: string, _op: string, _v: unknown) => ((rows = rows.filter((r) => r[c] !== null && r[c] !== undefined)), q),
+        update: (patch: Row) => ((mode = "update" as never), (pending = patch), q),
         limit: (n: number) => ((limit = n), q),
         maybeSingle: async () => ({ data: rows[0] ?? null, error: null }),
         insert: async (r: Row | Row[]) => {
@@ -38,6 +41,11 @@ function fakeDb(tables: Record<string, Row[]>, rpc: (name: string, args: Row) =>
         },
         delete: () => ((mode = "delete"), q),
         then: (resolve: (v: unknown) => void) => {
+          if (mode === "update") {
+            const ids = new Set(rows.map((r) => r.id));
+            for (const r of tables[table] ?? []) if (ids.has(r.id)) Object.assign(r, pending);
+            return resolve({ error: null });
+          }
           if (mode === "delete") {
             const ids = new Set(rows.map((r) => r.id));
             tables[table] = (tables[table] ?? []).filter((r) => !ids.has(r.id));
@@ -105,11 +113,32 @@ describe("retention purge", () => {
     expect(tables.conversation_messages?.map((x) => x.id)).toEqual(["m2"]);
     expect(tables.messages_log?.map((x) => x.id)).toEqual(["s2"]);
     expect(tables.audit_logs?.length).toBe(1);
-    expect(r.byWorkspace.get("ws_a")).toEqual({ conversationMessages: 1, smsMessages: 1 });
+    expect(r.byWorkspace.get("ws_a")).toEqual({ conversationMessages: 1, smsMessages: 1, callSummaries: 0 });
     expect(purgeSummary(r)).toBe("deleted web=1 sms=1 workspaces=1");
     expect(audits).toHaveLength(1);
     expect(audits[0]).toMatchObject({ workspace_id: "ws_a", user_id: "system:retention" });
     expect(String(audits[0]?.reason)).toBe("retention_purge: conversation_messages=1 sms_messages=1");
+  });
+
+  it("clears call notes past retention but keeps the call record", async () => {
+    audits.length = 0;
+    const now = new Date("2026-10-02T07:00:00Z");
+    const { sb, tables } = fakeDb({
+      conversation_messages: [],
+      client_agents: [{ workspace_id: "ws_a", conversation_retention_days: 30 }],
+      messages_log: [],
+      voice_calls: [
+        { id: "v1", workspace_id: "ws_a", started_at: "2026-08-01T00:00:00Z", summary_cipher: "enc:old" },
+        { id: "v2", workspace_id: "ws_a", started_at: "2026-09-30T00:00:00Z", summary_cipher: "enc:new" },
+      ],
+    });
+    const r = await purgeExpiredConversations(sb, now);
+    expect(tables.voice_calls?.map((v) => [v.id, v.summary_cipher])).toEqual([
+      ["v1", null],
+      ["v2", "enc:new"],
+    ]);
+    expect(r.byWorkspace.get("ws_a")?.callSummaries).toBe(1);
+    expect(String(audits[0]?.reason)).toBe("retention_purge: conversation_messages=0 sms_messages=0 call_summaries=1");
   });
 
   it("does nothing and writes no audit row when nothing expired", async () => {

@@ -148,6 +148,15 @@ export async function handleVoiceTurn(req: Request, slug: string, overrides?: Pa
   if (!config) return json(404, { error: "agent_not_found" });
   if (!config.integrations.voice.enabled) return json(403, { error: "voice_disabled" });
 
+  // 3b. One session per call. Gateway machines keep their own single-use
+  // ticket list, so a ticket replayed on another machine would open a second
+  // session: the call record already exists, so its start is refused and the
+  // gateway hangs that socket up.
+  if (body.event === "start" && deps.store?.getVoiceCall) {
+    const existing = await deps.store.getVoiceCall(config.workspaceId, body.callSid).catch(() => null);
+    if (existing) return json(409, { error: "call_already_started" });
+  }
+
   // 4. Idempotency on turnId: replay a finished turn, no-op a duplicate in flight.
   const cacheKey = `${config.workspaceId}:${body.turnId}`;
   const now = deps.now();

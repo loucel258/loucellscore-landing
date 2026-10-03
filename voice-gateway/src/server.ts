@@ -18,6 +18,15 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (!secret) throw new Error("VOICE_GATEWAY_SECRET is required; refusing to start");
   const appUrl = env.APP_URL;
   if (!appUrl) throw new Error("APP_URL is required; refusing to start");
+  // Every turn carries what the caller said: never over plain http (localhost aside, for tests).
+  let parsed: URL;
+  try {
+    parsed = new URL(appUrl);
+  } catch {
+    throw new Error("APP_URL must be a full URL like https://www.loucellscore.com; refusing to start");
+  }
+  const local = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  if (parsed.protocol !== "https:" && !local) throw new Error("APP_URL must use https; refusing to start");
   return { appUrl, secret, port: Number(env.PORT ?? 8080) };
 }
 

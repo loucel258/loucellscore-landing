@@ -99,8 +99,15 @@ export const BOOKING_TOOLS: Anthropic.Messages.Tool[] = [
     description: "Hand off to a human for anything you can't handle: complaints, refunds, disputes, special requests, or low confidence.",
     input_schema: {
       type: "object",
-      properties: { reason: { type: "string" }, summary: { type: "string" } },
-      required: ["reason"],
+      properties: {
+        reason: { type: "string" },
+        summary: {
+          type: "string",
+          description:
+            "One short sentence for the business owner: what the customer needs and what the problem is (e.g. 'Wants a refund because the technician never arrived'). Same language as the conversation. No phone numbers, account numbers or links.",
+        },
+      },
+      required: ["reason", "summary"],
     },
   },
 ];
