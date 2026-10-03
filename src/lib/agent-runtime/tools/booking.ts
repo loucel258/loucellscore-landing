@@ -5,7 +5,7 @@ import { BOOKING_TOOLS, type DispatchResult } from "@/lib/booking/tools";
 import { safeHttpsUrl } from "../config";
 import type { TurnContext } from "../context";
 import type { ServiceLite } from "../store";
-import type { Locale } from "../types";
+import { contactOf, type Locale } from "../types";
 import { actionDoneReply, actionFailedReply, pendingActionQuestion, type ActionFailure } from "../copy";
 import {
   PENDING_ACTION_TTL_MS,
@@ -34,9 +34,8 @@ import { defineTool, type RegisteredTool, type ToolOutput, type ToolPolicy } fro
  * anyone was notified.
  */
 
-export function bookingUnavailableContent(escalated: boolean): string {
-  const base =
-    "Booking is unavailable right now. Nothing was booked, changed, or cancelled. Tell the customer you can't manage appointments by text at the moment";
+export function bookingUnavailableContent(escalated: boolean, medium: "text" | "phone" = "text"): string {
+  const base = `Booking is unavailable right now. Nothing was booked, changed, or cancelled. Tell the customer you can't manage appointments by ${medium} at the moment`;
   return escalated
     ? `${base}, and that the team was notified and will follow up.`
     : `${base}, and ask them to contact the business directly. Do not promise a follow-up.`;
@@ -60,6 +59,8 @@ const POLICY: Record<keyof typeof SCHEMAS, ToolPolicy> = {
   reschedule_appointment: "customer_confirm",
   cancel_appointment: "customer_confirm",
 };
+
+const mediumOf = (ctx: TurnContext): "text" | "phone" => (ctx.channel === "voice" ? "phone" : "text");
 
 function spec(name: string) {
   const tool = BOOKING_TOOLS.find((t) => t.name === name);
@@ -95,7 +96,7 @@ function bookingTool(name: keyof typeof SCHEMAS): RegisteredTool {
           reason: "booking_backend_unavailable",
           summary: ctx.inbound.text.slice(0, 200),
         });
-        return { kind: "result", content: bookingUnavailableContent(r.notified) };
+        return { kind: "result", content: bookingUnavailableContent(r.notified, mediumOf(ctx)) };
       }
       if (policy === "customer_confirm") {
         await ctx.audit({ decision: "ALLOW", reason: `tool_call:${name}`, contentHash: sha256Hex(JSON.stringify(input)) });
@@ -123,7 +124,7 @@ function changesBackend(ctx: TurnContext, name: ConfirmableTool): boolean {
 /** Escalate (backend down) and tell the model the truth about it. */
 async function unavailableResult(ctx: TurnContext): Promise<ToolOutput> {
   const r = await ctx.escalate({ reason: "booking_backend_unavailable", summary: ctx.inbound.text.slice(0, 200) });
-  return { kind: "result", content: bookingUnavailableContent(r.notified) };
+  return { kind: "result", content: bookingUnavailableContent(r.notified, mediumOf(ctx)) };
 }
 
 const notSaved = (why: string): ToolOutput => ({
@@ -208,10 +209,10 @@ async function resolveDetails(
 
 /** Phase 1 (model): store the request; nothing changes until the customer replies YES. */
 async function propose(ctx: TurnContext, name: ConfirmableTool, input: Record<string, unknown>): Promise<ToolOutput> {
-  const conv = ctx.inbound.conv;
+  const contact = contactOf(ctx.inbound.conv);
   const store = ctx.deps.store;
-  if (conv.kind !== "contact" || !store) {
-    return notSaved("This request can't be confirmed by text right now. Offer to escalate_to_human.");
+  if (!contact || !store) {
+    return notSaved(`This request can't be confirmed by ${mediumOf(ctx)} right now. Offer to escalate_to_human.`);
   }
   const resolved = await resolveDetails(ctx, name, input);
   if ("reply" in resolved) return resolved.reply;
@@ -234,10 +235,11 @@ async function propose(ctx: TurnContext, name: ConfirmableTool, input: Record<st
     details,
     created_at: new Date(now).toISOString(),
     expires_at: new Date(now + PENDING_ACTION_TTL_MS).toISOString(),
+    origin: ctx.sessionKey,
   };
   let stored = false;
   try {
-    stored = await store.setPendingAction(ctx.config.workspaceId, conv.contactId, action);
+    stored = await store.setPendingAction(ctx.config.workspaceId, contact.contactId, action);
   } catch {
     stored = false;
   }
@@ -253,7 +255,9 @@ async function propose(ctx: TurnContext, name: ConfirmableTool, input: Record<st
       summary_en: action.summary,
       summary_es: action.summary_es,
       next_step:
-        "NOTHING HAS CHANGED YET. Ask the customer to reply YES to confirm (SÍ in Spanish), quoting the summary in their language, and say that NO cancels the request. Do not say it is booked, changed, or cancelled. The request expires in 30 minutes.",
+        ctx.channel === "voice"
+          ? "NOTHING HAS CHANGED YET. State the action out loud in natural spoken words (say the day and time the way a person would, for example 'martes siete de octubre a las tres de la tarde' or 'Tuesday, October seventh at three in the afternoon'), then ask the caller to say yes (sí) to confirm, and say that no cancels it. Do not say it is booked, changed, or cancelled. One short question, nothing else. The request expires in 30 minutes."
+          : "NOTHING HAS CHANGED YET. Ask the customer to reply YES to confirm (SÍ in Spanish), quoting the summary in their language, and say that NO cancels the request. Do not say it is booked, changed, or cancelled. The request expires in 30 minutes.",
     }),
   };
 }
@@ -349,6 +353,22 @@ const escalateToHuman = defineTool({
   policy: "escalate",
   async handler(input, ctx) {
     const r = await ctx.escalate({ reason: input.reason, summary: input.summary ?? "" });
+    if (ctx.channel === "voice") {
+      const t = ctx.inbound.voice?.transfer;
+      if (t?.number && t.open) {
+        return {
+          kind: "result",
+          content:
+            "The caller is being transferred to a person on the team right now. Say ONE short sentence that you are connecting them, and nothing else.",
+        };
+      }
+      return {
+        kind: "result",
+        content: r.notified || r.recorded
+          ? "Nobody can take the call right now, so a callback request was saved. Tell the caller, in one or two short sentences, that the team will call them back at the number they are calling from."
+          : "Nobody could be notified right now. Do not promise a callback. Tell the caller to contact the business directly.",
+      };
+    }
     // Only promise a follow-up when a person was actually notified.
     return {
       kind: "result",
@@ -358,6 +378,23 @@ const escalateToHuman = defineTool({
     };
   },
 });
+
+/**
+ * The voice agent's tools: the SMS surface, but booking tools only exist for
+ * a caller we could identify (a real phone number resolved to a contact);
+ * an anonymous caller can only be handed to a person.
+ */
+/**
+ * Phone tools. Caller ID can be faked, so existing appointments (look up,
+ * reschedule, cancel) are only reachable when the carrier fully vouched for
+ * the number (SHAKEN/STIR attestation A). An unverified caller can still
+ * check times, book a new visit, or ask for a person.
+ */
+export function voiceTools(hasContact: boolean, callerVerified: boolean): RegisteredTool[] {
+  if (!hasContact) return [escalateToHuman];
+  if (!callerVerified) return [bookingTool("check_availability"), bookingTool("create_appointment"), escalateToHuman];
+  return smsTools();
+}
 
 /** The SMS front desk's tools, in the order the model has always seen them. */
 export function smsTools(): RegisteredTool[] {

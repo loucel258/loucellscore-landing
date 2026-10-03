@@ -30,8 +30,56 @@ const FALLBACK_USER_TURNS = 10;
 export async function loadHistory(ctx: TurnContext): Promise<HistoryTurn[]> {
   if (ctx.history) return ctx.history;
   const conv = ctx.inbound.conv;
-  ctx.history = conv.kind === "session" ? await webHistory(ctx, conv.sessionId, conv.trust ?? "unverified") : await smsHistory(ctx);
+  ctx.history =
+    conv.kind === "session"
+      ? await webHistory(ctx, conv.sessionId, conv.trust ?? "unverified")
+      : conv.kind === "call"
+        ? await callHistory(ctx)
+        : await smsHistory(ctx);
   return ctx.history;
+}
+
+export const CALL_HISTORY_ROWS = 24;
+
+/**
+ * Voice: the call's own encrypted transcript (session "call_<sid>"). The
+ * gateway's turns are signed, so the server transcript is trusted as is.
+ * When the caller cut the agent off, the last agent turn is replaced by what
+ * was actually heard.
+ */
+async function callHistory(ctx: TurnContext): Promise<HistoryTurn[]> {
+  const { store } = ctx.deps;
+  let turns: HistoryTurn[] = [];
+  if (store && ctx.deps.encryptionAvailable()) {
+    let rows: Awaited<ReturnType<typeof store.recentTranscript>> = null;
+    try {
+      rows = await store.recentTranscript(ctx.config.workspaceId, ctx.sessionKey, CALL_HISTORY_ROWS);
+    } catch {
+      rows = null;
+    }
+    for (const r of rows ?? []) {
+      try {
+        turns.push({ role: r.role, content: ctx.deps.decrypt(r.engagement_id, r.cipher_b64) });
+      } catch {
+        // Undecryptable row: skip it.
+      }
+    }
+  }
+  const heard = ctx.inbound.voice?.interruptedAgentText?.trim();
+  if (heard) {
+    const marked = `${heard} [the caller interrupted here]`;
+    const last = turns[turns.length - 1];
+    if (last?.role === "user") {
+      // The caller cut in before the agent's answer was stored (only their line was kept):
+      // what they heard is the agent's reply to that line.
+      turns = [...turns, { role: "assistant", content: marked }];
+    } else {
+      // The answer was stored in full but only part of it was played.
+      const idx = turns.map((t) => t.role).lastIndexOf("assistant");
+      if (idx >= 0) turns = turns.map((t, i) => (i === idx ? { ...t, content: marked } : t));
+    }
+  }
+  return turns;
 }
 
 async function webHistory(ctx: TurnContext, sessionId: string, trust: SessionTrust): Promise<HistoryTurn[]> {

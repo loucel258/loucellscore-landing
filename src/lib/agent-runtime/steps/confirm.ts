@@ -3,12 +3,14 @@ import { sha256Hex } from "@/lib/crypto/hash";
 import type { TurnContext } from "../context";
 import type { Step } from "../runtime";
 import { actionDeclinedReply } from "../copy";
-import { isExpired, parseConfirmationReply, parsePendingAction, type PendingAction } from "../pending-action";
+import { answerableBy, isExpired, parseConfirmationReply, parsePendingAction, type PendingAction } from "../pending-action";
+import { parseSpokenConfirmation } from "../spoken";
+import { contactOf } from "../types";
 import { runConfirmedAction } from "../tools/booking";
 import { prepareBooking } from "./booking";
 
 /**
- * confirmPending (SMS, after admit + screen, before any model call): settle
+ * confirmPending (SMS and voice, after admit + screen, before any model call): settle
  * the customer's reply to a stored customer_confirm action.
  *
  *   no pending action / web          → null (the turn continues)
@@ -23,18 +25,20 @@ import { prepareBooking } from "./booking";
  * duplicate that slipped past claim) finds nothing to run.
  */
 export async function confirmPending(ctx: TurnContext): Promise<Step | null> {
-  const conv = ctx.inbound.conv;
+  const contact = contactOf(ctx.inbound.conv);
   const store = ctx.deps.store;
-  if (ctx.channel !== "sms" || conv.kind !== "contact" || !store) return null;
+  if ((ctx.channel !== "sms" && ctx.channel !== "voice") || !contact || !store) return null;
   const ws = ctx.config.workspaceId;
 
   let action: PendingAction | null;
   try {
-    action = parsePendingAction(await store.getPendingAction(ws, conv.contactId));
+    action = parsePendingAction(await store.getPendingAction(ws, contact.contactId));
   } catch {
     return null;
   }
   if (!action) return null;
+  // Asked in another conversation (a text, another call): not this turn's to settle or show.
+  if (!answerableBy(action, ctx.sessionKey)) return null;
 
   if (isExpired(action, ctx.deps.now())) {
     await take(ctx, action);
@@ -42,7 +46,7 @@ export async function confirmPending(ctx: TurnContext): Promise<Step | null> {
     return null;
   }
 
-  const reply = parseConfirmationReply(ctx.inbound.text);
+  const reply = ctx.channel === "voice" ? parseSpokenConfirmation(ctx.inbound.text) : parseConfirmationReply(ctx.inbound.text);
   if (!reply) {
     ctx.pendingAction = action;
     return null;
@@ -75,6 +79,7 @@ export async function confirmPending(ctx: TurnContext): Promise<Step | null> {
 
   await prepareBooking(ctx);
   const run = await runConfirmedAction(ctx, action, locale);
+  if (run.ok && action.tool === "create_appointment") ctx.state.booked = true;
   const escalation = ctx.escalation;
   return {
     draft: {
@@ -89,10 +94,10 @@ export async function confirmPending(ctx: TurnContext): Promise<Step | null> {
 }
 
 async function take(ctx: TurnContext, action: PendingAction): Promise<boolean> {
-  const conv = ctx.inbound.conv;
-  if (conv.kind !== "contact" || !ctx.deps.store) return false;
+  const contact = contactOf(ctx.inbound.conv);
+  if (!contact || !ctx.deps.store) return false;
   try {
-    return await ctx.deps.store.takePendingAction(ctx.config.workspaceId, conv.contactId, action.id);
+    return await ctx.deps.store.takePendingAction(ctx.config.workspaceId, contact.contactId, action.id);
   } catch {
     return false;
   }
@@ -100,12 +105,12 @@ async function take(ctx: TurnContext, action: PendingAction): Promise<boolean> {
 
 /** Opt-out: drop any pending action so a later YES (re-subscribe) can never run it. Best-effort. */
 export async function dropPendingAction(ctx: TurnContext): Promise<void> {
-  const conv = ctx.inbound.conv;
+  const contact = contactOf(ctx.inbound.conv);
   const store = ctx.deps.store;
-  if (conv.kind !== "contact" || !store) return;
+  if (!contact || !store) return;
   try {
-    const action = parsePendingAction(await store.getPendingAction(ctx.config.workspaceId, conv.contactId));
-    if (action) await store.takePendingAction(ctx.config.workspaceId, conv.contactId, action.id);
+    const action = parsePendingAction(await store.getPendingAction(ctx.config.workspaceId, contact.contactId));
+    if (action) await store.takePendingAction(ctx.config.workspaceId, contact.contactId, action.id);
   } catch {
     // Expiry (30 min) still bounds it.
   }

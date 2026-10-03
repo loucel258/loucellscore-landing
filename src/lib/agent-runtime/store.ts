@@ -24,11 +24,29 @@ export type SmsHistoryRow = { id: string; direction: "inbound" | "outbound"; bod
 export type EscalationRow = {
   workspace_id: string;
   agent_slug: string;
-  channel: "web" | "sms";
+  channel: "web" | "sms" | "voice";
   session_id: string | null;
   contact_id: string | null;
   reason: string;
   summary: string;
+};
+
+export type VoiceOutcome = "answered" | "booked" | "escalated" | "transferred" | "abandoned";
+/** Ranking used to keep the strongest outcome of a call (a later "answered" never downgrades "escalated"). */
+export const VOICE_OUTCOME_RANK: Record<VoiceOutcome, number> = {
+  abandoned: 0,
+  answered: 1,
+  booked: 2,
+  escalated: 3,
+  transferred: 4,
+};
+
+export type VoiceCallRow = {
+  call_sid: string;
+  started_at: string;
+  ended_at: string | null;
+  outcome: VoiceOutcome | null;
+  language: string | null;
 };
 
 export type ClaimResult = { status: "claimed"; id: string | null } | { status: "duplicate" };
@@ -62,6 +80,25 @@ export type RuntimeStore = {
   getOrCreateContact(workspaceId: string, phone: string): Promise<Contact | null>;
   optOut(workspaceId: string, phone: string): Promise<void>;
   optIn(workspaceId: string, contactId: string): Promise<void>;
+  /** Voice call record (migration 071). All three degrade silently while the table is missing. */
+  upsertVoiceCall?(row: {
+    workspaceId: string;
+    engagementId: string;
+    callSid: string;
+    provider: string;
+    caller: string | null;
+    /** SHAKEN/STIR attestation A on the incoming call (migration 071). */
+    callerVerified: boolean;
+    language: string | null;
+    startedAt: string;
+  }): Promise<void>;
+  getVoiceCall?(workspaceId: string, callSid: string): Promise<VoiceCallRow | null>;
+  /** Only ever raises the outcome (see VOICE_OUTCOME_RANK). */
+  updateVoiceCall?(
+    workspaceId: string,
+    callSid: string,
+    patch: { endedAt?: string; durationSec?: number; outcome?: VoiceOutcome; language?: string },
+  ): Promise<void>;
   /** SMS two-phase confirmation: contacts.metadata.pending_action, raw (callers parse it). */
   getPendingAction(workspaceId: string, contactId: string): Promise<unknown>;
   /** Store (replace) the contact's pending action. false = not stored. */
@@ -91,7 +128,72 @@ export function createSupabaseStore(sb: SupabaseClient): RuntimeStore {
     return asObject((data as { metadata: unknown }).metadata);
   }
 
+  let warnedNoVoiceTable = false;
+  const voiceTableMissing = (err: { code?: string } | null): boolean => {
+    if (err?.code !== "42P01" && err?.code !== "PGRST205") return false;
+    if (!warnedNoVoiceTable) {
+      warnedNoVoiceTable = true;
+      console.warn("[agent-runtime] voice_calls table missing (migration 071 pending); call records skipped");
+    }
+    return true;
+  };
+
   return {
+    async upsertVoiceCall(row) {
+      const { error } = await sb.from("voice_calls").upsert(
+        {
+          workspace_id: row.workspaceId,
+          engagement_id: row.engagementId,
+          call_sid: row.callSid,
+          provider: row.provider,
+          caller: row.caller,
+          caller_verified: row.callerVerified,
+          language: row.language,
+          started_at: row.startedAt,
+        },
+        { onConflict: "call_sid", ignoreDuplicates: true },
+      );
+      if (error && !voiceTableMissing(error)) console.warn(`[agent-runtime] voice call not stored: ${error.code ?? "error"}`);
+    },
+
+    async getVoiceCall(workspaceId, callSid) {
+      const { data, error } = await sb
+        .from("voice_calls")
+        .select("call_sid, started_at, ended_at, outcome, language")
+        .eq("workspace_id", workspaceId)
+        .eq("call_sid", callSid)
+        .maybeSingle();
+      if (error) {
+        voiceTableMissing(error);
+        return null;
+      }
+      return (data as VoiceCallRow | null) ?? null;
+    },
+
+    async updateVoiceCall(workspaceId, callSid, patch) {
+      const update: Record<string, unknown> = {};
+      if (patch.endedAt) update.ended_at = patch.endedAt;
+      if (patch.durationSec !== undefined) update.duration_sec = patch.durationSec;
+      if (patch.language) update.language = patch.language;
+      if (patch.outcome) {
+        const { data, error } = await sb
+          .from("voice_calls")
+          .select("outcome")
+          .eq("workspace_id", workspaceId)
+          .eq("call_sid", callSid)
+          .maybeSingle();
+        if (error) {
+          voiceTableMissing(error);
+          return;
+        }
+        const cur = (data as { outcome: VoiceOutcome | null } | null)?.outcome ?? null;
+        if (!cur || VOICE_OUTCOME_RANK[patch.outcome] > VOICE_OUTCOME_RANK[cur]) update.outcome = patch.outcome;
+      }
+      if (Object.keys(update).length === 0) return;
+      const { error } = await sb.from("voice_calls").update(update).eq("workspace_id", workspaceId).eq("call_sid", callSid);
+      if (error && !voiceTableMissing(error)) console.warn(`[agent-runtime] voice call not updated: ${error.code ?? "error"}`);
+    },
+
     async isPaused(engagementId, sessionKey) {
       const { data } = await sb
         .from("paused_sessions")

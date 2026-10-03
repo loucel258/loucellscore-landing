@@ -27,8 +27,16 @@ import { createSupabaseStore, type RuntimeStore } from "./store";
 export type CallOptions = { timeout?: number; signal?: AbortSignal; maxRetries?: number };
 
 /** The slice of the Anthropic client the runtime uses. */
+/** The slice of Anthropic's MessageStream the voice channel uses. */
+export type ModelStream = {
+  on(event: "text", listener: (delta: string) => void): ModelStream;
+  finalMessage(): Promise<Anthropic.Messages.Message>;
+};
+
 export type ModelClient = {
   messages: {
+    /** Streaming call (voice): text deltas as they arrive, then the whole message. */
+    stream?(body: Anthropic.Messages.MessageStreamParams, options?: CallOptions): ModelStream;
     create(
       body: Anthropic.Messages.MessageCreateParamsNonStreaming,
       options?: CallOptions,

@@ -1,6 +1,7 @@
 import "server-only";
 import type { TurnContext } from "../context";
 import { sanitize } from "@/lib/dlp/sanitizer";
+import { contactOf } from "../types";
 
 /**
  * escalate: hand the conversation to a person.
@@ -38,18 +39,25 @@ async function writeRow(ctx: TurnContext, req: EscalationRequest): Promise<boole
   if (!store) return false;
   const conv = ctx.inbound.conv;
   try {
-    const err = await store.insertEscalation({
+    const row = {
       workspace_id: ctx.config.workspaceId,
       agent_slug: ctx.config.slug,
       channel: ctx.channel,
-      session_id: conv.kind === "session" ? conv.sessionId : null,
-      contact_id: conv.kind === "contact" ? conv.contactId : null,
+      session_id: conv.kind === "session" ? conv.sessionId : conv.kind === "call" ? ctx.sessionKey : null,
+      contact_id: contactOf(conv)?.contactId ?? null,
       reason: req.reason.slice(0, 80),
       // Stored DLP-masked: the model writes this summary and may repeat a
       // name, email or card number. The contact stays reachable through
       // session_id / contact_id. (The internal alert email keeps it raw.)
       summary: sanitize(req.summary).sanitized.slice(0, 500),
-    });
+    };
+    let err = await store.insertEscalation(row);
+    // Migration 071 widens escalations.channel to include 'voice'. Until it
+    // is applied, keep the callback by filing it under 'sms' (the contact is
+    // the same person) instead of losing it.
+    if (err?.code === "23514" && row.channel === "voice") {
+      err = await store.insertEscalation({ ...row, channel: "sms", reason: `voice:${row.reason}`.slice(0, 80) });
+    }
     if (!err) return true;
     if (MISSING_TABLE.has(err.code ?? "")) {
       if (!warnedMissingTable) {
@@ -78,6 +86,12 @@ function alertFor(ctx: TurnContext, req: EscalationRequest): { subject: string; 
           <p><strong>Visitor:</strong> ${escapeHtml(req.visitor?.name ?? "(no name)")} · ${escapeHtml(req.visitor?.email ?? "(no email)")}</p>
           <p style="color:#888;font-size:11px;">session ${escapeHtml(ctx.sessionKey)} · transcript in /admin</p>
         `,
+    };
+  }
+  if (ctx.channel === "voice") {
+    return {
+      subject: `Phone call escalation: ${slug}`,
+      bodyHtml: `<p>The voice agent escalated a call. A callback is needed unless it was transferred.</p><p><b>Reason:</b> ${escapeHtml(req.reason)}</p><p><b>Summary:</b> ${escapeHtml(req.summary)}</p><p>Workspace: ${escapeHtml(ctx.config.workspaceId)} · call ${escapeHtml(ctx.sessionKey)} · transcript in the portal inbox</p>`,
     };
   }
   // The SMS body is attacker-controlled; everything is escaped before it

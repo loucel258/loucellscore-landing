@@ -10,6 +10,7 @@ import { previewText } from "./message-text";
 import { t, type PortalLang } from "./strings";
 import { daysAgoIso } from "./time";
 import {
+  applyCallMeta,
   buildThreads,
   cleanName,
   indexLeads,
@@ -19,6 +20,7 @@ import {
   type LeadLite,
   type RecentThreadItem,
   type SmsMessageRow,
+  type VoiceCallLite,
   type ThreadRef,
   type ThreadSummary,
   type WebMessageRow,
@@ -42,6 +44,34 @@ export async function inChunks<T>(ids: string[], size: number, run: (chunk: stri
   const out: T[] = [];
   for (let i = 0; i < unique.length; i += size) out.push(...(await run(unique.slice(i, i + size))));
   return out;
+}
+
+/**
+ * voice_calls rows (migration 071) for the call threads in `threads`, scoped
+ * to the engagement's workspaces. A missing table or any failure means "no
+ * call details": the thread still shows, from its transcript.
+ */
+export async function loadCallMeta(
+  sb: SupabaseClient,
+  ctx: AuthedPortalContext,
+  threads: ThreadSummary[],
+): Promise<ThreadSummary[]> {
+  const sids = threads.filter((t) => t.channel === "call").map((t) => t.id.replace(/^call_/, ""));
+  if (sids.length === 0 || ctx.workspaceIds.length === 0) return threads;
+  try {
+    const rows = await inChunks(sids, 100, async (chunk) => {
+      const { data, error } = await sb
+        .from("voice_calls")
+        .select("call_sid, caller, duration_sec, outcome")
+        .in("workspace_id", ctx.workspaceIds)
+        .in("call_sid", chunk);
+      if (error) return [] as VoiceCallLite[];
+      return (data as VoiceCallLite[] | null) ?? [];
+    });
+    return applyCallMeta(threads, rows);
+  } catch {
+    return threads;
+  }
 }
 
 export type ThreadData = {
@@ -128,7 +158,7 @@ export async function loadThreadData(
   const knownContacts = new Set(contacts.map((c) => c.id));
   const scopedSms = smsRows.filter((m) => m.contact_id && knownContacts.has(m.contact_id));
 
-  const threads = buildThreads({
+  const threads = await loadCallMeta(sb, ctx, buildThreads({
     webMessages: webRows,
     smsMessages: scopedSms,
     leads,
@@ -139,7 +169,7 @@ export async function loadThreadData(
       escalations,
       bookedContactIds: booked,
     },
-  });
+  }));
 
   return { threads, webRows, smsRows: scopedSms, escalations };
 }
@@ -277,7 +307,7 @@ export async function loadThreadDetail(
   ref: ThreadRef,
   escalations: OpenEscalation[],
 ): Promise<ThreadDetail | null> {
-  if (ref.channel === "web") {
+  if (ref.channel !== "sms") {
     const [msgRes, leadsRes, pausedRes, tagsRes] = await Promise.all([
       sb
         .from("conversation_messages")
@@ -305,16 +335,20 @@ export async function loadThreadDetail(
     const messages = ((msgRes.data as WebMessageRow[] | null) ?? []).slice().sort(byTurnOrder);
     if (messages.length === 0) return null;
     const leads = (leadsRes.data as LeadLite[] | null) ?? [];
-    const [thread] = buildThreads({
-      webMessages: messages,
-      smsMessages: [],
-      leads,
-      flags: {
-        pausedSessionIds: ((pausedRes.data as Array<{ session_id: string }> | null) ?? []).map((p) => p.session_id),
-        tags: (tagsRes.data as Array<{ session_id: string; tag: string }> | null) ?? [],
-        escalations,
-      },
-    });
+    const [thread] = await loadCallMeta(
+      sb,
+      ctx,
+      buildThreads({
+        webMessages: messages,
+        smsMessages: [],
+        leads,
+        flags: {
+          pausedSessionIds: ((pausedRes.data as Array<{ session_id: string }> | null) ?? []).map((p) => p.session_id),
+          tags: (tagsRes.data as Array<{ session_id: string; tag: string }> | null) ?? [],
+          escalations,
+        },
+      }),
+    );
     if (!thread) return null;
     // A manual reply can only reach the visitor by email, from a lead of
     // this engagement. Without one the composer is disabled up front.

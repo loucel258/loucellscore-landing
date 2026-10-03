@@ -83,7 +83,7 @@ export function defineTool<I>(def: ToolDef<I>): RegisteredTool {
 }
 
 /** One line per policy for the prompt's action contract (SMS). */
-export function policyRules(tools: readonly RegisteredTool[]): string[] {
+export function policyRules(tools: readonly RegisteredTool[], medium: "sms" | "voice" = "sms"): string[] {
   const names = (p: ToolPolicy) => tools.filter((t) => t.policy === p).map((t) => t.tool.name).join(", ");
   const lines: string[] = [];
   const read = names("read");
@@ -91,7 +91,11 @@ export function policyRules(tools: readonly RegisteredTool[]): string[] {
   const hitl = names("owner_hitl");
   const esc = names("escalate");
   if (read) lines.push(`- ${read}: look things up only.`);
-  if (confirm) {
+  if (confirm && medium === "voice") {
+    lines.push(
+      `- ${confirm}: change something real for this caller, but calling one does NOT make the change. It saves the request and returns a short summary; the change happens only when the caller says yes (sí) on the next turn. Call it as soon as the caller has chosen the exact service and time (do not ask them to confirm first), then say the action out loud in spoken words and ask for a yes. Never say it is booked, changed, or cancelled until the system confirms it.`,
+    );
+  } else if (confirm) {
     lines.push(
       `- ${confirm}: change something real for this customer, but calling one does NOT make the change. It saves the request and returns a short summary; the change happens only when the customer replies YES. Call it as soon as the customer has chosen the exact service and time (do not ask them to confirm first), then ask them to reply YES (or SÍ) to confirm, quoting the summary in their language. Never say it is booked, changed, or cancelled until the system confirms it.`,
     );

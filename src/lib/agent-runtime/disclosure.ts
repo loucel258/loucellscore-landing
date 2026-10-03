@@ -16,6 +16,8 @@ export const RECORDING_NOTICE: Record<Locale, string> = {
   es: "Esta llamada puede ser grabada y transcrita.",
 };
 
+const HOW_CAN_I_HELP: Record<Locale, string> = { en: "How can I help you?", es: "¿En qué le puedo ayudar?" };
+
 function displayName(businessName: string | null | undefined, locale: Locale): string {
   const n = (businessName ?? "").replace(/\s+/g, " ").trim();
   return n ? n : FALLBACK_BUSINESS[locale];
@@ -38,6 +40,8 @@ export function voiceWelcome(
 ): string {
   const parts = [aiDisclosure(locale, businessName)];
   if (opts.recordingNotice) parts.push(RECORDING_NOTICE[locale]);
+  // A receptionist hands the floor back; silence after the notice sounds broken.
+  parts.push(HOW_CAN_I_HELP[locale]);
   return parts.join(" ");
 }
 

@@ -1,0 +1,42 @@
+# Copy to fly.toml and set the app name.
+# Secrets (never in this file): fly secrets set VOICE_GATEWAY_SECRET=... APP_URL=https://www.loucellscore.com
+app = "your-voice-gateway"
+primary_region = "iad"   # Ashburn, next to Vercel iad1 and Twilio US1: lowest latency per turn
+
+# A deploy sends SIGTERM; the gateway stops taking new calls and lets live ones
+# finish (up to 280 s, src/server.ts DRAIN_MS). Fly must wait longer than that.
+kill_signal = "SIGTERM"
+kill_timeout = 300
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[deploy]
+  # One machine at a time: the other keeps answering while this one drains.
+  strategy = "rolling"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"   # always on: calls hold WebSockets
+  auto_start_machines = true
+  min_machines_running = 2     # two machines: one can restart or deploy without dropping calls
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 200
+    hard_limit = 250
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -22,11 +22,31 @@ const isHighRisk = (type: unknown) => HIGH_RISK_PII.has(String(type).toUpperCase
 /** Layer 2 is a model call; short messages can't hide much, so skip it below this. */
 const LAYER2_MIN_CHARS = 24;
 
+const NUMBER_WORDS =
+  /\b(?:zero|oh|one|two|three|four|five|six|seven|eight|nine|cero|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\b/gi;
+const SENSITIVE_WORDS =
+  /\b(?:social|security|seguro|ssn|itin|ein|tax|card|tarjeta|cr[eé]dito|d[eé]bito|cvv|cvc|account|cuenta|routing|ruta|bank|banco|password|contrase[nñ]a|clave|pin|c[oó]digo|code|license|licencia|passport|pasaporte)\b/i;
+
+/**
+ * Voice: a second model call before every reply is close to a second of
+ * silence on the line. On calls, Layer 2 runs only when the words could carry
+ * high-risk data: a run of digits, several spoken digits, or a word like
+ * "social", "tarjeta", "cuenta", "password". Layer 1 (regex) still checks
+ * every utterance, and the speech-to-text already writes spoken numbers as
+ * digits, which Layer 1 catches.
+ */
+export function voiceNeedsLayer2(text: string): boolean {
+  if (/\d(?:[\s.-]?\d){3,}/.test(text)) return true;
+  if ((text.match(NUMBER_WORDS) ?? []).length >= 4) return true;
+  return SENSITIVE_WORDS.test(text);
+}
+
 export async function screen(ctx: TurnContext): Promise<TurnOutcome | null> {
   const text = ctx.inbound.text;
   let dlp = ctx.deps.sanitize(text);
   let blocked = dlp.redactions.some((r) => isHighRisk(r.type));
-  if (!blocked && text.length >= LAYER2_MIN_CHARS) {
+  const runLayer2 = text.length >= LAYER2_MIN_CHARS && (ctx.channel !== "voice" || voiceNeedsLayer2(text));
+  if (!blocked && runLayer2) {
     try {
       const { result: layer2, usage } = await ctx.deps.sanitizeWithLLM(text);
       await ctx.meter(usage);

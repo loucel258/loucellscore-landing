@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Smartphone, Pause } from "lucide-react";
+import { MessageSquare, Smartphone, Pause, Phone } from "lucide-react";
 import { formatWhen } from "@/lib/portal/time";
 import type { RecentThreadItem } from "@/lib/portal/threads";
 
@@ -109,6 +109,7 @@ function ThreadRow({
   labels: FeedLabels;
 }) {
   const isSms = item.channel === "sms";
+  const isCall = item.channel === "call";
   return (
     <li>
       <Link
@@ -117,11 +118,11 @@ function ThreadRow({
       >
         <span
           className={`inline-flex size-8 shrink-0 items-center justify-center rounded-lg ${
-            isSms ? "bg-violet-50 text-violet-700" : "bg-cyan-50 text-cyan-700"
+            isCall ? "bg-amber-50 text-amber-700" : isSms ? "bg-violet-50 text-violet-700" : "bg-cyan-50 text-cyan-700"
           }`}
           aria-hidden
         >
-          {isSms ? <Smartphone className="size-4" /> : <MessageSquare className="size-4" />}
+          {isCall ? <Phone className="size-4" /> : isSms ? <Smartphone className="size-4" /> : <MessageSquare className="size-4" />}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">

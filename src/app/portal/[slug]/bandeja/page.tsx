@@ -13,6 +13,7 @@ import { buildPreviews, loadThreadData, loadThreadDetail, type ThreadDetail } fr
 import {
   TAG_KEYS,
   filterThreads,
+  formatCallLength,
   formatPhone,
   inboxHref,
   parseInboxParams,
@@ -271,16 +272,21 @@ function OutcomeBadge({ outcome, lang }: { outcome: ThreadOutcome | null; lang: 
   );
 }
 
-function ChannelBadge({ channel, lang }: { channel: "web" | "sms"; lang: PortalLang }) {
+function ChannelBadge({ channel, lang }: { channel: "web" | "sms" | "call"; lang: PortalLang }) {
   const sms = channel === "sms";
+  const call = channel === "call";
   return (
     <span
       className={`inline-flex items-center gap-0.5 rounded px-1 py-px text-[9.5px] font-semibold uppercase tracking-wider ring-1 ${
-        sms ? "bg-violet-50 text-violet-700 ring-violet-200" : "bg-cyan-50 text-cyan-800 ring-cyan-200"
+        call
+          ? "bg-amber-50 text-amber-800 ring-amber-200"
+          : sms
+            ? "bg-violet-50 text-violet-700 ring-violet-200"
+            : "bg-cyan-50 text-cyan-800 ring-cyan-200"
       }`}
     >
-      {sms ? <Smartphone className="size-2.5" /> : <MessageSquare className="size-2.5" />}
-      {t(lang, sms ? "badge.sms" : "badge.web")}
+      {call ? <Phone className="size-2.5" /> : sms ? <Smartphone className="size-2.5" /> : <MessageSquare className="size-2.5" />}
+      {t(lang, call ? "badge.call" : sms ? "badge.sms" : "badge.web")}
     </span>
   );
 }
@@ -395,9 +401,15 @@ function ThreadView({
             <p className="mt-0.5 text-[11px] text-neutral-500">
               {tn(lang, "inbox.messages", detail.messages.length)} · {formatDateTime(thread.firstAt, lang, tz)}
               {thread.channel === "web" && thread.email ? ` · ${thread.email}` : ""}
+              {thread.call?.durationSec != null ? ` · ${t(lang, "call.length", { duration: formatCallLength(thread.call.durationSec) })}` : ""}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
+            {thread.call?.outcome && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800 ring-1 ring-amber-200">
+                {t(lang, `call.outcome.${thread.call.outcome}`)}
+              </span>
+            )}
             <OutcomeBadge outcome={outcome} lang={lang} />
             {thread.urgent && (
               <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-rose-700 ring-1 ring-rose-200">

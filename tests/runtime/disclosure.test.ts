@@ -17,12 +17,12 @@ describe("disclosure helpers", () => {
   });
 
   it("voice welcome: disclosure, plus the recording notice only when asked", () => {
-    expect(voiceWelcome("en", "Acme")).toBe("Hi, I'm the virtual assistant for Acme.");
+    expect(voiceWelcome("en", "Acme")).toBe("Hi, I'm the virtual assistant for Acme. How can I help you?");
     expect(voiceWelcome("en", "Acme", { recordingNotice: true })).toBe(
-      "Hi, I'm the virtual assistant for Acme. This call may be recorded and transcribed.",
+      "Hi, I'm the virtual assistant for Acme. This call may be recorded and transcribed. How can I help you?",
     );
     expect(voiceWelcome("es", "Acme", { recordingNotice: true })).toBe(
-      "Hola, soy el asistente virtual de Acme. Esta llamada puede ser grabada y transcrita.",
+      "Hola, soy el asistente virtual de Acme. Esta llamada puede ser grabada y transcrita. ¿En qué le puedo ayudar?",
     );
     expect(RECORDING_NOTICE.es).toBe("Esta llamada puede ser grabada y transcrita.");
   });

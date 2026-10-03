@@ -53,7 +53,7 @@ export function toCsv(header: string[], rows: CsvValue[][]): string {
 // ── Conversations ─────────────────────────────────────────────────────
 
 export type ConversationExportRow = {
-  channel: "web" | "sms";
+  channel: "web" | "sms" | "call";
   startedAt: string;
   lastAt: string;
   name: string | null;
@@ -79,7 +79,7 @@ export function conversationsCsv(rows: ConversationExportRow[], lang: PortalLang
     rows.map((r) => [
       csvDateTime(r.startedAt, tz),
       csvDateTime(r.lastAt, tz),
-      t(lang, r.channel === "sms" ? "channel.sms" : "channel.web_chat"),
+      t(lang, r.channel === "sms" ? "channel.sms" : r.channel === "call" ? "channel.phone" : "channel.web_chat"),
       r.name ?? "",
       r.email ?? "",
       r.phone ? formatPhone(r.phone) : "",
@@ -98,7 +98,7 @@ export type BookingExportRow = {
   at: string | null;
   /** When the booking was made. */
   bookedAt: string | null;
-  channel: "web" | "sms";
+  channel: "web" | "sms" | "call";
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -155,7 +155,7 @@ export function bookingsCsv(rows: BookingExportRow[], lang: PortalLang, tz: stri
       r.service ?? "",
       bookingStatusLabel(lang, r.status),
       t(lang, SOURCE_KEY[r.source]),
-      t(lang, r.channel === "sms" ? "channel.sms" : "channel.web_chat"),
+      t(lang, r.channel === "sms" ? "channel.sms" : r.channel === "call" ? "channel.phone" : "channel.web_chat"),
       r.reminderSent === null ? "" : t(lang, r.reminderSent ? "export.yes" : "export.no"),
       priceCell(r.priceCents),
     ]),

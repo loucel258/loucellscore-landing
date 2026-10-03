@@ -30,7 +30,9 @@ export type LoopPolicy = {
 };
 
 export type LoopResult =
-  | { kind: "text"; text: string }
+  /** `streamed`: voice already spoke this text (nothing left to say). */
+  | { kind: "text"; text: string; streamed?: boolean }
+  | { kind: "aborted" }
   | { kind: "end"; end: Extract<ToolOutput, { kind: "end" }> }
   | { kind: "fail"; reason: string }
   | { kind: "cap"; text: string }
@@ -44,6 +46,8 @@ export type LoopArgs = {
   tools: readonly RegisteredTool[];
   policy: LoopPolicy;
   ctx: TurnContext;
+  /** Voice: speak text as it streams, say one filler before tools. */
+  voice?: { speak(text: string): void; filler(): void; aborted(): boolean; signal?: AbortSignal };
   /** Called after every model response (budget accounting). */
   onUsage?: (usage: Anthropic.Messages.Usage) => Promise<void> | void;
 };
@@ -65,25 +69,47 @@ export async function runLoop(args: LoopArgs): Promise<LoopResult> {
   const byName = new Map(tools.map((t) => [t.tool.name, t]));
   const toolSpecs = tools.map((t) => t.tool);
   let actions = 0;
+  const voice = args.voice;
+  let fillerDone = false;
 
   for (let i = 0; i < policy.maxIterations; i++) {
+    if (voice?.aborted()) return { kind: "aborted" };
     const remaining = policy.deadlineAt - ctx.deps.now();
     if (remaining <= 0) return { kind: "deadline" };
 
     let resp: Anthropic.Messages.Message;
+    let streamedNow = false;
     try {
-      resp = await client.messages.create(
-        {
-          model: policy.model,
-          max_tokens: policy.maxTokens,
-          ...(policy.temperature !== undefined ? { temperature: policy.temperature } : {}),
-          system,
-          tools: toolSpecs.length > 0 ? toolSpecs : undefined,
-          messages: [...messages],
-        },
-        { timeout: Math.min(policy.callTimeoutMs, remaining), signal: AbortSignal.timeout(remaining) },
-      );
+      const body = {
+        model: policy.model,
+        max_tokens: policy.maxTokens,
+        ...(policy.temperature !== undefined ? { temperature: policy.temperature } : {}),
+        system,
+        tools: toolSpecs.length > 0 ? toolSpecs : undefined,
+        messages: [...messages],
+      };
+      // The caller speaking over the agent cancels the model call too (no tokens spent on an unheard answer).
+      const deadline = AbortSignal.timeout(remaining);
+      const signal = voice?.signal ? AbortSignal.any([deadline, voice.signal]) : deadline;
+      const opts = { timeout: Math.min(policy.callTimeoutMs, remaining), signal };
+      if (voice && client.messages.stream) {
+        const stream = client.messages.stream(body, opts);
+        stream.on("text", (delta) => {
+          if (voice.aborted() || !delta) return;
+          streamedNow = true;
+          voice.speak(delta);
+        });
+        resp = await stream.finalMessage();
+      } else {
+        resp = await client.messages.create(body, opts);
+        const said = voice ? textOf(resp.content) : "";
+        if (voice && said && !voice.aborted()) {
+          streamedNow = true;
+          voice.speak(said);
+        }
+      }
     } catch (e) {
+      if (voice?.aborted()) return { kind: "aborted" };
       if (isAbort(e) && ctx.deps.now() >= policy.deadlineAt) return { kind: "deadline" };
       return { kind: "model_error", errorName: e instanceof Error ? e.name || "error" : "non_error" };
     }
@@ -95,9 +121,15 @@ export async function runLoop(args: LoopArgs): Promise<LoopResult> {
     const toolUses = resp.content.filter(
       (b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use",
     );
-    if (toolUses.length === 0) return { kind: "text", text };
-    if (actions >= policy.maxActions) return { kind: "text", text };
+    if (toolUses.length === 0) return { kind: "text", text, ...(streamedNow ? { streamed: true } : {}) };
+    if (actions >= policy.maxActions) return { kind: "text", text, ...(streamedNow ? { streamed: true } : {}) };
     if (i === policy.maxIterations - 1) return { kind: "cap", text };
+    if (voice) {
+      // Dead air while a tool runs is the worst thing on a phone: the
+      // model's own lead-in counts, otherwise one short filler.
+      if (!streamedNow && !fillerDone) voice.filler();
+      fillerDone = true;
+    }
 
     const results: Anthropic.Messages.ToolResultBlockParam[] = [];
     for (const tu of toolUses) {
@@ -116,6 +148,7 @@ export async function runLoop(args: LoopArgs): Promise<LoopResult> {
         });
         continue;
       }
+      if (voice?.aborted()) return { kind: "aborted" };
       actions++;
       let out: ToolOutput;
       try {

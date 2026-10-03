@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, KeyRound, Check, AlertTriangle } from "lucide-react";
+import { VoicePanel } from "./voice-panel";
 
 type CalendarCfg = { provider?: string; calendar_id?: string; timezone?: string };
 type RemindersCfg = {
@@ -18,9 +19,12 @@ type ConfiguredProvider = { provider: string; account_identifier: string | null 
 export function IntegrationsPanel({
   agentId,
   integrations,
+  agentName = "",
 }: {
   agentId: string;
   integrations: Record<string, unknown> | null;
+  /** Business name for the Vapi first-message hint (optional). */
+  agentName?: string;
 }) {
   const router = useRouter();
   const integ = (integrations ?? {}) as Integrations;
@@ -166,6 +170,7 @@ export function IntegrationsPanel({
   const labelCls = "block text-xs font-medium text-neutral-600 mb-1";
 
   return (
+    <>
     <section className="mt-6 rounded-xl border border-neutral-200 bg-white shadow-sm shadow-slate-900/10 p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
         <CalendarClock className="size-4" /> Front Desk: reminders and keys
@@ -336,5 +341,7 @@ export function IntegrationsPanel({
         </p>
       )}
     </section>
+    <VoicePanel agentId={agentId} integrations={integrations} agentName={agentName} />
+    </>
   );
 }

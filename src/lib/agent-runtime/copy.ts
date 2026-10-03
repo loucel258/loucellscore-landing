@@ -15,8 +15,13 @@ const WEB_PII_REFUSAL: Bilingual = {
 };
 
 /** High-risk PII refusal. SMS names the business so the customer knows where to go. */
-export function piiRefusal(locale: Locale, channel: "web" | "sms", businessName: string): string {
+export function piiRefusal(locale: Locale, channel: "web" | "sms" | "voice", businessName: string): string {
   if (channel === "web") return pick(WEB_PII_REFUSAL, locale);
+  if (channel === "voice") {
+    return locale === "es"
+      ? `Por su seguridad, por favor no me dé números de tarjeta ni de seguro social por teléfono. Si necesita ayuda con un pago, comuníquese directamente con ${businessName}.`
+      : `For your security, please don't read me card or Social Security numbers over the phone. If you need help with a payment, please contact ${businessName} directly.`;
+  }
   return locale === "es"
     ? `Por tu seguridad, no envíes datos como números de tarjeta o de seguro social por mensaje. Si necesitas ayuda con un pago, comunícate directamente con ${businessName}.`
     : `For your security, please don't send things like card or Social Security numbers by text. If you need help with a payment, please contact ${businessName} directly.`;
@@ -269,4 +274,104 @@ export function actionDeclinedReply(locale: Locale): string {
     },
     locale,
   );
+}
+
+// ── Voice channel ────────────────────────────────────────────────────────
+// Spoken sentences: short, no symbols, formal "usted" in Spanish.
+
+/** Said once before a tool runs when the model has not spoken yet. */
+export function voiceFiller(locale: Locale): string {
+  return pick({ en: "Sure, let me check.", es: "Claro, déjeme revisar." }, locale);
+}
+
+/** Monthly budget exhausted on a call. */
+export function voiceBudgetNotice(locale: Locale, businessName: string): string {
+  return locale === "es"
+    ? `Gracias por llamar. En este momento no puedo atenderle por aquí. Por favor comuníquese directamente con ${businessName}.`
+    : `Thanks for calling. I can't help by phone right now. Please contact ${businessName} directly.`;
+}
+
+/** Too many turns in a short time. */
+export function voiceRateLimited(locale: Locale): string {
+  return pick(
+    {
+      en: "I'm getting a lot of requests at once. Please give me a moment and try again.",
+      es: "Estoy recibiendo muchas solicitudes a la vez. Denme un momento e intente de nuevo.",
+    },
+    locale,
+  );
+}
+
+/** Spoken opt-out: the single confirmation, then the call can continue. */
+export function voiceOptOutConfirmation(locale: Locale, businessName: string): string {
+  return locale === "es"
+    ? `Listo, no le enviaremos más mensajes de ${businessName}. ¿Le puedo ayudar con algo más?`
+    : `Done, you won't get more messages from ${businessName}. Is there anything else I can help with?`;
+}
+
+/** Owner took over the call. */
+export function voiceStanddown(locale: Locale, transferring: boolean): string {
+  if (transferring) {
+    return pick(
+      {
+        en: "A member of our team is going to take this call. One moment please.",
+        es: "Un miembro de nuestro equipo va a atender esta llamada. Un momento por favor.",
+      },
+      locale,
+    );
+  }
+  return pick(
+    {
+      en: "A member of our team will call you back shortly. Thank you for calling.",
+      es: "Un miembro de nuestro equipo le devolverá la llamada en breve. Gracias por llamar.",
+    },
+    locale,
+  );
+}
+
+/**
+ * The agent cannot answer on the call. Transferring, a saved callback, or
+ * (when nobody could be notified) no promise at all.
+ */
+export function voiceFallback(
+  locale: Locale,
+  o: { transferring: boolean; notified: boolean; businessName: string },
+): string {
+  const es = locale === "es";
+  if (o.transferring) {
+    return es ? "Un momento, le comunico con una persona del equipo." : "One moment, I'm connecting you with a person on our team.";
+  }
+  if (o.notified) {
+    return es
+      ? "Disculpe, no pude resolverlo por aquí. Un miembro del equipo le devolverá la llamada a este número."
+      : "Sorry, I couldn't take care of that here. A team member will call you back at this number.";
+  }
+  return es
+    ? `Disculpe, no pude ayudarle en este momento. Por favor comuníquese directamente con ${o.businessName}.`
+    : `Sorry, I couldn't help right now. Please contact ${o.businessName} directly.`;
+}
+
+/** Call reached its maximum length. */
+export function voiceTimeLimit(locale: Locale, businessName: string): string {
+  return locale === "es"
+    ? `Hemos llegado al tiempo máximo de esta llamada. Si necesita algo más, por favor vuelva a llamar a ${businessName}. Gracias.`
+    : `We've reached the time limit for this call. If you need anything else, please call ${businessName} again. Thank you.`;
+}
+
+/** Transfer was requested but nobody answered: the callback is saved. */
+export function voiceNoAnswer(locale: Locale): string {
+  return pick(
+    {
+      en: "Sorry, nobody is available to take your call right now. Someone from our team will call you back soon. Thank you.",
+      es: "Disculpe, nadie puede atender su llamada en este momento. Alguien de nuestro equipo le devolverá la llamada pronto. Gracias.",
+    },
+    locale,
+  );
+}
+
+/** Voice is off or not ready: polite refusal, then the call ends. */
+export function voiceUnavailable(locale: Locale, businessName: string): string {
+  return locale === "es"
+    ? `Gracias por llamar a ${businessName}. En este momento no podemos atender llamadas por este medio. Por favor intente más tarde o envíenos un mensaje.`
+    : `Thanks for calling ${businessName}. We can't take calls this way right now. Please try again later or send us a message.`;
 }

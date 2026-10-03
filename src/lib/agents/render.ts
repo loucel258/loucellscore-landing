@@ -13,14 +13,14 @@
  * Pure function: no I/O, safe to unit test.
  */
 
-export type Channel = "sms" | "web";
+export type Channel = "sms" | "web" | "voice";
 
 /** ~3 GSM-7 segments. Long enough for a real answer, short enough to read. */
 export const SMS_MAX_CHARS = 480;
 
 const MD_LINK_RE = /\[([^\]\n]{1,200})\]\((\S{1,500}?)\)/g;
 
-function stripMarkdown(text: string): string {
+export function stripMarkdown(text: string): string {
   let out = text.replace(/\r\n?/g, "\n");
 
   // [label](url) → "label: url" (or the bare url when the label is the url).
@@ -73,7 +73,93 @@ export function capAtBoundary(text: string, max: number): string {
   return `${cut.replace(/[\s,;:-]+$/, "")}...`;
 }
 
-export function renderForChannel(text: string, channel: Channel, maxChars: number = SMS_MAX_CHARS): string {
+export function renderForChannel(
+  text: string,
+  channel: Channel,
+  maxChars: number = SMS_MAX_CHARS,
+  locale: "en" | "es" = "en",
+): string {
+  if (channel === "voice") return speakableSentences(text, locale).join(" ");
   if (channel !== "sms") return text;
   return capAtBoundary(stripMarkdown(text), maxChars);
+}
+
+// ── Voice ───────────────────────────────────────────────────────────────
+
+const URL_RE = /\b(?:https?:\/\/|www\.)\S+/gi;
+const EMOJI_RE = /[\p{Extended_Pictographic}\uFE0F\u200D]/gu;
+const PHONE_RE = /(?<![\d])(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?![\d])/g;
+
+const spaced = (digits: string) => digits.split("").join(" ");
+
+/**
+ * Text as it should be spoken: no markdown, links, emojis or symbols; prices,
+ * times and phone numbers written the way a person says them.
+ */
+export function toSpoken(text: string, locale: "en" | "es" = "en"): string {
+  let out = text
+    // A markdown link keeps its label; the URL is never read aloud.
+    .replace(MD_LINK_RE, (_m, label: string) => label.trim())
+    .replace(URL_RE, "");
+  out = stripMarkdown(out)
+    .replace(EMOJI_RE, "")
+    // Phone numbers digit by digit, grouped (the TTS would read a big number).
+    .replace(PHONE_RE, (_m, a: string, b: string, c: string) => `${spaced(a)}, ${spaced(b)}, ${spaced(c)}`)
+    // Prices: $45 -> 45 dollars, $45.50 -> 45 dollars and 50 cents.
+    .replace(/\$\s?(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{2}))?/g, (_m, whole: string, cents?: string) => {
+      const n = whole.replace(/,/g, "");
+      if (locale === "es") return cents && cents !== "00" ? `${n} dólares con ${Number(cents)}` : `${n} dólares`;
+      return cents && cents !== "00" ? `${n} dollars and ${Number(cents)} cents` : `${n} dollars`;
+    })
+    // Times: 3:00 p. m. -> 3 PM, 3:30 pm -> 3:30 PM.
+    .replace(/\b(\d{1,2})(?::(\d{2}))?\s?([ap])\.?\s?m\.?/gi, (_m, h: string, min: string | undefined, ap: string) =>
+      `${h}${min && min !== "00" ? `:${min}` : ""} ${ap.toUpperCase()}M`,
+    )
+    .replace(/(\d{1,2}):00\b/g, "$1")
+    .replace(/\s*&\s*/g, locale === "es" ? " y " : " and ")
+    .replace(/[*_#`~<>|]/g, "")
+    .replace(/\s*\n+\s*/g, ". ")
+    .replace(/\.\s*\./g, ".")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return out;
+}
+
+const ABBREVIATIONS = new Set(["dr", "dra", "sr", "sra", "srta", "mr", "mrs", "ms", "st", "lic", "ing", "vs", "etc", "no", "num"]);
+
+/**
+ * Index just past the first sentence in `buf`, or -1 when no sentence is
+ * complete yet. A terminator counts only once the next word has started
+ * (so "3 p. m." and "Dr. Lopez" are not cut in half).
+ */
+export function sentenceEnd(buf: string): number {
+  const re = /[.!?…]+["')\]]*\s+(?=\S)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(buf)) !== null) {
+    const end = m.index + m[0].length;
+    const term = buf.slice(m.index, m.index + 1);
+    const next = buf[end] ?? "";
+    if (term === ".") {
+      const before = buf.slice(0, m.index);
+      const word = /([A-Za-zÁÉÍÓÚáéíóúñÑ]+)$/.exec(before)?.[1]?.toLowerCase() ?? "";
+      if (word.length === 1 || ABBREVIATIONS.has(word)) continue;
+      if (/\p{Ll}/u.test(next)) continue;
+    }
+    return end;
+  }
+  return -1;
+}
+
+/** Whole text -> speakable sentences (each already spoken-form). */
+export function speakableSentences(text: string, locale: "en" | "es" = "en"): string[] {
+  let rest = toSpoken(text, locale);
+  const out: string[] = [];
+  for (;;) {
+    const end = sentenceEnd(`${rest} x`);
+    if (end < 0 || end > rest.length) break;
+    out.push(rest.slice(0, end).trim());
+    rest = rest.slice(end);
+  }
+  if (rest.trim()) out.push(rest.trim());
+  return out.filter(Boolean);
 }

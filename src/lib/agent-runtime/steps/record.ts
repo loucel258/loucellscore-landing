@@ -80,7 +80,14 @@ async function applyDisclosure(ctx: TurnContext, raw: string, reply: string): Pr
 
 export async function record(ctx: TurnContext, draft: ReplyDraft): Promise<TurnOutcome> {
   let text: string;
-  if (draft.safety) {
+  if (ctx.channel === "voice") {
+    // Spoken form. No late take-over check (the words are already out) and no
+    // disclosure prefix: the welcome line gave it, except on a provider that
+    // owns the greeting (needsDisclosure), where the adapter speaks it first.
+    const body = renderForChannel(draft.text, "voice", SMS_MAX_CHARS, ctx.locale);
+    const needs = !draft.safety && ctx.inbound.voice?.needsDisclosure && !disclosesAi(body);
+    text = needs ? `${aiDisclosure(ctx.locale, ctx.config.name)} ${body}` : body;
+  } else if (draft.safety) {
     text = renderForChannel(draft.text, ctx.channel);
   } else {
     const interrupted = await pausedAfterCompletion(ctx);

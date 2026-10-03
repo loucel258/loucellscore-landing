@@ -1,5 +1,6 @@
 import "server-only";
 import type { TurnContext } from "../context";
+import { contactOf } from "../types";
 
 /**
  * SMS: services for the prompt + the booking backend, resolved once per turn
@@ -7,8 +8,8 @@ import type { TurnContext } from "../context";
  * loop and before running a customer-confirmed action (steps/confirm.ts).
  */
 export async function prepareBooking(ctx: TurnContext): Promise<void> {
-  const conv = ctx.inbound.conv;
-  if (conv.kind !== "contact" || ctx.booking) return;
+  const contact = contactOf(ctx.inbound.conv);
+  if (!contact || ctx.booking) return;
   const { config } = ctx;
   if (!ctx.services) ctx.services = (await ctx.deps.store?.listServices(config.workspaceId)) ?? [];
   // external_unavailable is fail-closed: booking tools answer "unavailable",
@@ -19,7 +20,7 @@ export async function prepareBooking(ctx: TurnContext): Promise<void> {
   }
   ctx.booking = {
     workspaceId: config.workspaceId,
-    contactId: conv.contactId,
+    contactId: contact.contactId,
     calendarId: config.integrations.calendar.calendar_id,
     timezone: config.timezone,
     businessHours: config.businessHours,
@@ -28,6 +29,6 @@ export async function prepareBooking(ctx: TurnContext): Promise<void> {
     bookingUnavailable: backend.mode === "external_unavailable",
     bookingLinkOnly: backend.mode === "link",
     bookingLinkUrl: backend.mode === "link" ? backend.linkUrl : config.integrations.booking.link_url,
-    contactPhone: conv.phone || undefined,
+    contactPhone: contact.phone || undefined,
   };
 }

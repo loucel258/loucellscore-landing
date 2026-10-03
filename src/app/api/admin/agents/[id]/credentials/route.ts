@@ -81,7 +81,16 @@ export async function GET(
     .select("provider, account_identifier, updated_at")
     .eq("workspace_id", ws);
 
-  return NextResponse.json({ ok: true, configured: data ?? [] });
+  // The voice panel needs the slug (webhook URLs) and whether this
+  // deployment has the gateway configured. Booleans only, never the values.
+  const { data: agentRow } = await sb.from("client_agents").select("slug, name").eq("id", id).maybeSingle();
+  return NextResponse.json({
+    ok: true,
+    configured: data ?? [],
+    slug: (agentRow as { slug?: string | null } | null)?.slug ?? null,
+    name: (agentRow as { name?: string | null } | null)?.name ?? null,
+    voiceEnv: { gatewayUrl: !!process.env.VOICE_GATEWAY_URL, gatewaySecret: !!process.env.VOICE_GATEWAY_SECRET },
+  });
 }
 
 export async function POST(

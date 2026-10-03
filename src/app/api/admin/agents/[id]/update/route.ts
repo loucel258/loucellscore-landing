@@ -7,6 +7,7 @@ import { writeAuditEntry } from "@/lib/audit/writer";
 import { isE164, isSupportedTimeZone } from "@/lib/admin/validators";
 import { safeHttpsUrl } from "@/lib/agents/booking-config";
 import { toAgentConfig } from "@/lib/agent-runtime/config";
+import { newVapiSecret } from "@/lib/agent-runtime/channels/voice-vapi";
 import { checkReadiness } from "@/lib/agent-runtime/readiness";
 import { getVersion, recordConfigVersion } from "@/lib/admin/config-versions-db";
 import { diffSnapshots, restoreInputFromSnapshot, snapshotFromRow } from "@/lib/admin/config-versions";
@@ -103,6 +104,27 @@ const InputSchema = z.object({
         })
         .optional(),
       locale: z.enum(["es", "en"]).optional(),
+      // Phone calls (voice channel). Webhook URLs and setup: docs/voice-architecture.md.
+      voice: z
+        .object({
+          enabled: z.boolean().optional(),
+          provider: z.enum(["twilio_cr", "vapi"]).optional(),
+          // Provider voice ids, free text for now ("" clears).
+          voice_en: z.string().max(200).optional(),
+          voice_es: z.string().max(200).optional(),
+          default_lang: z.enum(["en", "es"]).optional(),
+          // "" = no live transfer (escalations become callbacks).
+          transfer_number: z
+            .string()
+            .max(20)
+            .refine((v) => v === "" || isE164(v), "Phone numbers must be E.164, like +15615551234")
+            .optional(),
+          recording_notice: z.boolean().optional(),
+          max_call_minutes: z.number().int().min(1).max(60).optional(),
+          // true = generate a new custom LLM secret (shown once in the response; only its hash is stored).
+          vapi_secret_rotate: z.boolean().optional(),
+        })
+        .optional(),
       // What request_booking shares. "" clears it; anything else must be a
       // plain https URL (same rule the runtime applies before using it).
       booking: z
@@ -187,7 +209,7 @@ async function liveBlockers(
   // panel already warns about it.
   const channels = (agent.channels ?? []).flatMap((c) =>
     c === "chat_widget" ? (["web"] as const) : c === "sms" ? (["sms"] as const) : [],
-  );
+  ) as Array<"web" | "sms" | "voice">;
   const cfg = toAgentConfig({
     id: agent.id,
     slug: slugAfter,
@@ -206,9 +228,10 @@ async function liveBlockers(
     vertical: null,
     integrations: update.integrations ?? agent.integrations,
   });
+  if (cfg?.integrations.voice.enabled) channels.push("voice");
   if (!cfg || channels.length === 0) return null;
   let twilioCredential = false;
-  if (channels.includes("sms")) {
+  if (channels.includes("sms") || channels.includes("voice")) {
     const { data: twilio } = await sb
       .from("vault_credentials")
       .select("id")
@@ -219,7 +242,12 @@ async function liveBlockers(
       .maybeSingle();
     twilioCredential = !!twilio;
   }
-  const blockers = checkReadiness(cfg, { channels, twilioCredential }).missing.filter((m) => m.key !== "booking_link");
+  const blockers = checkReadiness(cfg, {
+    channels,
+    twilioCredential,
+    voiceGatewayUrl: !!process.env.VOICE_GATEWAY_URL,
+    voiceGatewaySecret: !!process.env.VOICE_GATEWAY_SECRET,
+  }).missing.filter((m) => m.key !== "booking_link");
   return blockers.length > 0 ? blockers.map((m) => `${m.channel}: ${m.message}`).join(" ") : null;
 }
 
@@ -283,6 +311,8 @@ export async function POST(
 
   const update: Record<string, unknown> = {};
   const changed: string[] = [];
+  // Shown once, never stored or logged (only its sha256 is saved).
+  let newVapiSecretValue: string | null = null;
 
   if (input.name !== undefined) {
     update.name = input.name;
@@ -381,6 +411,48 @@ export async function POST(
     if (input.integrations.locale !== undefined) {
       next.locale = input.integrations.locale;
       touched = true;
+    }
+    if (input.integrations.voice) {
+      const { vapi_secret_rotate, ...fields } = input.integrations.voice;
+      const voice: Record<string, unknown> = { ...(cur.voice ?? {}) };
+      for (const [k, val] of Object.entries(fields)) {
+        if (val === undefined) continue;
+        if (val === "") delete voice[k];
+        else voice[k] = val;
+      }
+      if (vapi_secret_rotate) {
+        const gen = newVapiSecret();
+        voice.vapi_secret_hash = gen.hash;
+        newVapiSecretValue = gen.secret;
+      }
+      if (voice.enabled === true) {
+        if ((voice.provider ?? "twilio_cr") === "vapi") {
+          if (!voice.vapi_secret_hash) {
+            return NextResponse.json(
+              { ok: false, error: "voice_needs_secret", detail: "Generate the custom LLM secret before enabling Vapi." },
+              { status: 422 },
+            );
+          }
+        } else {
+          const { data: twilio } = await sb
+            .from("vault_credentials")
+            .select("id")
+            .eq("workspace_id", agent.workspace_id)
+            .eq("provider", "twilio")
+            .not("account_identifier", "is", null)
+            .not("access_token_enc", "is", null)
+            .maybeSingle();
+          if (!twilio) {
+            return NextResponse.json(
+              { ok: false, error: "twilio_not_configured", detail: "Save the Twilio keys before enabling phone calls." },
+              { status: 422 },
+            );
+          }
+        }
+      }
+      next.voice = voice;
+      touched = true;
+      changed.push("integrations.voice");
     }
     const booking: Record<string, unknown> = { ...(cur.booking ?? {}) };
     if (input.integrations.booking?.link_url !== undefined) {
@@ -546,5 +618,11 @@ export async function POST(
     // Audit failure must not block the config change itself.
   }
 
-  return NextResponse.json({ ok: true, changed, ...(version ? { version } : {}), ...(restoredFrom !== null ? { restoredFrom } : {}) });
+  return NextResponse.json({
+    ok: true,
+    changed,
+    ...(version ? { version } : {}),
+    ...(restoredFrom !== null ? { restoredFrom } : {}),
+    ...(newVapiSecretValue ? { vapiSecret: newVapiSecretValue } : {}),
+  });
 }

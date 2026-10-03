@@ -358,6 +358,14 @@ const EN: Dict = {
 
   "badge.web": "Web",
   "badge.sms": "Text",
+  "badge.call": "Call",
+  "call.length": "Call length: {duration}",
+  "call.outcome.answered": "Answered",
+  "call.outcome.booked": "Booked",
+  "call.outcome.escalated": "Needs a call back",
+  "call.outcome.transferred": "Transferred to you",
+  "call.outcome.abandoned": "Hung up early",
+  "call.caller": "Caller",
 
   "topic.booking": "Booking",
   "topic.pricing": "Prices",
@@ -926,6 +934,14 @@ const ES: Dict = {
 
   "badge.web": "Web",
   "badge.sms": "SMS",
+  "badge.call": "Llamada",
+  "call.length": "Duración de la llamada: {duration}",
+  "call.outcome.answered": "Atendida",
+  "call.outcome.booked": "Con cita",
+  "call.outcome.escalated": "Pide que le devuelvan la llamada",
+  "call.outcome.transferred": "Transferida a ti",
+  "call.outcome.abandoned": "Colgó antes",
+  "call.caller": "Quien llamó",
 
   "topic.booking": "Citas",
   "topic.pricing": "Precios",

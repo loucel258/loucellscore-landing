@@ -50,3 +50,5 @@ encrypted transcripts → leads).
 | 067 | ✅ `customers.phone` (text-only customers; legacy "tel:" rows moved) + `retainer_payments` (append-only, admin read role can select, anon 401). Applied 2026-10-02, verified |
 | 068 | ✅ `audit_verifications` (daily chain-check results) + admin read on `audit_chain_head`. Applied 2026-10-02, verified |
 | 069 | ✅ `portal_users` (per-person portal logins, owner/staff) + `client_portal_access.shared_passcode_enabled`. Admin read role sees no passcode columns (403 verified); anon 401. Applied 2026-10-02, verified |
+| 070 | ✅ `agent_config_versions` (append-only signed snapshot of each agent config change; anon denied). Applied 2026-10-02, verified |
+| 071 | ✅ `voice_calls` (one row per phone call: caller, caller_verified via SHAKEN/STIR, duration, outcome) + `escalations.channel` accepts `voice`. Anon 401, admin read role 200. Applied 2026-10-02, verified |

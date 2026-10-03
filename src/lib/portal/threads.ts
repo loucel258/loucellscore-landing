@@ -9,7 +9,22 @@
  * unit-tested. Pages load the rows and render; nothing here decrypts.
  */
 
-export type ThreadChannel = "web" | "sms";
+export type ThreadChannel = "web" | "sms" | "call";
+
+/** Phone calls are stored like web chats, under session ids "call_<callSid>". */
+export const isCallSession = (sessionId: string): boolean => sessionId.startsWith("call_");
+
+export type CallMeta = {
+  durationSec: number | null;
+  outcome: "answered" | "booked" | "escalated" | "transferred" | "abandoned" | null;
+};
+
+export type VoiceCallLite = {
+  call_sid: string;
+  caller: string | null;
+  duration_sec: number | null;
+  outcome: string | null;
+};
 
 export type WebMessageRow = {
   id: string;
@@ -58,6 +73,8 @@ export type ThreadSummary = {
   urgent: boolean;
   booked: boolean;
   tags: string[];
+  /** Calls only: length and how it ended (voice_calls, when the table exists). */
+  call?: CallMeta;
   /** What the conversation ended in (see withOutcomes); undefined until applied. */
   outcome?: ThreadOutcome | null;
 };
@@ -196,7 +213,7 @@ export function buildThreads(input: {
       const tags = tagsBySession.get(m.session_id) ?? [];
       out.set(key, {
         key,
-        channel: "web",
+        channel: isCallSession(m.session_id) ? "call" : "web",
         id: m.session_id,
         name: cleanName(lead?.name),
         phone: null,
@@ -256,6 +273,35 @@ export function buildThreads(input: {
   return [...out.values()].sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
 }
 
+const CALL_OUTCOMES = new Set(["answered", "booked", "escalated", "transferred", "abandoned"]);
+
+/** Adds the caller's number and the call's length / result to call threads. Other threads pass through. */
+export function applyCallMeta(threads: ThreadSummary[], calls: readonly VoiceCallLite[]): ThreadSummary[] {
+  if (calls.length === 0) return threads;
+  const bySid = new Map(calls.map((c) => [`call_${c.call_sid}`, c]));
+  return threads.map((t) => {
+    const c = t.channel === "call" ? bySid.get(t.id) : undefined;
+    if (!c) return t;
+    return {
+      ...t,
+      phone: c.caller ?? t.phone,
+      booked: t.booked || c.outcome === "booked",
+      call: {
+        durationSec: c.duration_sec,
+        outcome: c.outcome && CALL_OUTCOMES.has(c.outcome) ? (c.outcome as CallMeta["outcome"]) : null,
+      },
+    };
+  });
+}
+
+/** "2 min 05 s" / "45 s". */
+export function formatCallLength(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return "";
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return m > 0 ? `${m} min ${String(s).padStart(2, "0")} s` : `${s} s`;
+}
+
 /**
  * Attaches each thread's outcome. Web threads read the per-session
  * outcome from the conversation stats; a confirmed booking always wins
@@ -269,7 +315,7 @@ export function withOutcomes(
   return threads.map((t) => {
     const outcome: ThreadOutcome | null = t.booked
       ? "booked"
-      : t.channel === "web"
+      : t.channel === "web" || t.channel === "call"
         ? (bySession.get(t.id) ?? null)
         : null;
     return { ...t, outcome, booked: outcome === "booked" };
@@ -297,7 +343,7 @@ export function threadDisplayName(
   webFallback: string,
 ): string {
   if (thread.name) return thread.name;
-  if (thread.channel === "sms" && thread.phone) return formatPhone(thread.phone);
+  if ((thread.channel === "sms" || thread.channel === "call") && thread.phone) return formatPhone(thread.phone);
   return webFallback;
 }
 

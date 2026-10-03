@@ -3,7 +3,17 @@ import { sha256Hex } from "@/lib/crypto/hash";
 import { parseSmsKeyword } from "@/lib/booking/gates";
 import type { TurnContext } from "../context";
 import type { TurnOutcome } from "../types";
-import { optOutConfirmation, smsBudgetNotice, standdown, standdownAfterCompletion, webBudgetNotice } from "../copy";
+import {
+  optOutConfirmation,
+  smsBudgetNotice,
+  standdown,
+  standdownAfterCompletion,
+  voiceBudgetNotice,
+  voiceOptOutConfirmation,
+  voiceStanddown,
+  webBudgetNotice,
+} from "../copy";
+import { isSpokenOptOut } from "../spoken";
 import { dropPendingAction } from "./confirm";
 
 /**
@@ -21,6 +31,9 @@ const WEB_GLOBAL = { capacity: 60, refillPerSec: 1 };
 // SMS: per contact burst 6, ~6 per 10 min sustained. Per agent burst 60, 2/min.
 const SMS_CONTACT = { capacity: 6, refillPerSec: 6 / 600 };
 const SMS_AGENT = { capacity: 60, refillPerSec: 1 / 30 };
+// Voice: per call (or per caller) burst 20 turns, one per 3 s sustained; per agent burst 120, 1/s.
+const VOICE_CALLER = { capacity: 20, refillPerSec: 1 / 3 };
+const VOICE_AGENT = { capacity: 120, refillPerSec: 1 };
 
 export async function admit(ctx: TurnContext): Promise<TurnOutcome | null> {
   return (await admitBeforeCrisis(ctx)) ?? (await admitAfterCrisis(ctx));
@@ -40,8 +53,23 @@ export async function admitAfterCrisis(ctx: TurnContext): Promise<TurnOutcome | 
   return (await takeoverPause(ctx)) ?? (await budget(ctx));
 }
 
+/**
+ * Voice: a caller who says "stop texting me" is opted out like an SMS STOP
+ * (always honored, ahead of crisis and rate limits). The call itself goes on:
+ * they phoned us, and we only confirm once.
+ */
+async function voiceOptOut(ctx: TurnContext): Promise<TurnOutcome | null> {
+  const conv = ctx.inbound.conv;
+  if (conv.kind !== "call" || !isSpokenOptOut(ctx.inbound.text)) return null;
+  if (/^\+[1-9]\d{7,14}$/.test(conv.from)) await ctx.deps.store?.optOut(ctx.config.workspaceId, conv.from);
+  await dropPendingAction(ctx);
+  await ctx.audit({ decision: "ALLOW", reason: "voice_opt_out" });
+  return { kind: "suppressed", reason: "opt_out", text: voiceOptOutConfirmation(ctx.locale, ctx.config.name) };
+}
+
 async function smsKeywords(ctx: TurnContext): Promise<TurnOutcome | null> {
   const conv = ctx.inbound.conv;
+  if (conv.kind === "call") return voiceOptOut(ctx);
   if (conv.kind !== "contact") return null;
   const store = ctx.deps.store;
   const ws = ctx.config.workspaceId;
@@ -76,8 +104,11 @@ async function rateLimits(ctx: TurnContext): Promise<TurnOutcome | null> {
   const slug = ctx.config.slug;
   const conv = ctx.inbound.conv;
 
+  const callerId = conv.kind === "call" ? (conv.from.startsWith("+") ? conv.from : conv.callSid) : "";
   const [visitorKey, visitor, globalKey, global] =
-    conv.kind === "contact"
+    conv.kind === "call"
+      ? [`voice:${slug}:c:${sha256Hex(`${ctx.config.workspaceId}:${callerId}`).slice(0, 24)}`, VOICE_CALLER, `voice:${slug}:agent`, VOICE_AGENT]
+      : conv.kind === "contact"
       ? [`sms:${slug}:c:${sha256Hex(`${ctx.config.workspaceId}:${conv.phone}`).slice(0, 24)}`, SMS_CONTACT, `sms:${slug}:agent`, SMS_AGENT]
       : [`agent:${slug}:${ctx.inbound.ip ?? "unknown"}`, WEB_VISITOR, `agent:${slug}:global`, WEB_GLOBAL];
 
@@ -114,6 +145,9 @@ async function takeoverPause(ctx: TurnContext): Promise<TurnOutcome | null> {
   if (!(await isPaused(ctx))) return null;
   await ctx.audit({ decision: "DENY", blocked_by: "session_paused", reason: "owner_take_over" });
   // SMS: the owner is texting the customer; the agent stays silent.
+  if (ctx.channel === "voice") {
+    return { kind: "suppressed", reason: "paused", text: voiceStanddown(ctx.locale, ctx.inbound.voice?.transfer.number != null && ctx.inbound.voice.transfer.open) };
+  }
   return { kind: "suppressed", reason: "paused", text: ctx.channel === "web" ? standdown(ctx.locale) : undefined };
 }
 
@@ -138,6 +172,9 @@ async function budget(ctx: TurnContext): Promise<TurnOutcome | null> {
 
   const conv = ctx.inbound.conv;
   if (conv.kind === "session") return { kind: "blocked", reason: "budget", text: webBudgetNotice(ctx.locale) };
+  if (conv.kind === "call") {
+    return { kind: "blocked", reason: "budget", text: voiceBudgetNotice(ctx.locale, ctx.config.name) };
+  }
 
   // SMS: at most one short notice per contact per day.
   const notice = smsBudgetNotice(ctx.locale, ctx.config.name);

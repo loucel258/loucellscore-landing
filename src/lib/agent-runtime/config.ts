@@ -22,6 +22,9 @@ import { VERTICAL_IDS, inferVertical, type VerticalId } from "./verticals";
  *   quiet_hours: { start_hour, end_hour }        (can only narrow 8am-9pm)
  *   whatsapp:    { from_number, templates }      (kept raw, see notify/proactive)
  *   kb:          "FAQ / policies text"
+ *   voice:       { enabled, provider: "twilio_cr"|"vapi", voice_en, voice_es,
+ *                  default_lang, transfer_number (E.164), recording_notice,
+ *                  max_call_minutes, vapi_secret_hash }
  *   locale:      "es" | "en"
  *   vertical:    "salon" | "generic"
  */
@@ -45,6 +48,7 @@ export const DEFAULT_MONTHLY_TOKEN_BUDGET = 2_000_000;
 export const KB_MAX_CHARS = 20_000;
 
 const MAX_URL_LEN = 500;
+const E164_RE = /^\+[1-9]\d{7,14}$/;
 
 /**
  * Accept only an absolute https URL without embedded credentials. Returns the
@@ -152,6 +156,20 @@ export const IntegrationsSchema = obj(
       }),
     ),
     quiet_hours: obj(z.object({ start_hour: hour, end_hour: hour })),
+    voice: obj(
+      z.object({
+        enabled: flag,
+        provider: z.enum(["twilio_cr", "vapi"]).catch("twilio_cr"),
+        voice_en: text(200),
+        voice_es: text(200),
+        default_lang: z.enum(["en", "es"]).nullable().catch(null),
+        transfer_number: norm((v) => (typeof v === "string" && E164_RE.test(v.trim()) ? v.trim() : null)),
+        recording_notice: z.boolean().catch(true),
+        max_call_minutes: z.number().int().min(1).max(60).catch(10),
+        /** sha256 hex of the Vapi / custom-LLM bearer secret. Never the secret itself. */
+        vapi_secret_hash: norm((v) => (typeof v === "string" && /^[0-9a-f]{64}$/.test(v) ? v : null)),
+      }),
+    ),
     kb: text(KB_MAX_CHARS),
     locale: z.enum(["en", "es"]).nullable().catch(null),
     vertical: z.enum(VERTICAL_IDS).nullable().catch(null),

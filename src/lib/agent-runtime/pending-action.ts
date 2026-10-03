@@ -51,9 +51,20 @@ export const PendingActionSchema = z.object({
   }),
   created_at: iso,
   expires_at: iso,
+  /** Conversation that asked for it ("sms_<contact>" or "call_<sid>"). Absent on older (SMS) rows. */
+  origin: z.string().max(100).optional(),
 });
 
 export type PendingAction = z.infer<typeof PendingActionSchema>;
+
+/**
+ * Only the conversation that asked the question can answer it: a "sí" on a
+ * phone call never runs an action proposed by text message (or by another
+ * call), and a texted YES never runs one proposed on a call.
+ */
+export function answerableBy(action: PendingAction, sessionKey: string): boolean {
+  return (action.origin ?? null) === null ? sessionKey.startsWith("sms_") : action.origin === sessionKey;
+}
 
 /** contacts.metadata.pending_action → a usable PendingAction, or null (absent / malformed). */
 export function parsePendingAction(raw: unknown): PendingAction | null {

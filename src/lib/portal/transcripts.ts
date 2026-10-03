@@ -40,28 +40,39 @@ export async function persistTurn(args: {
     const assistantAt = new Date(userAt.getTime() + 1);
 
     const rows = [
-      {
-        engagement_id: meta.engagementId,
-        workspace_id: args.workspaceId,
-        session_id: args.sessionId,
-        role: "user" as const,
-        cipher_b64: encryptMessage(meta.engagementId, args.userText),
-        tool_summary: null,
-        expires_at: expires,
-        inserted_at: userAt.toISOString(),
-      },
-      {
-        engagement_id: meta.engagementId,
-        workspace_id: args.workspaceId,
-        session_id: args.sessionId,
-        role: "assistant" as const,
-        cipher_b64: encryptMessage(meta.engagementId, args.assistantText),
-        tool_summary: args.toolSummary ?? null,
-        expires_at: expires,
-        inserted_at: assistantAt.toISOString(),
-      },
+      // An agent-only line (the call's welcome) has no user row.
+      ...(args.userText
+        ? [
+            {
+              engagement_id: meta.engagementId,
+              workspace_id: args.workspaceId,
+              session_id: args.sessionId,
+              role: "user" as const,
+              cipher_b64: encryptMessage(meta.engagementId, args.userText),
+              tool_summary: null,
+              expires_at: expires,
+              inserted_at: userAt.toISOString(),
+            },
+          ]
+        : []),
+      // A caller line the agent never got to answer (cut off mid-thought) has no agent row.
+      ...(args.assistantText
+        ? [
+            {
+              engagement_id: meta.engagementId,
+              workspace_id: args.workspaceId,
+              session_id: args.sessionId,
+              role: "assistant" as const,
+              cipher_b64: encryptMessage(meta.engagementId, args.assistantText),
+              tool_summary: args.toolSummary ?? null,
+              expires_at: expires,
+              inserted_at: assistantAt.toISOString(),
+            },
+          ]
+        : []),
     ];
 
+    if (rows.length === 0) return;
     await sb.from("conversation_messages").insert(rows);
   } catch (err) {
     // eslint-disable-next-line no-console

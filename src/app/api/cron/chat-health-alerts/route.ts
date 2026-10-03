@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/audit/client";
 import { sendInternalAlert, verifyCronAuth } from "@/lib/notify/resend";
 import { getAdminSettings, isWithinBusinessHours } from "@/lib/admin/settings";
 import { logCronRun } from "@/lib/ops/cron-log";
+import { checkVoiceGateway } from "@/lib/voice/health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ export const dynamic = "force-dynamic";
  *   2. ≥5 chat_failed in last 1h → upstream issues piling up
  *   3. ≥3 pii_blocked in single session in last 15 min → attack pattern
  *   4. 0 user_message events in last 24h DURING business hours → chat regressed
+ *   V. voice gateway (VOICE_GATEWAY_URL) not answering /health → phone calls
+ *      are falling back to "someone will call you back"
  *
  * Fails closed when:
  *   - No CRON_SECRET set (rejects non-Vercel callers in prod)
@@ -151,6 +154,24 @@ async function handleCron(req: Request): Promise<Response> {
     }
   } else {
     results.push({ rule: "pii_attack_pattern", fired: false, sent: false });
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // Rule V: voice gateway down (only when one is configured)
+  // ──────────────────────────────────────────────────────────────
+  const gateway = await checkVoiceGateway();
+  if (gateway.configured && !gateway.ok) {
+    const sent = await maybeAlert(
+      "voice_gateway_down",
+      "🔴 Phone agent offline: voice gateway not responding",
+      `<p>The voice gateway did not answer its health check (${gateway.detail}).</p>
+       <p>Callers are hearing "someone will call you back" and a callback is filed for each call, so check <a href="https://loucellscore.com/admin">/admin</a> for callbacks.</p>
+       <p><strong>Action:</strong> <code>fly status</code> and <code>fly logs</code> on the gateway app; restart with <code>fly machine restart</code>.</p>`,
+      dedupeCutoff,
+    );
+    results.push({ rule: "voice_gateway_down", fired: true, sent, detail: gateway.detail });
+  } else {
+    results.push({ rule: "voice_gateway_down", fired: false, sent: false });
   }
 
   // ──────────────────────────────────────────────────────────────

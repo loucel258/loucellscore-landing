@@ -46,6 +46,18 @@ export const CHANNEL_POLICY: Record<Channel, ChannelPolicy> = {
     callTimeoutMs: 20_000,
     turnDeadlineMs: 45_000,
   },
+  // Voice: fast model (Haiku), short answers, tight deadlines. A caller on
+  // the line will not wait 20 s for a tool loop; past the deadline the turn
+  // escalates (callback / transfer) instead of dead air.
+  voice: {
+    modelRole: "chat",
+    maxTokens: 320,
+    temperature: 0.4,
+    maxIterations: 4,
+    maxActions: 4,
+    callTimeoutMs: 12_000,
+    turnDeadlineMs: 20_000,
+  },
 };
 
 export type AuditFields = {
@@ -67,6 +79,10 @@ export type TurnState = {
   toolSummary?: string;
   /** Reply when the model's final text is empty (web booking). */
   emptyTextFallback?: string;
+  /** Voice: the model's final text was already streamed to the caller. */
+  finalStreamed?: boolean;
+  /** Voice: a booking was made on this turn (call outcome "booked"). */
+  booked?: boolean;
 };
 
 export type TurnContext = {
@@ -91,7 +107,7 @@ export type TurnContext = {
    * unanchored, or a fresh session). null = history not loaded this turn.
    */
   historySource: "server" | "new" | "client_only" | null;
-  /** SMS: active services for the prompt (loaded, or preset). */
+  /** SMS / voice: active services for the prompt (loaded, or preset). */
   services: ServiceLite[] | null;
   /** SMS: booking tool scope, bound to this workspace + contact. */
   booking: BookingToolCtx | null;
@@ -116,7 +132,10 @@ export type TurnContext = {
 };
 
 export function sessionKeyFor(inbound: Inbound): string {
-  return inbound.conv.kind === "session" ? inbound.conv.sessionId : `sms_${inbound.conv.contactId}`;
+  const conv = inbound.conv;
+  if (conv.kind === "session") return conv.sessionId;
+  if (conv.kind === "call") return `call_${conv.callSid}`;
+  return `sms_${conv.contactId}`;
 }
 
 function normalizeIp(ip: string | undefined): string | null {

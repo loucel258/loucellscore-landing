@@ -7,8 +7,8 @@ import { handleEscalateToHuman } from "@/lib/chat/tools";
 import { sha256Hex } from "@/lib/crypto/hash";
 import { CHANNEL_POLICY, createTurnContext, type TurnContext } from "./context";
 import { withDeps, type TurnDeps } from "./deps";
-import type { Inbound, TurnOutcome } from "./types";
-import { fallbackReply, oneMoment } from "./copy";
+import { contactOf, type Inbound, type TurnOutcome } from "./types";
+import { fallbackReply, oneMoment, voiceFallback } from "./copy";
 import { claim } from "./steps/claim";
 import { admitAfterCrisis, admitBeforeCrisis } from "./steps/admit";
 import { crisisGate } from "./steps/crisis";
@@ -21,7 +21,7 @@ import { record, type ReplyDraft } from "./steps/record";
 import { prepareBooking } from "./steps/booking";
 import { confirmPending } from "./steps/confirm";
 import { webTools } from "./tools/web";
-import { smsTools } from "./tools/booking";
+import { smsTools, voiceTools } from "./tools/booking";
 
 /**
  * One agent turn, any channel:
@@ -30,7 +30,7 @@ import { smsTools } from "./tools/booking";
  *         → buildPrompt → runLoop → (escalate on cap / deadline / failure)
  *         → record
  *
- * confirmPending settles a YES / NO to a stored customer_confirm action
+ * confirmPending (SMS and voice) settles a YES / NO to a stored customer_confirm action
  * deterministically (pending-action.ts); any other message continues.
  *
  * Adapters (channels/web.ts, channels/sms.ts) build the Inbound and render
@@ -83,14 +83,19 @@ export async function respond(ctx: TurnContext): Promise<Step> {
 
   const client = ctx.deps.claude();
   if (!client) {
-    if (ctx.channel === "sms") return giveUp(ctx, "agent_unavailable");
+    if (ctx.channel !== "web") return giveUp(ctx, "agent_unavailable");
     await ctx.audit({ decision: "DENY", blocked_by: "service_unavailable", reason: "no_api_key" });
     return { outcome: { kind: "blocked", reason: "unavailable" } };
   }
 
   const history = await loadHistory(ctx);
-  const tools = ctx.channel === "web" ? webTools(ctx.config) : smsTools();
-  if (ctx.channel === "sms") await prepareBooking(ctx);
+  const tools =
+    ctx.channel === "web"
+      ? webTools(ctx.config)
+      : ctx.channel === "voice"
+        ? voiceTools(!!contactOf(ctx.inbound.conv), ctx.inbound.voice?.callerVerified === true)
+        : smsTools();
+  if (ctx.channel !== "web") await prepareBooking(ctx);
   const prompt = buildPrompt({
     config: ctx.config,
     channel: ctx.channel,
@@ -98,6 +103,7 @@ export async function respond(ctx: TurnContext): Promise<Step> {
     tools,
     services: ctx.services ?? [],
     pending: ctx.pendingAction ? { summary: ctx.pendingAction.summary } : undefined,
+    callerVerified: ctx.inbound.voice?.callerVerified,
   });
 
   await ctx.audit({ decision: "ALLOW", reason: "user_message", contentHash: sha256Hex(ctx.inbound.text) });
@@ -109,6 +115,7 @@ export async function respond(ctx: TurnContext): Promise<Step> {
     messages: buildMessages(history, ctx.inbound.text),
     tools,
     ctx,
+    voice: ctx.inbound.voice,
     policy: {
       model: modelFor(policy.modelRole),
       maxTokens: policy.maxTokens ?? ctx.config.maxTokens,
@@ -141,6 +148,18 @@ async function interpret(ctx: TurnContext, r: LoopResult): Promise<Step> {
           escalationReason: r.end.escalationReason,
         },
       };
+    case "aborted":
+      // The caller spoke over us. Keep what they said (the next turn needs it
+      // to make sense); the agent's half answer is not recorded.
+      if (ctx.channel === "voice" && ctx.inbound.text) {
+        await ctx.deps.persistTurn({
+          workspaceId: ctx.config.workspaceId,
+          sessionId: ctx.sessionKey,
+          userText: ctx.inbound.text,
+          assistantText: "",
+        });
+      }
+      return { outcome: { kind: "duplicate" } };
     case "fail":
       return { outcome: { kind: "blocked", reason: "failed" } };
     case "model_error":
@@ -155,8 +174,9 @@ async function interpret(ctx: TurnContext, r: LoopResult): Promise<Step> {
     case "deadline":
       return giveUp(ctx, "deadline");
     case "text": {
+      if (r.streamed) ctx.state.finalStreamed = true;
       if (!r.text) {
-        if (ctx.channel === "sms") return giveUp(ctx, "empty_reply");
+        if (ctx.channel !== "web") return giveUp(ctx, "empty_reply");
         return {
           draft: {
             kind: "reply",
@@ -191,8 +211,15 @@ async function interpret(ctx: TurnContext, r: LoopResult): Promise<Step> {
 async function giveUp(ctx: TurnContext, reason: string): Promise<Step> {
   const result = await ctx.escalate({ reason, summary: ctx.inbound.text.slice(0, 200) });
   await ctx.audit({ decision: "ALLOW", reason: `escalation:${reason}` });
+  const voice = ctx.inbound.voice;
   const text =
-    ctx.channel === "sms"
+    ctx.channel === "voice"
+      ? voiceFallback(ctx.locale, {
+          transferring: !!voice?.transfer.number && voice.transfer.open,
+          notified: result.notified || result.recorded,
+          businessName: ctx.config.name,
+        })
+      : ctx.channel === "sms"
       ? fallbackReply(ctx.locale, result.notified, ctx.config.name)
       : handleEscalateToHuman({ reason: "agent_uncertain", summary: reason }, ctx.locale, {
           house: HOUSE_AGENT_SLUGS.has(ctx.config.slug),
